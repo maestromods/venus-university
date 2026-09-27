@@ -99,6 +99,7 @@ import {
   useGameStore,
   type SceneKind
 } from './gameStore'
+import { settlePendingPhotos } from './photoRecovery'
 import { useCharacterStore } from './characterStore'
 import { castOf, useSaveStore } from './saveStore'
 import {
@@ -2491,6 +2492,8 @@ export function enterGame(
   game.loadSave(save, record, characters)
   // A read nothing on screen is waiting on: the profile is not open yet.
   void loadProfilePicture()
+  // A picture whose render outlived the save that asked for it: found on disk, or given up on.
+  void settlePendingPhotos()
   // The file a slot opening is folded back into: a boundary's own save, never the autosave or a
   // manual one.
   loopState.slotSaveId = isSlotSaveId(save.saveId) ? save.saveId : null

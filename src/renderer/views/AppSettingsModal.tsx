@@ -133,6 +133,7 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
   )
   // And before a line is rewritten while an ending is under way.
   const [warnEndingEdit, setWarnEndingEdit] = useState(settings?.warnEndingEdit !== false)
+  const [photos, setPhotos] = useState(settings?.photos !== false)
 
   // The typed fields, staged until Save. Each is the endpoint's own, seeded whichever provider
   // is stored, so a panel switched away and back finds them as they were.
@@ -385,6 +386,11 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
   }
 
   /** Whether rewriting a chat-log line in a scene that has started its ending asks first. */
+  function handlePhotosChange(checked: boolean): void {
+    setPhotos(checked)
+    void write({ photos: checked }).then(reseed((stored) => setPhotos(stored.photos !== false)))
+  }
+
   function handleWarnEndingEditChange(checked: boolean): void {
     setWarnEndingEdit(checked)
     void write({ warnEndingEdit: checked }).then(
@@ -673,6 +679,19 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
 
           <div className="vu-settings-content">
             <span className="vu-settings-heading">Content</span>
+
+            {/* The switch that decides whether the cast photographs itself at all sits over the
+                three that decide what a picture may show. Named for the playthrough it makes,
+                like they are: what is turned on here is the absence. */}
+            {!webBuild && (
+              <CheckField
+                id="settings-photos"
+                label="No photos on Bunnyboard"
+                note="Nobody texts the reader a picture of herself. Nobody is even offered the option, so no reply asks for a photo the playthrough does not want."
+                checked={!photos}
+                onChange={(checked) => handlePhotosChange(!checked)}
+              />
+            )}
 
             {/* Each toggle carries what turning it on costs; the note is the whole of what the
                 app promises about either setting. */}

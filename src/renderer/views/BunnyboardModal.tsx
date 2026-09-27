@@ -12,7 +12,13 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
-import { MessagePhotoBubble, PhotoLightboxHost } from '../components/PhotoBubble'
+import type { ChatPhoto } from '@shared/photoTypes'
+import {
+  MessagePhoto,
+  MessagePhotoBubble,
+  openShot,
+  PhotoLightboxHost
+} from '../components/PhotoBubble'
 import {
   fullNameOf,
   type Character,
@@ -1661,7 +1667,16 @@ const FeedPost = memo(function FeedPost({
   emoji?: string
   name: string
   handle?: string
-  post: { id?: string; text: string; date: number; time: TimeSlot; likes: number; liked?: boolean }
+  post: {
+    id?: string
+    text: string
+    date: number
+    time: TimeSlot
+    likes: number
+    liked?: boolean
+    /** The picture she attached. Declared here because this shape is the row's own, not `SocialPost`. */
+    photo?: ChatPhoto
+  }
   /** Somebody he has no contact info for — the one route by which one reaches his feed. */
   stranger?: boolean
   /** She already has his request, so the control that sent it is spent. */
@@ -1720,6 +1735,11 @@ const FeedPost = memo(function FeedPost({
         )}
       </div>
       <p className="vu-bb-post-text">{post.text}</p>
+      {post.photo && charId && (
+        <div className="vu-bb-post-shot">
+          <MessagePhoto charId={charId} photo={post.photo} onOpen={openShot} />
+        </div>
+      )}
       <motion.button
         className={`vu-bb-like${post.liked ? ' vu-bb-like--on' : ''}`}
         type="button"

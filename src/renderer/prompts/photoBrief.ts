@@ -102,3 +102,27 @@ export const PHOTO_SCHEMA_FIELDS: Record<string, unknown> = {
   // an optional field is one a model leaves out.
   photoTier: { type: 'string', enum: [...PHOTO_TIERS] }
 }
+
+/**
+ * What a picture on a feed post may be, told to the slot-intro call.
+ *
+ * Flat, because a post is public: `allowedPostTier` caps every one of them at the same place
+ * whoever is posting, so unlike the thread's brief there is nothing here to read off a save.
+ * Returned empty when no picture can be drawn at all, since an instruction not to attach one is
+ * an idea to attach one.
+ */
+export function postPhotoLines(canRenderImages: boolean): string[] {
+  if (!canRenderImages) return []
+  return [
+    'A post may carry a picture she took. Describe it in "image" — what the photograph shows, the way she would caption it to herself: where she is, what she is wearing, how she is standing or sitting, how close the shot is. One sentence, and a full one. Leave "image" empty on a post that is just words, which most of them are.',
+    'What is not written is not drawn: "a selfie" gets a picture of nobody in particular.',
+    'Her whole year sees this, so it is an ordinary picture or a flirty one at most — what she is wearing, a day out, a swimsuit. Never anything undressed, whatever she might send one person in a message.',
+    'Name nobody and nowhere: a picture cannot show a name. "her room", "the quad", "a cafe" — what it looks like, never what it is called.',
+    'The post’s own "text" should read like somebody who just posted that picture, without describing it.'
+  ]
+}
+
+/** The `image` field on a post, spread into the slot-intro schema's post properties. */
+export const POST_PHOTO_SCHEMA_FIELD: Record<string, unknown> = {
+  image: { type: 'string' }
+}

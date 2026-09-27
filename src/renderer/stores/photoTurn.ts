@@ -2,7 +2,7 @@ import { allowedPhotoTier, isPhotoTier, settlePhoto } from '@shared/photoGate'
 import { affectionFor } from '@shared/relationship'
 import type { Character, TextingResponse } from '@shared/types'
 import { useGameStore } from './gameStore'
-import { canSendPhotos, setMessagePhoto } from './photoStore'
+import { canSendPhotos, savePhotoState, setMessagePhoto } from './photoStore'
 import { noNsfwImagesOf, useSettingsStore } from './settingsStore'
 
 /**
@@ -57,6 +57,10 @@ export async function sendPhoto(
   }
   const file = named.data
   setMessagePhoto(charId, last.id, { tier: verdict.tier, scene, file, pending: true })
+  // The waiting bubble is saved too, carrying the name the render will land under: that name is
+  // the only thing `settlePendingPhotos` has to look for, and a bubble that never reached disk
+  // leaves the finished picture orphaned there with nothing pointing at it.
+  savePhotoState()
 
   void window.api.photo
     .generate(playthroughId, character, verdict.tier, data.photoPrompt ?? '', file)
@@ -66,10 +70,15 @@ export async function sendPhoto(
       if (useGameStore.getState().playthroughId !== playthroughId) return
       if (result.ok) {
         setMessagePhoto(charId, last.id, { tier: verdict.tier, scene, file })
+        // Straight to disk: the next slot may be a long way off, and a picture that is on disk
+        // but not in the save comes back as a bubble waiting for something already there.
+        savePhotoState()
         return
       }
       console.warn(`[texting] her photo failed: ${result.error.code}`, result.error.message)
       // Kept even here: she sent it, whatever ComfyUI did about it.
       setMessagePhoto(charId, last.id, { tier: verdict.tier, scene, file, failed: true })
+      // Saved as well: a bubble that failed has to come back failed, not still waiting.
+      savePhotoState()
     })
 }

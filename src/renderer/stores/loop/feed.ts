@@ -1,3 +1,4 @@
+import { startPostPhoto } from '../photoPost'
 import { rollPostLikes } from '@shared/feed'
 import { npcFriendsOf } from '@shared/npcRelationships'
 import type { EndingPostsResponse, FeedExtras, SlotIntroResponse, TimeSlot } from '@shared/types'
@@ -41,6 +42,10 @@ export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
       time: game.time,
       likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
     })
+    // Her picture, if she described one. Read off the reply rather than the type, which declares
+    // the post's fields inline where nothing can be added to them from outside. Never awaited:
+    // the feed is read long after the slot opened, and the post already stands without it.
+    void startPostPhoto(charId, id, (post as { image?: string }).image)
     // A stranger's post is a teaser candidate; blocked counts as contact, since the flag is
     // masked rather than cleared.
     const flags = game.charInfo[charId]?.flags

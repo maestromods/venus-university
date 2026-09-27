@@ -1,6 +1,9 @@
 import type { ChatPhoto } from '@shared/photoTypes'
 import { isWebBuild } from '../platform'
 import { useGameStore } from './gameStore'
+import { writeAutosave } from './loop/saves'
+import { loopState } from './loop/state'
+import { sceneInProgress } from './loop/stream'
 import { useSettingsStore } from './settingsStore'
 import { useSetupStore } from './setupStore'
 
@@ -77,4 +80,23 @@ export function setFeedPostPhoto(charId: string, postId: string, photo: ChatPhot
     posts[at] = photo ? { ...rest, photo } : rest
     return { charInfo: { ...state.charInfo, [charId]: { ...info, feed: posts } } }
   })
+}
+
+/**
+ * Writes the save as soon as a picture settles, rather than leaving it for the next slot.
+ *
+ * A render lands between saves — she is texted from the phone, which is open for whole slots at
+ * a time — so without this the picture reaches disk only when the loop next writes for its own
+ * reasons. Close the game before that and the bubble comes back pending forever, pointing at a
+ * file that is sitting right there. `settlePendingPhotos` exists to clean that up on load; this
+ * is what stops it happening.
+ *
+ * The same shape `bankTextLedger` uses for the other thing texting changes between slots: the
+ * autosave records the last decision point, so nothing half-streamed is written. Mid-stream it
+ * does nothing and lets the loop's own imminent write carry the picture — a save is taken from
+ * the store, which already has it. Manual saves need nothing here for the same reason.
+ */
+export function savePhotoState(): void {
+  if (sceneInProgress() && !useGameStore.getState().awaitingInput) return
+  void writeAutosave(loopState.decisionSave)
 }
