@@ -122,7 +122,27 @@ export function postPhotoLines(canRenderImages: boolean): string[] {
   ]
 }
 
-/** The `image` field on a post, spread into the slot-intro schema's post properties. */
-export const POST_PHOTO_SCHEMA_FIELD: Record<string, unknown> = {
-  image: { type: 'string' }
+/**
+ * The replies under a post, which the model writes because a canned line cannot answer what she
+ * actually posted. How many are kept is rolled against how many girls she is close to; this only
+ * has to supply enough of them, and the right kind.
+ */
+export function postCommentLines(): string[] {
+  return [
+    'Each post also carries "comments": what other students replied underneath it, in their own voices — up to five, and an empty array on the posts nobody answers, which is most of them. A post with a picture draws more than one without.',
+    'They are strangers from the four thousand this campus holds, not the characters above: they do not know her, they are not the reader, and none of them may be named. No handles and no @s — just what each one said.',
+    'They answer the post they are under. A reply to a picture is a reply to that picture; one under a picture with skin in it reads like a public feed at its least charming, which is strangers being obvious at somebody who did not ask.'
+  ]
 }
+
+/** The fields a post's picture and its replies need, spread into the slot-intro schema. */
+export const POST_PHOTO_SCHEMA_FIELD: Record<string, unknown> = {
+  image: { type: 'string' },
+  comments: { type: 'array', items: { type: 'string' } }
+}
+
+/**
+ * Both are **required and answered empty**, never omitted: a field a model may leave out is a
+ * field it leaves out, and `image` decides whether a picture happens at all.
+ */
+export const POST_PHOTO_SCHEMA_REQUIRED = ['image', 'comments'] as const

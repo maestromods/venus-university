@@ -1,3 +1,4 @@
+import { rollComments } from '../photoComments'
 import { startPostPhoto } from '../photoPost'
 import { rollPostLikes } from '@shared/feed'
 import { npcFriendsOf } from '@shared/npcRelationships'
@@ -35,17 +36,21 @@ export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
     const text = post.text?.trim()
     if (!text) continue
     const id = crypto.randomUUID()
+    // Both read off the reply rather than the type, which declares the post's fields inline
+    // where nothing can be added to them from outside.
+    const extra = post as { image?: string; comments?: string[] }
     game.appendFeedPost(charId, {
       id,
       text,
       date: game.date,
       time: game.time,
-      likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
+      likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length),
+      // What the crowd said, in the model's words; how many of them are kept is rolled here.
+      comments: rollComments(charId, extra.comments)
     })
-    // Her picture, if she described one. Read off the reply rather than the type, which declares
-    // the post's fields inline where nothing can be added to them from outside. Never awaited:
-    // the feed is read long after the slot opened, and the post already stands without it.
-    void startPostPhoto(charId, id, (post as { image?: string }).image)
+    // Her picture, if she described one. Never awaited: the feed is read long after the slot
+    // opened, and the post already stands without it.
+    void startPostPhoto(charId, id, extra.image)
     // A stranger's post is a teaser candidate; blocked counts as contact, since the flag is
     // masked rather than cleared.
     const flags = game.charInfo[charId]?.flags

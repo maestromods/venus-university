@@ -13,6 +13,8 @@ import {
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
 import type { ChatPhoto } from '@shared/photoTypes'
+import type { PostComment } from '@shared/postComments'
+import { PostComments } from '../components/PostComments'
 import {
   MessagePhoto,
   MessagePhotoBubble,
@@ -1676,6 +1678,8 @@ const FeedPost = memo(function FeedPost({
     liked?: boolean
     /** The picture she attached. Declared here because this shape is the row's own, not `SocialPost`. */
     photo?: ChatPhoto
+    /** What the crowd said under it, for the same reason. */
+    comments?: PostComment[]
   }
   /** Somebody he has no contact info for — the one route by which one reaches his feed. */
   stranger?: boolean
@@ -1740,6 +1744,7 @@ const FeedPost = memo(function FeedPost({
           <MessagePhoto charId={charId} photo={post.photo} onOpen={openShot} />
         </div>
       )}
+      {post.comments && <PostComments comments={post.comments} />}
       <motion.button
         className={`vu-bb-like${post.liked ? ' vu-bb-like--on' : ''}`}
         type="button"
