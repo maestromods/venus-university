@@ -11,7 +11,7 @@
  */
 
 /** Which thread a picture belongs to, which is the middle of its name. */
-export const PHOTO_KINDS = ['bunnyboard', 'chat'] as const
+const PHOTO_KINDS = ['bunnyboard', 'chat'] as const
 export type PhotoKind = (typeof PHOTO_KINDS)[number]
 
 export function isPhotoKind(value: unknown): value is PhotoKind {

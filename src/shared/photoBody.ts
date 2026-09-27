@@ -104,7 +104,7 @@ const REAR_CUES = [
 ]
 
 /** The parts of her this picture contains. */
-export function seenIn(caption: string): Set<BodyField> {
+function seenIn(caption: string): Set<BodyField> {
   const text = caption.toLowerCase()
   const framing = FRAMING.find((rule) => rule.cues.some((cue) => text.includes(cue)))
   const seen = new Set<BodyField>(framing?.seen ?? SEEN_BY_DEFAULT)
@@ -116,7 +116,7 @@ export function seenIn(caption: string): Set<BodyField> {
 }
 
 /** How much of a part is left: covered, shaped through cloth, or bare. */
-export type Coverage = 'hidden' | 'shape' | 'exposed'
+type Coverage = 'hidden' | 'shape' | 'exposed'
 
 /** Clothing words in the caption, and which parts each one puts away entirely. */
 const HIDES: Readonly<Record<string, readonly BodyField[]>> = {
@@ -205,7 +205,7 @@ const BARE_CUES = [
  * What is covering each part. `bare` is the gate's verdict, and overrules the caption: a
  * picture allowed to be undressed and described as undressed has nothing on it to detect.
  */
-export function coverageIn(caption: string, bare: boolean): Record<BodyField, Coverage> {
+function coverageIn(caption: string, bare: boolean): Record<BodyField, Coverage> {
   const text = caption.toLowerCase()
   const stripped = bare && BARE_CUES.some((cue) => text.includes(cue))
 

@@ -26,11 +26,6 @@ function rankOf(tier: PhotoTier): number {
   return PHOTO_TIERS.indexOf(tier)
 }
 
-/** The lower of two tiers — what a picture becomes when the gate will not have it. */
-export function lowerTier(a: PhotoTier, b: PhotoTier): PhotoTier {
-  return rankOf(a) <= rankOf(b) ? a : b
-}
-
 /** What the save says she is willing to send him right now. */
 export function allowedPhotoTier(input: {
   flags: CharFlags | undefined
