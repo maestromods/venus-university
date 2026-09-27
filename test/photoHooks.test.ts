@@ -121,6 +121,16 @@ const HOOKS: readonly { file: string; needs: readonly string[]; why: string }[] 
     why: 'the player cannot turn photographs off'
   },
   {
+    file: 'src/renderer/vu_styles/PhotoBubble.css',
+    needs: ['.vu-bb-bubble.vu-bb-bubble--photo'],
+    why: 'at one class the build’s own bubble rule wins on load order and the picture sits in a padded bubble'
+  },
+  {
+    file: 'src/renderer/vu_styles/ContactGallery.css',
+    needs: ['.vu-gallery-grid.vu-contact-shots', '.vu-gallery-cell.vu-contact-shot'],
+    why: 'at one class the CG grid wins on load order and her gallery draws in landscape cells'
+  },
+  {
     file: 'src/renderer/views/EditCharacterModal.tsx',
     needs: ['BODY_FIELDS.map', 'bodyForm(', 'cleanBody('],
     why: 'her body cannot be read or written by hand'

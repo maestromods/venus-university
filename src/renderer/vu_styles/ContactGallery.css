@@ -56,11 +56,15 @@
 }
 
 /* Portrait, because a phone holds a phone that way; the CG grid's own cells are landscape. */
-.vu-contact-shots {
+/* Written with the base class as well, so it wins on specificity rather than on load order.
+   These sit in the feature's own stylesheet, which the bundler happens to place *before* the
+   build's — so at one class each the build's rule would win and the override would do nothing.
+   Two classes settles it wherever either file lands. */
+.vu-gallery-grid.vu-contact-shots {
   margin-top: 4px;
 }
 
-.vu-contact-shot {
+.vu-gallery-cell.vu-contact-shot {
   aspect-ratio: 2 / 3;
   cursor: pointer;
 }

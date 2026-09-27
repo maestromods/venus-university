@@ -11,7 +11,11 @@
 /* A picture is the bubble rather than something inside one: no padding and no surface, or the
    five pixels of bubble around the edge read as a border the feed's own pictures do not have.
    The corner it is cut to is the picture's own. */
-.vu-bb-bubble--photo {
+/* Written with the base class as well, so it wins on specificity rather than on load order.
+   These sit in the feature's own stylesheet, which the bundler happens to place *before* the
+   build's — so at one class each the build's rule would win and the override would do nothing.
+   Two classes settles it wherever either file lands. */
+.vu-bb-bubble.vu-bb-bubble--photo {
   padding: 0;
   background: none;
   white-space: normal;
