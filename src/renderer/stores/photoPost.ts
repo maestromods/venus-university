@@ -23,7 +23,7 @@ import { noNsfwImagesOf, useSettingsStore } from './settingsStore'
  * What a post's picture is allowed to be, read off the caption she wrote rather than a flag
  * beside it, and capped by the one rule a public feed has.
  */
-export function settlePostPhoto(image: string | undefined): { tier: PhotoTier; scene: string } | null {
+function settlePostPhoto(image: string | undefined): { tier: PhotoTier; scene: string } | null {
   const scene = image?.trim()
   if (!scene || !canSendPhotos()) return null
 
@@ -37,7 +37,7 @@ export function settlePostPhoto(image: string | undefined): { tier: PhotoTier; s
 }
 
 /** The name the post's picture will land under, settled before the post is filed. */
-export async function reservePostPhotoName(charId: string): Promise<string | null> {
+async function reservePostPhotoName(charId: string): Promise<string | null> {
   const game = useGameStore.getState()
   const character = game.characters[charId]
   if (!character || !game.playthroughId) return null
@@ -97,6 +97,43 @@ async function postWhenDrawn(
   console.log(`[feed] ${character.firstName} posted ${file}`)
 }
 
+/** A picture this slot has settled on and reserved a name for, waiting on the post it belongs to. */
+export interface PreparedPostPhoto {
+  shot: { tier: PhotoTier; scene: string }
+  file: string
+}
+
+/** Whether this slot has already settled on a picture. Cleared by {@link beginSlotPhotos}. */
+let drawnThisSlot = false
+
+/** Called as a slot's posts are filed, before any of them are looked at. */
+export function beginSlotPhotos(): void {
+  drawnThisSlot = false
+}
+
+/**
+ * The picture one post will carry, or `null` for a post that carries none.
+ *
+ * **One picture a slot at most**: a render is half a minute of the machine, and a feed where
+ * every post carries a photograph reads as an advertisement rather than a year group. The first
+ * post whose caption settles takes it and the rest are filed as text.
+ *
+ * The name is reserved here, and the caller awaits it before filing anything: the slot save is
+ * written the moment the posts are filed, and a post that goes into it without the name of the
+ * picture it is waiting for can never be told what landed.
+ */
+export async function preparePostPhoto(
+  charId: string,
+  image: string | undefined
+): Promise<PreparedPostPhoto | null> {
+  if (drawnThisSlot) return null
+  const shot = settlePostPhoto(image)
+  if (!shot) return null
+  drawnThisSlot = true
+  const file = await reservePostPhotoName(charId)
+  return file ? { shot, file } : null
+}
+
 /**
  * The post waiting for its picture to be drawn, and the slot's own render held with it.
  *
@@ -122,11 +159,10 @@ let held: {
 export function holdPostPhoto(
   charId: string,
   written: SocialPost,
-  shot: { tier: PhotoTier; scene: string },
-  file: string,
+  prepared: PreparedPostPhoto,
   nudge: (charId: string) => void
 ): void {
-  held = { charId, written, shot, file, nudge }
+  held = { charId, written, shot: prepared.shot, file: prepared.file, nudge }
 }
 
 /**

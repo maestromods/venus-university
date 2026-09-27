@@ -1,5 +1,5 @@
 import { rollComments } from '../photoComments'
-import { holdPostPhoto, reservePostPhotoName, settlePostPhoto } from '../photoPost'
+import { beginSlotPhotos, holdPostPhoto, preparePostPhoto } from '../photoPost'
 import { rollPostLikes } from '@shared/feed'
 import { npcFriendsOf } from '@shared/npcRelationships'
 import type { EndingPostsResponse, FeedExtras, SlotIntroResponse, TimeSlot } from '@shared/types'
@@ -28,7 +28,7 @@ import { deliverBunnybotNow } from '../textingLoop'
  */
 export async function deliverSlotPosts(posts: SlotIntroResponse['posts']): Promise<void> {
   const fresh: TeaserCandidate[] = []
-  let shotAlreadyDrawn = false
+  beginSlotPhotos()
 
   for (const post of posts ?? []) {
     const game = useGameStore.getState()
@@ -37,18 +37,12 @@ export async function deliverSlotPosts(posts: SlotIntroResponse['posts']): Promi
     const text = post.text?.trim()
     if (!text) continue
     const id = crypto.randomUUID()
-    // Both read off the reply rather than the type, which declares the post's fields inline
-    // where nothing can be added to them from outside.
+    // Read off the reply rather than the type, which declares the post's fields inline where
+    // nothing can be added to them from outside.
     const extra = post as { image?: string; comments?: string[] }
-    // One picture a slot at most: a render is half a minute of the machine, and a feed where
-    // every post carries a photograph reads as an advertisement rather than a year group.
-    const shot = shotAlreadyDrawn ? null : settlePostPhoto(extra.image)
-    if (shot) shotAlreadyDrawn = true
-    // Awaited, and before the post is filed: the slot save is written the moment this returns,
-    // and a post that goes into it without the name of the picture it is waiting for can never
-    // be told what landed. The name settles first, so the save carries it either way.
-    const file = shot ? await reservePostPhotoName(charId) : null
-    // What the crowd said, in the model's words; how many of them are kept is rolled here.
+    // Awaited before anything is filed: the picture's name has to be in the post the slot save
+    // is about to write down.
+    const shot = await preparePostPhoto(charId, extra.image)
     const comments = rollComments(charId, extra.comments)
     const written = {
       id,
@@ -60,15 +54,10 @@ export async function deliverSlotPosts(posts: SlotIntroResponse['posts']): Promi
       ...(comments.length > 0 ? { comments } : {})
     }
 
-    // A post she took a picture for waits for the picture. She posted both at once or she posted
-    // nothing: an hour of text under an empty frame is not what anybody wrote, and a picture that
-    // never renders leaves no evidence it was meant to.
-    //
-    // The render itself is held until the reader commits to something this slot, so it runs
-    // under the scene rather than while he is on the map with the feed open. Until then the feed
-    // is the slot's text posts and nothing else.
-    if (shot && file) {
-      holdPostPhoto(charId, written, shot, file, nudgeFirstContactPost)
+    // A post she took a picture for is not filed until the picture exists; the render itself
+    // waits for the reader to commit to something. Both rules live in `photoPost`.
+    if (shot) {
+      holdPostPhoto(charId, written, shot, nudgeFirstContactPost)
       continue
     }
 
