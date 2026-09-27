@@ -54,7 +54,7 @@ export async function reservePostPhotoName(charId: string): Promise<string | nul
  *
  * A render that fails takes the post with it, rather than leaving text under an empty frame.
  */
-export async function postWhenDrawn(
+async function postWhenDrawn(
   charId: string,
   written: SocialPost,
   shot: { tier: PhotoTier; scene: string },
@@ -95,4 +95,48 @@ export async function postWhenDrawn(
   // The post reached the feed after the slot save was written, so it goes to disk on its own.
   savePhotoState()
   console.log(`[feed] ${character.firstName} posted ${file}`)
+}
+
+/**
+ * The post waiting for its picture to be drawn, and the slot's own render held with it.
+ *
+ * Why it waits rather than starting as the slot opens: a render is half a minute of the machine,
+ * and the reader spends the start of a slot on the map deciding where to go. Starting it then
+ * puts the whole render in the one stretch he might be reading the feed, and finishes it in the
+ * one stretch he is not. Held until he commits to something instead, it runs underneath the
+ * scene he committed to — and the post is on the feed by the time he is free to look at it.
+ *
+ * One at a time, since only one picture is drawn a slot anyway. A hold that is never taken up —
+ * a slot the reader passed through without doing anything — is replaced by the next slot's, and
+ * the post it belonged to never existed, which is the same answer a failed render gives.
+ */
+let held: {
+  charId: string
+  written: SocialPost
+  shot: { tier: PhotoTier; scene: string }
+  file: string
+  nudge: (charId: string) => void
+} | null = null
+
+/** Files the post and its picture to be drawn when the reader next commits to something. */
+export function holdPostPhoto(
+  charId: string,
+  written: SocialPost,
+  shot: { tier: PhotoTier; scene: string },
+  file: string,
+  nudge: (charId: string) => void
+): void {
+  held = { charId, written, shot, file, nudge }
+}
+
+/**
+ * Starts the held render, if there is one. Called as the reader commits to an action, which is
+ * every turn of a scene as well as the first — so it takes the hold before starting, and a
+ * second call finds nothing.
+ */
+export function startHeldPostPhoto(): void {
+  const start = held
+  if (!start) return
+  held = null
+  void postWhenDrawn(start.charId, start.written, start.shot, start.file, start.nudge)
 }

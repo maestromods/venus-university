@@ -1,5 +1,5 @@
 import { rollComments } from '../photoComments'
-import { postWhenDrawn, reservePostPhotoName, settlePostPhoto } from '../photoPost'
+import { holdPostPhoto, reservePostPhotoName, settlePostPhoto } from '../photoPost'
 import { rollPostLikes } from '@shared/feed'
 import { npcFriendsOf } from '@shared/npcRelationships'
 import type { EndingPostsResponse, FeedExtras, SlotIntroResponse, TimeSlot } from '@shared/types'
@@ -63,8 +63,12 @@ export async function deliverSlotPosts(posts: SlotIntroResponse['posts']): Promi
     // A post she took a picture for waits for the picture. She posted both at once or she posted
     // nothing: an hour of text under an empty frame is not what anybody wrote, and a picture that
     // never renders leaves no evidence it was meant to.
+    //
+    // The render itself is held until the reader commits to something this slot, so it runs
+    // under the scene rather than while he is on the map with the feed open. Until then the feed
+    // is the slot's text posts and nothing else.
     if (shot && file) {
-      void postWhenDrawn(charId, written, shot, file, nudgeFirstContactPost)
+      holdPostPhoto(charId, written, shot, file, nudgeFirstContactPost)
       continue
     }
 

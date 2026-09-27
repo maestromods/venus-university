@@ -99,6 +99,7 @@ import {
   useGameStore,
   type SceneKind
 } from './gameStore'
+import { startHeldPostPhoto } from './photoPost'
 import { settlePendingPhotos } from './photoRecovery'
 import { useCharacterStore } from './characterStore'
 import { castOf, useSaveStore } from './saveStore'
@@ -469,6 +470,10 @@ async function startOrientationScene(): Promise<void> {
   game.setInputDraft('')
   game.setAwaitingInput(false)
   game.setBusy(true)
+  // The slot's held feed picture, now that he is busy with something: it draws under the scene
+  // and the post is waiting on the feed when he is free again. Takes the hold, so the turns
+  // after this one find nothing.
+  startHeldPostPhoto()
   game.setStreaming(true)
 
   // The same settling every other scene start runs; an unanswered invitation is a snub here too.
