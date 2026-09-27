@@ -12,6 +12,7 @@ import {
 } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
+import { MessagePhotoBubble, PhotoLightboxHost } from '../components/PhotoBubble'
 import {
   fullNameOf,
   type Character,
@@ -303,6 +304,7 @@ export function BunnyboardModal({
       exit="gone"
       {...overlayProps}
     >
+      <PhotoLightboxHost />
       {contact ? (
         <ContactPage key={contact} charId={contact} theme={theme} />
       ) : (
@@ -1216,10 +1218,14 @@ function MessageBubble({ message }: { message: ChatMessage }): JSX.Element {
       </div>
     )
   }
+  // A picture is its own message, the way a phone sends one: her words in one bubble and the
+  // photograph in the next, rather than a snapshot pasted under a sentence.
+  const side = message.sender === 'player' ? 'mine' : 'theirs'
   return (
-    <div className={`vu-bb-bubble vu-bb-bubble--${message.sender === 'player' ? 'mine' : 'theirs'}`}>
-      {message.text}
-    </div>
+    <>
+      {message.text && <div className={`vu-bb-bubble vu-bb-bubble--${side}`}>{message.text}</div>}
+      {message.photo && <MessagePhotoBubble photo={message.photo} sender={message.sender} />}
+    </>
   )
 }
 

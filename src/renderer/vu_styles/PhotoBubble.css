@@ -1,0 +1,134 @@
+/* ---- the picture on a text ------------------------------------------------ */
+
+/* The photo feature's own rules, in the feature's own file rather than appended to
+   `Bunnyboard.css`: the component imports this, so a sync that replaces that stylesheet carries
+   nothing of the feature away with it. Class names stay in the `vu-bb-` family, since what they
+   style is a bubble on that thread. */
+
+
+/* A photograph arrives as its own message, so its bubble is the frame and nothing else: the
+   padding is a mount rather than the breathing room text wants. */
+/* A picture is the bubble rather than something inside one: no padding and no surface, or the
+   five pixels of bubble around the edge read as a border the feed's own pictures do not have.
+   The corner it is cut to is the picture's own. */
+.vu-bb-bubble--photo {
+  padding: 0;
+  background: none;
+  white-space: normal;
+}
+
+/* The picture itself. A fixed width rather than a proportion of the bubble, which is only as
+   wide as what it holds — the states below have no picture to be measured from. */
+.vu-bb-photo {
+  display: block;
+  width: 280px;
+  max-width: 100%;
+  border-radius: 12px;
+}
+
+/* The three states that are not a photograph. Each keeps the bubble's width *and* the shape a
+   photograph comes back in — 832x1216, the size `characterPhoto.json` renders at — so nothing
+   moves when the picture lands on top of the frame that was waiting for it. Change the graph's
+   latent and this follows it. */
+.vu-bb-photo--pending,
+.vu-bb-photo--failed {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 832 / 1216;
+  /* The dashed edge is drawn inside the frame, so the frame is exactly the picture's size and
+     not two pixels more. */
+  box-sizing: border-box;
+  border: 1px dashed color-mix(in oklab, var(--vu-text) 25%, transparent);
+  background: color-mix(in oklab, var(--vu-text) 6%, transparent);
+  color: color-mix(in oklab, var(--vu-text) 65%, transparent);
+  font: 500 13.5px/1.4 var(--font-body);
+  text-align: center;
+}
+
+/* The bunny carries the wait, alone: a line of text under it said what the hop already says. */
+.vu-bb-photo--pending {
+  place-items: center;
+}
+
+/* Sized for a bubble rather than a screen: the mark carries no size of its own. */
+.vu-bb-photo__bunny {
+  display: block;
+  width: 34px;
+  color: color-mix(in oklab, var(--vu-text) 45%, transparent);
+}
+
+.vu-bb-photo__bunny svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Covered until asked for, so an explicit one is never on screen unbidden — blurred rather
+   than hidden, since a blank frame says nothing about what is behind it and this says "a
+   photograph, not yet". Scaled up under its own clip, because a blur samples past the edges
+   and would otherwise leave the bubble's corners soft and pale. */
+.vu-bb-photo--veiled {
+  filter: blur(26px);
+  transform: scale(1.08);
+}
+
+/* The picture and whatever sits over it. */
+.vu-bb-photo-frame {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+/* The switch that covers and uncovers, in one corner either way so it reads as one control.
+   Under the pointer only while the picture is on show — it is not the thing being looked at —
+   and always visible while it is covered, where there is nothing for it to be in the way of. */
+.vu-bb-photo-eye {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--vu-accent-shadow) 62%, transparent);
+  color: var(--vu-text);
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.14s ease-out;
+}
+
+.vu-bb-photo-frame:hover .vu-bb-photo-eye,
+.vu-bb-photo-eye:focus-visible,
+.vu-bb-photo-eye--covered {
+  opacity: 1;
+}
+
+.vu-bb-photo-eye:hover {
+  background: color-mix(in srgb, var(--vu-accent-shadow) 82%, transparent);
+}
+
+/* The picture opens at the size it was drawn, so it is a control and has to look like one.
+   It clips, because a veiled picture is scaled up inside it. */
+.vu-bb-photo-open {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  cursor: zoom-in;
+}
+
+/* A veiled one is not opened by tapping, it is unveiled. */
+.vu-bb-photo-open:has(.vu-bb-photo--veiled) {
+  cursor: pointer;
+}
+
+.vu-bb-post-shot .vu-bb-photo {
+  width: 100%;
+  border-radius: 16px;
+}

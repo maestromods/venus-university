@@ -3,6 +3,7 @@ import type { BaseWindow } from 'electron'
 import { join } from 'path'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { handleCharImageProtocol, registerCharImageScheme } from './charImageProtocol'
+import { handlePhotoProtocol } from './photoProtocol'
 import { registerIpcHandlers } from './ipc'
 import { installConsoleLog } from './logFile'
 import { redact } from './redact'
@@ -199,6 +200,7 @@ app
     electronApp.setAppUserModelId(APP_ID)
 
     handleCharImageProtocol()
+    handlePhotoProtocol()
 
     app.on('browser-window-created', (_, window) => {
       optimizer.watchWindowShortcuts(window)

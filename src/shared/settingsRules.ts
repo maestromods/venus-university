@@ -17,6 +17,8 @@ export const SETTINGS_SCHEMA_VERSION = 1
 const SETTINGS_REQUIRED: Record<
   keyof Omit<
     Settings,
+    // `photos` — the photo feature's, and optional: absent reads as off.
+    | 'photos'
     | 'apiKey'
     | 'endpointApiKey'
     | 'endpointUrl'

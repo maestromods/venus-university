@@ -124,6 +124,7 @@ import {
   runAbortable,
   setProgressSink
 } from '@shared/jobQueue'
+import { registerPhotoIpc } from './photoIpc'
 import { copyEndingArtTo, generateEndingArt, readEndingArt } from './services/endingArtService'
 import {
   deleteProfilePicture,
@@ -209,6 +210,8 @@ async function enqueueComfyJob<T>(
 
 /** Registers every IPC channel; keep this, preload and the d.ts in sync. */
 export function registerIpcHandlers(): void {
+  // The photo feature's three channels, which keep their own module and their own queue.
+  registerPhotoIpc(handle)
   // The key the cloud calls need never leaves main; the transport reads it through this port.
   useSettingsSource(getSettings)
   // Fixed channel: jobs can outlive their original `invoke`, so broadcast progress.

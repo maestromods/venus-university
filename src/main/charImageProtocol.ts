@@ -4,6 +4,7 @@ import { isCharFileRel } from '@shared/characterFiles'
 import { SAFE_CHAR_ID } from '@shared/characterRules'
 import { getCharacterImagePath } from './paths'
 import { imagePath } from './services/imageFiles'
+import { PHOTO_SCHEME } from './photoProtocol'
 
 /** Disk-backed image URLs: the host is the charId and the path is the image's own. */
 const SCHEME = 'charimg'
@@ -17,7 +18,10 @@ export function registerCharImageScheme(): void {
     {
       scheme: SCHEME,
       privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true }
-    }
+    },
+    // A second `registerSchemesAsPrivileged` replaces the first, so `playimg://` is
+    // privileged from here rather than registering itself.
+    PHOTO_SCHEME
   ])
 }
 
