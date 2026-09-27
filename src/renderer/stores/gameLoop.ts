@@ -435,8 +435,9 @@ async function beginSlot(): Promise<void> {
   // The texts the girls he left wrote, filed on the same terms.
   deliverSlotBreakups(opening.breakups)
 
-  // The status updates the same call wrote, filed before the fold on the same terms.
-  deliverSlotPosts(opening.posts)
+  // The status updates the same call wrote, filed before the fold on the same terms. Awaited
+  // for the picture's name, which has to be in the post before the fold writes it down.
+  await deliverSlotPosts(opening.posts)
 
   // Folded into the slot-save minted before the call went out, which is the start-of-slot
   // decision point.

@@ -1,72 +1,98 @@
-import { allowedPostTier, settlePhoto } from '@shared/photoGate'
+import { allowedPostTier, settlePhoto, type PhotoTier } from '@shared/photoGate'
+import type { SocialPost } from '@shared/types'
 import { useGameStore } from './gameStore'
-import { canSendPhotos, savePhotoState, setFeedPostPhoto } from './photoStore'
+import { canSendPhotos, savePhotoState } from './photoStore'
 import { noNsfwImagesOf, useSettingsStore } from './settingsStore'
 
 /**
  * The picture on a post on her feed.
  *
- * The same two moves the thread makes, with one difference: what a post may show is flat. A post
- * is public — there is no relationship to read, no one reader it is for, and nothing she has been
- * through with anybody changes what her whole year gets to see. `allowedPostTier` says so: a
- * swimsuit is ordinary on a feed, and nothing past it is.
+ * What a post may show is flat, unlike a thread's. A post is public — there is no relationship
+ * to read, no one reader it is for, and nothing she has been through with anybody changes what
+ * her whole year gets to see. `allowedPostTier` says so: a swimsuit is ordinary on a feed, and
+ * nothing past it is.
  *
- * The post is appended by the caller and the picture arrives on it afterwards, rather than the
- * post being held back until the render lands. A feed is read long after the slot opened, so a
- * post that shows up without its photograph still reads — and holding it back would put a render
- * in front of the teaser and nudge logic that runs as each post lands.
+ * The other rule here is that a post she took a picture for **waits for the picture**. She
+ * posted both at once or she posted nothing: an hour of text under an empty frame is not what
+ * anybody wrote, and a picture that never renders leaves no evidence it was meant to. This is
+ * the one place the feed and the thread part company — a bubble on a thread appears at once and
+ * fills in, because her words have already landed and the reader is watching them land.
  */
-export async function startPostPhoto(
-  charId: string,
-  postId: string,
-  image: string | undefined
-): Promise<void> {
-  const scene = image?.trim()
-  if (!scene || !canSendPhotos()) return
 
-  const verdict = settlePhoto({
-    sendPhoto: true,
-    photoPrompt: scene,
-    allowed: allowedPostTier(noNsfwImagesOf(useSettingsStore.getState()))
-  })
+/**
+ * What a post's picture is allowed to be, read off the caption she wrote rather than a flag
+ * beside it, and capped by the one rule a public feed has.
+ */
+export function settlePostPhoto(image: string | undefined): { tier: PhotoTier; scene: string } | null {
+  const scene = image?.trim()
+  if (!scene || !canSendPhotos()) return null
+
+  const allowed = allowedPostTier(noNsfwImagesOf(useSettingsStore.getState()))
+  const verdict = settlePhoto({ sendPhoto: true, photoPrompt: scene, allowed })
   if (!verdict.send) {
     if (verdict.note) console.log(`[feed] no picture on a post: ${verdict.note}`)
-    return
+    return null
   }
+  return { tier: verdict.tier, scene }
+}
 
+/** The name the post's picture will land under, settled before the post is filed. */
+export async function reservePostPhotoName(charId: string): Promise<string | null> {
+  const game = useGameStore.getState()
+  const character = game.characters[charId]
+  if (!character || !game.playthroughId) return null
+  const result = await window.api.photo.reserveName(game.playthroughId, character, 'bunnyboard')
+  if (result.ok) return result.data
+  console.warn(`[feed] no name for a post's picture: ${result.error.code}`, result.error.message)
+  return null
+}
+
+/**
+ * Draws one post's picture and files the post where it landed. Never awaited: the feed is read
+ * long after the slot opened, so nothing is kept waiting on a render — but the post itself does
+ * not appear until the picture it was written for is on disk.
+ *
+ * A render that fails takes the post with it, rather than leaving text under an empty frame.
+ */
+export async function postWhenDrawn(
+  charId: string,
+  written: SocialPost,
+  shot: { tier: PhotoTier; scene: string },
+  file: string,
+  nudge: (charId: string) => void
+): Promise<void> {
   const game = useGameStore.getState()
   const character = game.characters[charId]
   const playthroughId = game.playthroughId
   if (!character || !playthroughId) return
 
-  // The name before the picture, so the post carries it into the save whatever the render does
-  // next — the one thing `settlePendingPhotos` has to look for.
-  const named = await window.api.photo.reserveName(playthroughId, character, 'bunnyboard')
-  if (!named.ok) {
-    console.warn(`[feed] no name for a post's picture: ${named.error.code}`, named.error.message)
-    return
-  }
-  const file = named.data
-  setFeedPostPhoto(charId, postId, { tier: verdict.tier, scene, file, pending: true })
-  savePhotoState()
-
   const result = await window.api.photo.generate(
     playthroughId,
     character,
-    verdict.tier,
-    scene,
+    shot.tier,
+    shot.scene,
     file
   )
+  const live = useGameStore.getState()
   // The save may have moved on under a render: a picture from a playthrough the player has left
   // belongs to nothing, and neither does the post that was waiting on it.
-  if (useGameStore.getState().playthroughId !== playthroughId) return
+  if (live.playthroughId !== playthroughId) return
   if (!result.ok) {
-    console.warn(`[feed] a post's picture failed: ${result.error.code}`, result.error.message)
-    setFeedPostPhoto(charId, postId, { tier: verdict.tier, scene, file, failed: true })
-    savePhotoState()
+    console.warn(
+      `[feed] a post's picture failed, so the post is dropped: ${result.error.code}`,
+      result.error.message
+    )
     return
   }
-  setFeedPostPhoto(charId, postId, { tier: verdict.tier, scene, file })
+
+  live.appendFeedPost(charId, {
+    ...written,
+    photo: { tier: shot.tier, scene: shot.scene, file }
+  })
+  // Held back with the post, since there was nothing to be notified about until now.
+  const flags = live.charInfo[charId]?.flags
+  if (flags?.gaveContactInfo && !flags.blocked) nudge(charId)
+  // The post reached the feed after the slot save was written, so it goes to disk on its own.
   savePhotoState()
   console.log(`[feed] ${character.firstName} posted ${file}`)
 }

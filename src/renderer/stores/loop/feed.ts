@@ -1,5 +1,5 @@
 import { rollComments } from '../photoComments'
-import { startPostPhoto } from '../photoPost'
+import { postWhenDrawn, reservePostPhotoName, settlePostPhoto } from '../photoPost'
 import { rollPostLikes } from '@shared/feed'
 import { npcFriendsOf } from '@shared/npcRelationships'
 import type { EndingPostsResponse, FeedExtras, SlotIntroResponse, TimeSlot } from '@shared/types'
@@ -26,8 +26,9 @@ import { deliverBunnybotNow } from '../textingLoop'
  * Files the status updates the slot's opening came back with, picks the one stranger's post the
  * feed surfaces for the slot, and fills a feed too thin to read with more of them.
  */
-export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
+export async function deliverSlotPosts(posts: SlotIntroResponse['posts']): Promise<void> {
   const fresh: TeaserCandidate[] = []
+  let shotAlreadyDrawn = false
 
   for (const post of posts ?? []) {
     const game = useGameStore.getState()
@@ -39,18 +40,35 @@ export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
     // Both read off the reply rather than the type, which declares the post's fields inline
     // where nothing can be added to them from outside.
     const extra = post as { image?: string; comments?: string[] }
-    game.appendFeedPost(charId, {
+    // One picture a slot at most: a render is half a minute of the machine, and a feed where
+    // every post carries a photograph reads as an advertisement rather than a year group.
+    const shot = shotAlreadyDrawn ? null : settlePostPhoto(extra.image)
+    if (shot) shotAlreadyDrawn = true
+    // Awaited, and before the post is filed: the slot save is written the moment this returns,
+    // and a post that goes into it without the name of the picture it is waiting for can never
+    // be told what landed. The name settles first, so the save carries it either way.
+    const file = shot ? await reservePostPhotoName(charId) : null
+    // What the crowd said, in the model's words; how many of them are kept is rolled here.
+    const comments = rollComments(charId, extra.comments)
+    const written = {
       id,
       text,
       date: game.date,
       time: game.time,
       likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length),
-      // What the crowd said, in the model's words; how many of them are kept is rolled here.
-      comments: rollComments(charId, extra.comments)
-    })
-    // Her picture, if she described one. Never awaited: the feed is read long after the slot
-    // opened, and the post already stands without it.
-    void startPostPhoto(charId, id, extra.image)
+      // Left off entirely where nobody answered, rather than an empty array in every post.
+      ...(comments.length > 0 ? { comments } : {})
+    }
+
+    // A post she took a picture for waits for the picture. She posted both at once or she posted
+    // nothing: an hour of text under an empty frame is not what anybody wrote, and a picture that
+    // never renders leaves no evidence it was meant to.
+    if (shot && file) {
+      void postWhenDrawn(charId, written, shot, file, nudgeFirstContactPost)
+      continue
+    }
+
+    game.appendFeedPost(charId, written)
     // A stranger's post is a teaser candidate; blocked counts as contact, since the flag is
     // masked rather than cleared.
     const flags = game.charInfo[charId]?.flags
