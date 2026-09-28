@@ -329,3 +329,29 @@ describe('endpointProblem', () => {
   })
 })
 
+/**
+ * `mergePatch` spreads the stored settings and then **names** every field it takes from the
+ * patch. A field it does not name is silently discarded: the stored value survives, the write
+ * still reports success, and the control is reseeded from a store that never changed — so the
+ * checkbox springs back to where it was.
+ *
+ * Nothing about that fails loudly. The compiler is happy either way, since the patch type carries
+ * the field whichever end drops it.
+ */
+describe('mergePatch — a switch the patch names is the switch that lands', () => {
+  it('turns photographs off', () => {
+    const merged = mergePatch(settings(), settingsPatch({ photos: false }))
+    expect(merged.photos).toBe(false)
+  })
+
+  it('turns them on again', () => {
+    const merged = mergePatch(settings({ photos: false }), settingsPatch({ photos: true }))
+    expect(merged.photos).toBe(true)
+  })
+
+  /** Absent is how a save written before the feature existed reads, and absent is photographs on. */
+  it('leaves it absent where the patch says nothing', () => {
+    const merged = mergePatch(settings({ photos: false }), settingsPatch())
+    expect(merged.photos).toBeUndefined()
+  })
+})

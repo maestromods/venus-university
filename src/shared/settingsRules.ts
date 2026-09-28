@@ -17,7 +17,8 @@ export const SETTINGS_SCHEMA_VERSION = 1
 const SETTINGS_REQUIRED: Record<
   keyof Omit<
     Settings,
-    // `photos` — the photo feature's, and optional: absent reads as off.
+    // `photos` — the photo feature's, and optional: absent reads as on, since a save written
+    // before the feature existed is not a save that asked for it to be off.
     | 'photos'
     | 'apiKey'
     | 'endpointApiKey'
@@ -257,6 +258,9 @@ export function mergePatch(current: Settings, patch: SettingsPatch): Settings {
     warnEndingEdit: patch.warnEndingEdit,
     noNsfwImages: patch.noNsfwImages,
     lessNsfwText: patch.lessNsfwText,
+    // Named like every other switch: `...current` alone would keep the stored value and discard
+    // what the patch asks for, so the toggle would write nothing and spring back.
+    photos: patch.photos,
     // Absent stays absent, as the volumes below do, and absent is the sound playing.
     noNsfwSound: patch.noNsfwSound,
     sfwAsked: patch.sfwAsked,
