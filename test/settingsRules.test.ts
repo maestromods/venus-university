@@ -354,4 +354,10 @@ describe('mergePatch — a switch the patch names is the switch that lands', () 
     const merged = mergePatch(settings({ photos: false }), settingsPatch())
     expect(merged.photos).toBeUndefined()
   })
+
+  it('turns body details on, and off again', () => {
+    const on = mergePatch(settings(), settingsPatch({ bodyDetails: true }))
+    expect(on.bodyDetails).toBe(true)
+    expect(mergePatch(on, settingsPatch({ bodyDetails: false })).bodyDetails).toBe(false)
+  })
 })
