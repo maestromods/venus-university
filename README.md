@@ -14,6 +14,18 @@
 >   - *Body details* — an optional build, chest, hips and backside for each character, picked
 >     from tags the image model knows, so her body stays the same across sprites, CGs and photos.
 >     Off by default; the switch is in Character Manage.
+> - **Photos need the game's local ComfyUI, set up exactly as Venus Dev's.** There is no cloud or
+>   other fallback: without a working ComfyUI the characters are never offered a photo at all.
+>   Photos render with the same models the game already uses for sprites and CGs, and the tags
+>   they are drawn from are tuned for them, so keep them exactly as the game's own setup installs
+>   them:
+>   - checkpoint `novaAnimeXL_ilV190.safetensors`
+>   - LoRA `usnrStyle.safetensors`
+>   - upscaler `RealESRGAN_x4plus_anime_6B.pth`
+>   - face model `segm/Anzhc Face seg 640 v2 y8n.pt`
+>
+>   A different checkpoint may still render, but outfits, bodies and poses will drift, and a
+>   missing model makes every photo fail with "Image failed to generate".
 > - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
 >   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
 >   are here only so the game builds from source.
