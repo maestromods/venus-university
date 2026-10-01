@@ -1,3 +1,51 @@
+> [!IMPORTANT]
+> **This is an unofficial, modified version of Venus University.** It is not made, endorsed or
+> supported by Venus Dev. The official game is on itch.io, linked below.
+>
+> - **Please do not report problems with this version to Venus Dev** — neither by email nor in the
+>   game's community. Anything you find here may have been caused by the changes below.
+> - **Modified by naudh1r, September 2026**, from Venus Dev's public mirror at commit `b56a990`.
+>   The full list of changes is this branch's commit history.
+> - **This branch adds the photo feature only**, with its own switches in Settings:
+>   - *Photos* — characters can text you a picture, or post one to the feed, rendered on your own
+>     machine by the local ComfyUI. Some can be explicit, depending on your relationship and your
+>     content settings. On by default wherever ComfyUI can render; turn on "No photos on
+>     Bunnyboard" for a text-only playthrough.
+>   - *Body details* — an optional build, chest, hips and backside for each character, picked
+>     from tags the image model knows, so her body stays the same across sprites, CGs and photos.
+>     Off by default; the switch is in Character Manage.
+> - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
+>   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
+>   are here only so the game builds from source.
+>
+> ### Installing this version
+>
+> Starting fresh:
+>
+> ```
+> git clone -b photo-feature https://github.com/naudh1r/venus-university.git
+> ```
+>
+> Already have Venus Dev's version cloned? Add this one beside it and switch to it — your unzipped
+> characters and your saves stay where they are. Commit or stash any changes of your own first.
+>
+> ```
+> git remote add naudh1r https://github.com/naudh1r/venus-university.git
+> git fetch naudh1r
+> git checkout -b photo-feature naudh1r/photo-feature
+> ```
+>
+> Then set it up as Venus Dev's instructions below describe. Later, `git pull` on that branch picks
+> up changes to this version, and `git checkout main` takes you back to his.
+>
+> **This version follows Venus Dev's releases by hand, not automatically.** It is built on his mirror
+> at `b56a990` and keeps working as it is when he publishes something newer; it just does not have
+> his new changes until they are merged in here. If you have already updated to a newer release of
+> his, switching to this version takes you back to an older one, and a save made on his newer
+> version may not load in it.
+>
+> Venus Dev's own README follows, unedited.
+
 # Venus University
 
 Venus University is a single-player AI-driven dating sim available for web and desktop (via Electron).
