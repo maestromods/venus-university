@@ -26,6 +26,11 @@
 >
 >   A failed photo shows "Image failed to generate" with a Reroll button, which works once ComfyUI
 >   is back. A different checkpoint may still render, but outfits, bodies and poses will drift.
+>
+>   **Make sure ComfyUI is running before you play.** The game only starts it from Character
+>   Manage, so open Character Manage and start it there first. If you don't want to run ComfyUI
+>   while you play, turn on **No photos on Bunnyboard** in Settings → Content instead, and
+>   characters won't send any.
 > - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
 >   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
 >   are here only so the game builds from source.
