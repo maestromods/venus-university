@@ -1,50 +1,46 @@
 > [!IMPORTANT]
-> **This is an unofficial, modified version of Venus University.** It is not made, endorsed or
-> supported by Venus Dev. The official game is on itch.io, linked below.
+> **This is an unofficial, modified version of Venus University.** It is not made or supported by
+> Venus Dev. The official game is on itch.io, linked below.
 >
-> - **Please do not report problems with this version to Venus Dev** — neither by email nor in the
->   game's community. Anything you find here may have been caused by the changes below.
-> - **Modified by naudh1r, September 2026**, from Venus Dev's public mirror at commit `b56a990`.
->   The full list of changes is this branch's commit history.
-> - **This branch adds the photo feature only**, with its own switches in Settings:
->   - *Photos* — characters can text you a picture, or post one to the feed, rendered on your own
->     machine by the local ComfyUI. Some can be explicit, depending on your relationship and your
->     content settings. On by default wherever ComfyUI can render; turn on "No photos on
->     Bunnyboard" for a text-only playthrough.
->   - *Body details* — an optional build, chest, hips and backside for each character, picked
->     from tags the image model knows, so her body stays the same across sprites, CGs and photos.
->     Off by default; the switch is in Character Manage.
-> - **Photos need the game's local ComfyUI, set up exactly as Venus Dev's.** There is no cloud or
->   other fallback. Once ComfyUI is installed, characters will send photos, and if it is not
->   running or a model is missing, every one of them fails to draw. Photos render with the same models the game already uses for sprites and CGs, and the tags
->   they are drawn from are tuned for them, so keep them exactly as the game's own setup installs
->   them:
+> Please don't report problems with this version to Venus Dev. They may come from the changes here.
+>
+> ### What this branch adds
+>
+> - **Photos.** Characters can send you a photo in DMs and post photos to the feed. How far a
+>   photo goes depends on your relationship and your content settings. To turn photos off, use
+>   **No photos on Bunnyboard** in Settings → Content.
+> - **Body details.** An optional build, chest, hips and backside for each character, so her body
+>   looks the same in sprites, CGs and photos. Off by default. The switch is in Character Manage.
+>
+> ### Requirements for photos
+>
+> Photos are drawn by the game's own local ComfyUI. There is no cloud option.
+>
+> - **Use the same models as the official game:**
 >   - checkpoint `novaAnimeXL_ilV190.safetensors`
 >   - LoRA `usnrStyle.safetensors`
 >   - upscaler `RealESRGAN_x4plus_anime_6B.pth`
 >   - face model `segm/Anzhc Face seg 640 v2 y8n.pt`
 >
->   A failed photo shows "Image failed to generate" with a Reroll button, which works once ComfyUI
->   is back. A different checkpoint may still render, but outfits, bodies and poses will drift.
+>   Another checkpoint may still work, but outfits, bodies and poses will look off.
+> - **Make sure ComfyUI is running before you play.** The switch that runs it is only on the
+>   Character Manage screen.
+> - If ComfyUI isn't running or a model is missing, characters still send photos, but they fail to
+>   draw. You'll see "Image failed to generate" with a Reroll button, which works once ComfyUI is
+>   running again.
+> - If you don't want to run ComfyUI, turn on **No photos on Bunnyboard** and characters won't
+>   send any.
 >
->   **Make sure ComfyUI is running before you play.** The switch that runs ComfyUI is only on the
->   Character Manage screen, so turn it on there before you start or continue a game. If you don't want to run ComfyUI
->   while you play, turn on **No photos on Bunnyboard** in Settings → Content instead, and
->   characters won't send any.
-> - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
->   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
->   are here only so the game builds from source.
+> ### Installing
 >
-> ### Installing this version
->
-> Starting fresh:
+> New install:
 >
 > ```
 > git clone -b photo-feature https://github.com/naudh1r/venus-university.git
 > ```
 >
-> Already have Venus Dev's version cloned? Add this one beside it and switch to it — your unzipped
-> characters and your saves stay where they are. Commit or stash any changes of your own first.
+> If you already have Venus Dev's version, add this one next to it. Your characters and saves stay
+> where they are. Commit or stash your own changes first.
 >
 > ```
 > git remote add naudh1r https://github.com/naudh1r/venus-university.git
@@ -52,16 +48,19 @@
 > git checkout -b photo-feature naudh1r/photo-feature
 > ```
 >
-> Then set it up as Venus Dev's instructions below describe. Later, `git pull` on that branch picks
-> up changes to this version, and `git checkout main` takes you back to his.
+> Then follow Venus Dev's setup steps below. Run `git pull` on this branch to get updates, and
+> `git checkout main` to go back to the official version.
 >
-> **This version follows Venus Dev's releases by hand, not automatically.** It is built on his mirror
-> at `b56a990` and keeps working as it is when he publishes something newer; it just does not have
-> his new changes until they are merged in here. If you have already updated to a newer release of
-> his, switching to this version takes you back to an older one, and a save made on his newer
-> version may not load in it.
+> This version is based on Venus Dev's mirror at commit `b56a990`. It doesn't update by itself
+> when a new official version comes out. If you've already updated to a newer official version,
+> switching to this one takes you back to an older version, and newer saves may not load.
 >
-> Venus Dev's own README follows, unedited.
+> ### Licences
+>
+> The code is AGPL-3.0-only (`LICENSE`). Images, audio and video are © Venus Dev, all rights
+> reserved (`LICENSE-ASSETS.md`). They're included only so the game builds from source.
+>
+> Venus Dev's own README follows, unchanged.
 
 # Venus University
 
