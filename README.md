@@ -23,11 +23,10 @@
 >   - face model `segm/Anzhc Face seg 640 v2 y8n.pt`
 >
 >   Another checkpoint may still work, but outfits, bodies and poses will look off.
-> - **Make sure ComfyUI is running before you play.** The switch that runs it is only on the
->   Character Manage screen.
-> - If ComfyUI isn't running or a model is missing, characters still send photos, but they fail to
->   draw. You'll see "Image failed to generate" with a Reroll button, which works once ComfyUI is
->   running again.
+> - **ComfyUI starts by itself** the first time a photo is drawn, so the first photo of a session
+>   takes longer. To avoid that wait, start it early from Character Manage.
+> - If ComfyUI can't start, for example because a model is missing, characters still send photos,
+>   but they fail to draw. You'll see "Image failed to generate" with a Reroll button.
 > - If you don't want to run ComfyUI, turn on **No photos on Bunnyboard** and characters won't
 >   send any.
 >
