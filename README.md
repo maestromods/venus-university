@@ -1,3 +1,54 @@
+> [!IMPORTANT]
+> **This is an unofficial, modified version of Venus University.** It is not made, endorsed or
+> supported by Venus Dev. The official game is on itch.io, linked below.
+>
+> - **Please do not report problems with this version to Venus Dev** — neither by email nor in the
+>   game's community. Anything you find here may have been caused by the changes below.
+> - **Modified by morrowkiln, October 2026**, from Venus Dev's public mirror at commit `ec8f7ce`
+>   (0.3.0). The full list of changes is this branch's commit history.
+> - **What it adds: semesters that continue.** A finished semester can be carried into the next
+>   one, from the ending's own modal or from that save in Load Game. Spring is followed by a
+>   Fall with a calendar of its own, then Spring again, until the spring the reader graduates
+>   in. Seniors who graduated are gone and everybody else moves up a year; you drop and add
+>   until the roster is twelve. The reader keeps his money, inventory, phone and reputation,
+>   loses his job, and his stats slip a tier. Returning characters keep their memories,
+>   milestones, gifts, feed and your notes on them, and each gets new memories of the break.
+> - **It stands on its own.** It is built directly on Venus Dev's version and needs no other
+>   mod.
+> - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
+>   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
+>   are here only so the game builds from source.
+>
+> ### Installing this version
+>
+> Starting fresh:
+>
+> ```
+> git clone -b semester-0.3 https://github.com/morrowkiln/venus-university.git
+> ```
+>
+> Already have Venus Dev's version cloned? Add this one beside it and switch to it — your unzipped
+> characters and your saves stay where they are. Commit or stash any changes of your own first.
+>
+> ```
+> git remote add morrowkiln https://github.com/morrowkiln/venus-university.git
+> git fetch morrowkiln
+> git checkout -b semester-0.3 morrowkiln/semester-0.3
+> ```
+>
+> Then set it up as Venus Dev's instructions below describe. `git checkout main` takes you back
+> to his version.
+>
+> **Saves.** A save made on Venus Dev's own version loads here, a finished one included.
+> A semester started by continuing is a playthrough only this version understands: do not expect
+> it to load in Venus Dev's own build.
+>
+> **This version follows Venus Dev's releases by hand, not automatically.** It is built on 0.3.0
+> and keeps working as it is when he publishes something newer; it just does not have his new
+> changes until they are merged in here.
+>
+> Venus Dev's own README follows, unedited.
+
 # Venus University
 
 Venus University is a single-player AI-driven dating sim available for web and desktop (via Electron).
