@@ -2,7 +2,7 @@ import { allowedPostTier, settlePhoto, type PhotoTier } from '@shared/photoGate'
 import type { ChatPhoto } from '@shared/photoTypes'
 import type { SocialPost } from '@shared/types'
 import { useGameStore } from './gameStore'
-import { canSendPhotos, savePhotoState, setFeedPostPhoto } from './photoStore'
+import { canSendPhotos, savePhotoState, setFeedPostPhoto } from './localPhotoStore'
 import { noNsfwImagesOf, useSettingsStore } from './settingsStore'
 
 /**

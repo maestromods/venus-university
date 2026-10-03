@@ -2,7 +2,7 @@ import type { IpcMainInvokeEvent } from 'electron'
 import { enqueue } from '@shared/jobQueue'
 import type { Character } from '@shared/types'
 import { start as startComfy } from './services/comfyService'
-import { generatePhoto, photoLanded, reservePhotoName } from './services/photoService'
+import { generatePhoto, photoLanded, reservePhotoName } from './services/localPhotoService'
 
 /**
  * The three channels the photo feature adds, registered from here rather than written into

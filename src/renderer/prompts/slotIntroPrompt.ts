@@ -4,7 +4,7 @@ import {
   POST_PHOTO_SCHEMA_FIELD,
   POST_PHOTO_SCHEMA_REQUIRED
 } from './photoBrief'
-import { canSendPhotos } from '../stores/photoStore'
+import { canSendPhotos } from '../stores/localPhotoStore'
 import { affectionFor, dedupedMemoriesFor, emptyFlags } from '@shared/relationship'
 import { DEFAULT_PLAYER_STATS, type PlayerStats } from '@shared/playerStats'
 import {

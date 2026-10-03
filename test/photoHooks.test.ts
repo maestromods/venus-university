@@ -58,7 +58,7 @@ const HOOKS: readonly {
   {
     file: 'src/main/services/comfyService.ts',
     needs: ['export async function runGenerationJob'],
-    why: 'photoService renders on this pipeline'
+    why: 'localPhotoService renders on this pipeline'
   },
   {
     file: 'src/main/charImageProtocol.ts',

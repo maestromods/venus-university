@@ -64,7 +64,7 @@ import {
 } from '@shared/types'
 import { useBunnyboardStore } from './bunnyboardStore'
 import { useGameStore } from './gameStore'
-import { canSendPhotos } from './photoStore'
+import { canSendPhotos } from './localPhotoStore'
 import { sendPhoto } from './photoTurn'
 import { noNsfwImagesOf, useSettingsStore } from './settingsStore'
 import { prefetchHangoutScene, startHangoutScene } from './loop/hooks'

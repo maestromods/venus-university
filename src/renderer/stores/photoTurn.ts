@@ -4,7 +4,7 @@ import type { ChatPhoto } from '@shared/photoTypes'
 import type { Character, TextingResponse } from '@shared/types'
 import { useGameStore } from './gameStore'
 import { RENDER_PATIENCE_MS } from './photoPost'
-import { canSendPhotos, savePhotoState, setMessagePhoto } from './photoStore'
+import { canSendPhotos, savePhotoState, setMessagePhoto } from './localPhotoStore'
 import { noNsfwImagesOf, useSettingsStore } from './settingsStore'
 import { tellAboutDmPhotos } from './photoTipDelivery'
 
