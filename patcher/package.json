@@ -1,0 +1,14 @@
+{
+  "name": "venus-continuing-semesters-patcher",
+  "private": true,
+  "type": "module",
+  "description": "Builds the Continuing Semesters setup wizard, which installs the mod on top of the official Venus University build.",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "@electron/asar": "3.4.1",
+    "esbuild": "0.25.12",
+    "fflate": "0.8.3"
+  }
+}
