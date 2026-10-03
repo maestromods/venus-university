@@ -11,9 +11,23 @@
 >   **No DM and feed photos** in Settings → Content.
 >
 >   She remembers the photos she sent you in DMs and what was in them. Feed photos work like the
->   game's own feed posts: once posted, she doesn't remember them.
+>   game's own feed posts: once posted, she doesn't remember them, and liking one counts toward
+>   her affection like any other post.
 > - **Body details.** An optional build, chest, hips and backside for each character, so her body
 >   looks the same in sprites, CGs and photos. Off by default. The switch is in Character Manage.
+>
+> ### Backups and character exports
+>
+> - **Back up game data** keeps everything the official backup keeps, plus the photo settings,
+>   your own characters' body details and which texts carried a photo. Her DM and feed photos go
+>   in a second file next to the backup, `<backup name>.photos.zip`. Keep the two files together,
+>   under the same name.
+> - **Restore from backup** brings her photos back when that second file is next to the backup.
+>   Without it the restore still works, and those photos show "Image failed to generate" with a
+>   Reroll button.
+> - A game without this mod can restore the same backup. It ignores the photos file.
+> - **Exporting a character** carries her body details. Her photos belong to a playthrough, not
+>   to her, so they aren't in the export.
 >
 > ### Requirements for photos
 >

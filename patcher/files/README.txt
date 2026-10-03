@@ -8,7 +8,8 @@ What it adds
 ------------
 - Characters can send you photos in DMs and post photos to the feed.
   She remembers the photos she sent you in DMs. Feed photos work like
-  the game's own feed posts: once posted, she doesn't remember them.
+  the game's own feed posts: once posted, she doesn't remember them, and
+  liking one counts toward her affection like any other post.
 - Body details: an optional build, chest, hips and backside per character.
 - Both can be turned off in the game's settings.
 
@@ -41,6 +42,18 @@ Install
 
 The setup checks that your game is the official version before changing
 anything, and keeps a backup of the original game code.
+
+Backups
+-------
+"Back up game data" also writes a second file next to the backup,
+"<backup name>.photos.zip", with her DM and feed photos. Keep the two
+files together, under the same name. "Restore from backup" brings the
+photos back when that file is next to the backup; without it, the
+restore still works and those photos offer a Reroll. A game without the
+mod can restore the same backup and ignores the photos file.
+
+Exporting a character carries her body details, but not her photos:
+those belong to a playthrough.
 
 Keep the game from updating
 ---------------------------
