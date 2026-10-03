@@ -7,7 +7,6 @@ import {
   emptyFlags,
   foldRelationshipEvents,
   isRelationshipEvent,
-  MEMORY_CAP,
   memoryStatusLine as memoryLineOf,
   milestoneEmotionOf,
   milestoneSoured,
@@ -738,7 +737,8 @@ export function projectLedger(
     const info = entryFor(entry.charId)
     projected[entry.charId] = {
       ...info,
-      memories: [...info.memories, { date, type: entry.type, desc: entry.desc }].slice(-MEMORY_CAP)
+      // Every memory is kept, as the boundary will keep it.
+      memories: [...info.memories, { date, type: entry.type, desc: entry.desc }]
     }
   }
 

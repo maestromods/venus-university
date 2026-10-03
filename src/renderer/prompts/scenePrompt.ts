@@ -16,9 +16,9 @@ import {
   dedupedMemoriesFor,
   emptyFlags,
   loveLifeBlurb,
-  MEMORY_CAP,
   overTextDesc
 } from '@shared/relationship'
+import { memoryBudgetFor } from '@shared/settingsRules'
 import { OUTFIT_SKIN_EXPOSURE } from '@shared/tags'
 import { hasTrait } from '@shared/traits'
 import type { Weather } from '@shared/weather'
@@ -40,8 +40,10 @@ import {
   type ClassSlot,
   type JobState,
   MEMORY_TYPES,
+  type MemoryBudgets,
   type Occasion,
   type OutfitSet,
+  type Position,
   type ProjectSession,
   type SceneLine,
   type ShiftSlot,
@@ -285,6 +287,10 @@ export interface PromptState {
   hiddenCast?: readonly Character[]
   /** The player's `lessNsfwText` setting. */
   lessNsfwText: boolean
+  /** The player's own cast-scene persona; absent is the shipped one. */
+  scenePersona?: string
+  /** How many memories per character the cast block carries, by cast size. */
+  memoryBudgets: Required<MemoryBudgets>
 }
 
 /** What a call that writes a scene reads: the state plus the inspiration word its caller drew. */
@@ -352,6 +358,17 @@ export function personaFor(lessNsfwText: boolean): string {
   return lessNsfwText ? SFW_PERSONA : PERSONA
 }
 
+/** The shipped cast-scene persona, verbatim — what a player who has set no custom one sends. */
+export const DEFAULT_SCENE_PERSONA = PERSONA
+
+/**
+ * The persona a cast scene is written under: the player's own verbatim where one is stored,
+ * else the shipped one this content setting sends.
+ */
+export function scenePersonaFor(lessNsfwText: boolean, custom: string | undefined): string {
+  return custom ?? personaFor(lessNsfwText)
+}
+
 /** {@link personaFor} for the calls that stage no cast — the ledgers and the solo scene. */
 function ledgerPersonaFor(lessNsfwText: boolean): string {
   return lessNsfwText ? SFW_LEDGER_PERSONA : LEDGER_PERSONA
@@ -361,7 +378,23 @@ function ledgerPersonaFor(lessNsfwText: boolean): string {
 const OUTFIT_SUFFIX_GLOSS: Record<StockOutfitSet, string> = {
   pe: 'if she\'s in her PE clothes',
   swim: 'for swimwear',
-  nude: "if her breasts or genitals have been exposed."
+  nude: "if her breasts or genitals have been exposed"
+}
+
+/** A CG of the act itself, as opposed to its climax twin. */
+type ActPosition = Exclude<Position, `${string}_after`>
+
+/** What each act's CG is for, in RITA's terms. */
+const ACT_POSITION_GLOSS: Record<ActPosition, string> = {
+  nude_foreplay: 'she is naked and he is fingering her, going down on her or playing with her breasts.',
+  sex: 'they are having sex.',
+  handjob: 'she is giving him a handjob.',
+  fellatio: 'she is giving him a blowjob.'
+}
+
+/** True for a CG of the act itself rather than its climax. */
+function isActPosition(position: Position): position is ActPosition {
+  return !position.endsWith('_after')
 }
 
 /** The wardrobes the cast block describes, with the label each is given; no `nude`. */
@@ -414,17 +447,18 @@ function jsonRules(
     'Every "show:" must be paired with a "sprite:" in the same actions array. Afterwards, change a character\'s sprite whenever it makes sense.',
     ...(allowPositions
       ? [
-          `If sex is happening on screen, use the "cg:<name>" action instead of a sprite. CG list: ${POSITIONS.filter((p) => !p.endsWith('_after')).join(', ')}.`,
-          'Use nude_foreplay for fingering, cunnilingus, and breast play. It is entirely nude, so only use it when the girl has been undressed.',
-          `During and after climax: ${POSITIONS.filter((p) => p.endsWith('_after')).join(', ')}.`,
+          'If sex is happening on screen, use the "cg:<name>" action to replace her sprite with an explicit full-screen picture of her in the middle of a sex act.',
+          ...POSITIONS.filter(isActPosition).map(
+            (position) => `"${cgAction(position)}": ${ACT_POSITION_GLOSS[position]}`
+          ),
+          `When one of them climaxes, switch to that act's "_after" cg: ${POSITIONS.filter((p) => !isActPosition(p)).join(', ')}.`,
           'If the position changes or sex starts again, set "cg:<name>" again.',
           'CG is overwritten by "sprite:". DO NOT use "sprite:" on a character who is in a CG until sex is done.',
-          'A cg shows one girl by herself, so only use "cg:" when she is the only character on screen. "hide:" everybody else first — earlier in the same actions array is fine.',
+          'A cg shows one girl by herself, so only use "cg:" when she is the only character on screen.',
           'Showing anybody else ends the cg.',
           ...(cgNames.length > 0
             ? [`Only ${andList(cgNames)} ${cgNames.length === 1 ? 'has' : 'have'} cgs.`]
-            : []),
-          'NEVER use a cg if the characters aren\'t actively having sex on screen.'
+            : [])
         ]
       : []),
     ...bgLines(backgrounds, 'Set "bg" whenever the location changes. Pick only from the backgrounds below OR a character\'s own room (listed under her character info):')
@@ -514,9 +548,8 @@ function castBlock(cast: readonly Character[], state: PromptState): string[] {
     }
 
     // Her room bg, offered only when both of its images exist; scene calls only.
-    if (state.roomReady[character.charId]) {
-      lines.push(`The bg for her room is ${roomBgIdOf(character)}.`)
-    }
+    const room = offeredRoomBg(character, state)
+    if (room) lines.push(`The bg for her room is ${room}.`)
 
     const flags = info?.flags ?? emptyFlags()
     const affection = affectionFor(info, state.date, character)
@@ -586,7 +619,7 @@ function castBlock(cast: readonly Character[], state: PromptState): string[] {
     )
 
     // Memory budget by cast size, never by who is on screen.
-    const memoryBudget = cast.length >= 3 ? 5 : cast.length === 2 ? 10 : MEMORY_CAP
+    const memoryBudget = memoryBudgetFor(state.memoryBudgets, cast.length)
     // Deduped before the budget is spent.
     lines.push(
       ...memoryLines(character, dedupedMemoriesFor(info).slice(-memoryBudget), info?.textMemory)
@@ -594,6 +627,8 @@ function castBlock(cast: readonly Character[], state: PromptState): string[] {
 
     // What the two of them have been texting about on Bunnyboard.
     lines.push(...(state.textingSummaries?.[character.charId] ?? []))
+
+    lines.push(...notesLines(character.firstName, info?.notes))
   }
 
   // How the cast stand with *each other*, closing the block.
@@ -798,6 +833,12 @@ export function memoryLines(
   ]
 }
 
+/** The player's own notes on her, verbatim as one element, closing her entry; none, nothing. */
+export function notesLines(firstName: string, notes: string | undefined): string[] {
+  if (!notes?.trim()) return []
+  return [`Important notes on ${firstName}: ${notes.trim()}`]
+}
+
 /** Every stage instruction this scene may legally carry. */
 function actionEnum(cast: readonly Character[], state: PromptState): string[] {
   const values: string[] = []
@@ -820,15 +861,20 @@ function actionEnum(cast: readonly Character[], state: PromptState): string[] {
 }
 
 /**
- * The room bg ids of cast members whose rooms are fully rendered — what the schema's
- * bg enum carries beyond the shipped list.
+ * The bg id a cast member's room is offered under, or null: her room needs both of its images,
+ * and an id a listed background already answers to is that background's.
  */
+function offeredRoomBg(character: Character, state: PromptState): string | null {
+  if (!state.roomReady[character.charId]) return null
+  const id = roomBgIdOf(character)
+  return allBackgrounds(state.backgrounds).includes(id) ? null : id
+}
+
+/** The room bg ids of the cast — what the schema's bg enum carries beyond the listed ones. */
 function castRoomBgs(cast: readonly Character[], state: PromptState): string[] {
-  const shipped = new Set(allBackgrounds(state.backgrounds))
   return cast
-    .filter((character) => state.roomReady[character.charId])
-    .map((character) => roomBgIdOf(character))
-    .filter((id) => !shipped.has(id))
+    .map((character) => offeredRoomBg(character, state))
+    .filter((id): id is string => id !== null)
     .sort()
 }
 
@@ -892,7 +938,7 @@ function systemPrompt(
   setting: string
 ): string {
   return [
-    personaFor(state.lessNsfwText),
+    scenePersonaFor(state.lessNsfwText, state.scenePersona),
     '',
     ...jsonRules(
       state.backgrounds,

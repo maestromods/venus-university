@@ -720,6 +720,11 @@ export interface CharState {
    * the sprite reference as *applied* — a set withheld by `noNsfwImages` was never seen.
    */
   seenOutfits?: OutfitSet[]
+  /**
+   * The player's own notes on her, written from her contact page and closing her entry in every
+   * prompt that describes her in full; absent when there are none.
+   */
+  notes?: string
 }
 
 /**
@@ -922,7 +927,7 @@ export interface Occasion {
 }
 
 /**
- * A character withdrawn from an event by her own timetable, persisted inside
+ * A character withdrawn from an event she cannot make, persisted inside
  * {@link SceneState.opening}.
  */
 export interface EventCancellation {
@@ -930,7 +935,10 @@ export interface EventCancellation {
   /** The slot the plan she is dropping out of falls in. */
   date: number
   time: TimeSlot
-  /** Which commitment took her, so the message names the real one. */
+  /**
+   * What took her, so the message names the real one: spring break, or on an opening an older
+   * save banked, her class or her shift.
+   */
   reason: 'class' | 'shift' | 'away'
   /** Set with `'shift'`: the job she is rostered for, so the line can name the employer. */
   jobId?: string
@@ -1640,8 +1648,8 @@ export interface Settings {
    */
   apiModel: string
   /**
-   * The Gemini key: it writes under `gemini`, and draws the cloud pictures under either
-   * provider. Empty is no key at all, which is what the pictures are skipped without.
+   * The Gemini key: it writes and draws the cloud pictures under `gemini`. Empty is no key at
+   * all, which is what the pictures are skipped without there.
    */
   apiKey: string
   /** How hard the model reasons; resolved against the model at call time. Gemini's alone. */
@@ -1673,6 +1681,22 @@ export interface Settings {
    * needs none. It is kept only for the origin it was typed for.
    */
   endpointApiKey?: string
+  /**
+   * The root a custom provider's pictures are asked at: Google's own speaks Gemini's native call,
+   * anywhere else OpenRouter's Images API. Absent is Google's. Read only under `openai`.
+   */
+  imageEndpointUrl?: string
+  /**
+   * The model a custom provider's pictures are drawn on, as typed; absent or blank is the room
+   * model Gemini's own provider draws with. Read only under `openai`.
+   */
+  imageModel?: string
+  /**
+   * The key a custom provider's pictures are drawn with; absent draws them on {@link apiKey} at
+   * Google's own host where that is set, else on {@link endpointApiKey}. It is kept only for the
+   * origin it was typed for.
+   */
+  imageApiKey?: string
   /**
    * Gemini's second model for the calls named in {@link secondaryModelFor} — a model id from
    * Gemini's table. Absent or empty means every call runs on {@link apiModel}. Gemini's alone.
@@ -1707,6 +1731,11 @@ export interface Settings {
    */
   checkUpdates?: boolean
   /**
+   * Whether the window opens fullscreen. A change to it switches the window at once; F11
+   * toggles the window without writing it. Optional on disk, absent meaning it does.
+   */
+  fullscreen?: boolean
+  /**
    * Whether interjecting during a scene's ending warns first. Optional on disk, absent meaning
    * it does.
    */
@@ -1736,11 +1765,6 @@ export interface Settings {
    * rules leave the schema entirely.
    */
   lessNsfwText: boolean
-  /**
-   * Silence what a CG carries: the act and the breath under one, and the climax's own sting.
-   * Optional on disk, absent meaning they play.
-   */
-  noNsfwSound?: boolean
   /**
    * Whether the player has been asked the content questions above. It is the first run's last
    * step, so it doubles as the mark that the run finished.
@@ -1774,26 +1798,55 @@ export interface Settings {
    * desktop encrypts its key either way and ignores this.
    */
   rememberKey?: boolean
+  /** Sent as `temperature` to a custom endpoint. Absent is not sent. Read only under `openai`. */
+  temperature?: number
+  /**
+   * Sent as `repetition_penalty` to a custom endpoint. Absent is not sent. Read only
+   * under `openai`.
+   */
+  repetitionPenalty?: number
+  /** Sent as `top_p` to a custom endpoint. Absent is not sent. Read only under `openai`. */
+  topP?: number
+  /** Sent as `top_k` to a custom endpoint. Absent is not sent. Read only under `openai`. */
+  topK?: number
+  /** How many memories per character a cast scene's prompt carries, by cast size. */
+  memoryBudgets?: MemoryBudgets
+  /**
+   * The persona cast scene calls are written under in place of the shipped one, sent verbatim
+   * whatever `lessNsfwText` says. Absent is the shipped persona.
+   */
+  scenePersona?: string
+}
+
+/** How many memories per character a cast scene's prompt carries, by cast size; absent is the default. */
+export interface MemoryBudgets {
+  one?: number
+  two?: number
+  three?: number
 }
 
 /**
  * What `settings:get` returns: {@link Settings} with each secret replaced by a
  * presence flag, so no key is ever in renderer memory.
  */
-export interface RendererSettings extends Omit<Settings, 'apiKey' | 'endpointApiKey'> {
+export interface RendererSettings
+  extends Omit<Settings, 'apiKey' | 'endpointApiKey' | 'imageApiKey'> {
   apiKeySet: boolean
   endpointApiKeySet: boolean
+  imageApiKeySet: boolean
 }
 
 /**
- * What `settings:set` carries. A key field left absent — `apiKey` or `endpointApiKey` — means
- * "keep the stored key": the renderer cannot read one back, so it can only ever replace one.
+ * What `settings:set` carries. A key field left absent — `apiKey`, `endpointApiKey` or
+ * `imageApiKey` — means "keep the stored key": the renderer cannot read one back, so it can only
+ * ever replace one.
  */
 export type SettingsPatch = Omit<
   Settings,
   | 'schemaVersion'
   | 'apiKey'
   | 'endpointApiKey'
+  | 'imageApiKey'
   | 'freezeSeeds'
   | 'editPregens'
   | 'forceTime'
@@ -1806,6 +1859,7 @@ export type SettingsPatch = Omit<
 > & {
   apiKey?: string
   endpointApiKey?: string
+  imageApiKey?: string
 }
 
 /**
@@ -1814,13 +1868,26 @@ export type SettingsPatch = Omit<
  */
 export type WriterCandidate = Pick<
   Settings,
-  | 'apiProvider'
-  | 'endpointModel'
-  | 'endpointUrl'
-  | 'reasoningEffort'
-  | 'maxOutputTokens'
+  'apiProvider' | 'endpointModel' | 'endpointUrl' | 'reasoningEffort'
 > & {
   endpointApiKey?: string
+}
+
+/**
+ * What the images model list is asked on: the images URL and key as typed, and the writer
+ * endpoint beside them, whose key a blank images key may draw on; a key is absent where its field
+ * was left blank so the stored one is tried.
+ */
+export interface ImageEndpointCandidate {
+  imageEndpointUrl: string
+  imageApiKey?: string
+  endpointUrl?: string
+  endpointApiKey?: string
+}
+
+/** What the images Test connection sends: the same, and the images model as typed. */
+export interface ImageCandidate extends ImageEndpointCandidate {
+  imageModel: string
 }
 
 /** A single line of a scene, as emitted by the cloud LLM. */

@@ -15,8 +15,7 @@ import {
   loveLifeBlurb,
   memoriesFor,
   memorySentence,
-  relationshipTagOf,
-  MEMORY_CAP
+  relationshipTagOf
 } from '@shared/relationship'
 import { isCharacterTrait } from '@shared/traits'
 import { fullNameOf, type CharMemory, type StockOutfitSet } from '@shared/types'
@@ -28,6 +27,7 @@ import { useGameStore } from '../stores/gameStore'
 import { noNsfwImagesOf, useSettingsStore } from '../stores/settingsStore'
 import { sendFriendRequest } from '../stores/textingLoop'
 import type { ScreenTheme } from './clockTheme'
+import { CharacterNotesModal } from './CharacterNotesModal'
 import { EditMemoryModal } from './EditMemoryModal'
 import {
   breatheDecor,
@@ -81,6 +81,8 @@ export function ContactPage({
   const [outfit, setOutfit] = useState<StockOutfitSet | null>(null)
   // The memory open in the edit panel, as the list below holds it.
   const [editing, setEditing] = useState<CharMemory | null>(null)
+  // Whether the notes panel stands over the page.
+  const [notesOpen, setNotesOpen] = useState(false)
 
   if (!character) return <p className="vu-contact-gone">This account no longer exists.</p>
 
@@ -338,9 +340,7 @@ export function ContactPage({
             )}
           </Card>
 
-          <Card
-            label={isContact ? `Memories · ${history.length} of ${MEMORY_CAP}` : 'Memories'}
-          >
+          <Card label={isContact ? `Memories · ${history.length}` : 'Memories'}>
             {!isContact ? (
               <Locked>{AFTER_ADDING}</Locked>
             ) : history.length === 0 ? (
@@ -383,19 +383,30 @@ export function ContactPage({
             Close
           </motion.button>
           {isContact ? (
-            <motion.button
-              id={`bb-message-${charId}`}
-              className="vu-btn vu-btn--primary vu-btn--panel vu-paper"
-              type="button"
-              {...gestures(false, lift, press)}
-              onClick={() => {
-                // Jump straight into the thread, creating it on first text.
-                useBunnyboardStore.getState().setTab('chats')
-                useBunnyboardStore.getState().viewChar(charId)
-              }}
-            >
-              Message
-            </motion.button>
+            <>
+              <motion.button
+                id={`bb-notes-${charId}`}
+                className="vu-btn vu-btn--quiet"
+                type="button"
+                {...gestures(false, quietLift, quietPress)}
+                onClick={() => setNotesOpen(true)}
+              >
+                Add character notes
+              </motion.button>
+              <motion.button
+                id={`bb-message-${charId}`}
+                className="vu-btn vu-btn--primary vu-btn--panel vu-paper"
+                type="button"
+                {...gestures(false, lift, press)}
+                onClick={() => {
+                  // Jump straight into the thread, creating it on first text.
+                  useBunnyboardStore.getState().setTab('chats')
+                  useBunnyboardStore.getState().viewChar(charId)
+                }}
+              >
+                Message
+              </motion.button>
+            </>
           ) : (
             // Somebody he found on the feed: the one thing he can do is ask.
             <motion.button
@@ -469,6 +480,14 @@ export function ContactPage({
             name={character.firstName}
             memory={editing}
             onClose={() => setEditing(null)}
+          />
+        )}
+        {notesOpen && (
+          <CharacterNotesModal
+            key="char-notes"
+            theme={theme}
+            charId={charId}
+            onClose={() => setNotesOpen(false)}
           />
         )}
       </AnimatePresence>

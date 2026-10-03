@@ -14,6 +14,8 @@ import {
   type NpcSlotOverlay
 } from '@shared/npcRelationships'
 import { readerBlockOf } from '../prompts/setting'
+import { memoryBudgetsOf } from '@shared/settingsRules'
+import { useSettingsStore } from './settingsStore'
 import {
   bossChatIdOf,
   globalSlotOf,
@@ -70,6 +72,7 @@ import { createTextExtractor } from './textingStream'
 import { BOT_REPLY_MS, createTypingPacer, typingDelayFor, type TypingPacer } from './textingPace'
 import {
   charAwayNow,
+  charBusyNow,
   charHiddenLocationNow,
   charOverlayGroupNow,
   charStandingHauntAt,
@@ -475,7 +478,8 @@ export async function sendMessage(charId: string, text: string): Promise<void> {
         // What she is there for, on a slot she is standing at her own haunt.
         charHaunt: charStandingHauntNow(charId),
         // The one absence a thread survives, so her block has to say it.
-        springBreakAway: game.springBreakAway
+        springBreakAway: game.springBreakAway,
+        memoryBudget: memoryBudgetsOf(useSettingsStore.getState().settings ?? {}).one
       },
       // The same reader block a scene gets, grades and all.
       readerBlockOf(game)
@@ -703,7 +707,10 @@ function handleHangout(charId: string, hangout: HangoutVerdict | null): void {
   const game = useGameStore.getState()
   if (sceneActiveOf(game)) return
   // A girl who has left campus cannot meet him this week, however the exchange read.
-  if (charAwayNow(charId)) return
+  if (charAwayNow(charId)) {
+    deliverAwayNotice(charId)
+    return
+  }
 
   if (hangout.initiatedBy === 'contact') {
     game.setPendingHangout(charId, { description: hangout.description })
@@ -750,6 +757,18 @@ export async function beginHangout(): Promise<void> {
   await startHangoutScene(armed.charId, armed.description)
 }
 
+/** The line under a meet-up agreed with a girl who has left campus for spring break. */
+function deliverAwayNotice(charId: string): void {
+  const character = useGameStore.getState().characters[charId]
+  deliver(
+    charId,
+    chatMessage(
+      'system',
+      `${character?.firstName ?? 'She'} is away for spring break and can't meet up.`
+    )
+  )
+}
+
 /** The Yes/No footer under her pending ask-out. */
 export function answerHangout(charId: string, yes: boolean): void {
   const game = useGameStore.getState()
@@ -763,14 +782,7 @@ export function answerHangout(charId: string, yes: boolean): void {
     game.appendChatMessage(charId, chatMessage('player', 'Sure'), 0)
     // An invitation raised before she left and accepted after it.
     if (charAwayNow(charId)) {
-      const character = game.characters[charId]
-      deliver(
-        charId,
-        chatMessage(
-          'system',
-          `${character?.firstName ?? 'She'} is away for spring break and can't meet up.`
-        )
-      )
+      deliverAwayNotice(charId)
       return
     }
     // The same armed button the player's own ask gets.
@@ -1154,15 +1166,18 @@ export function pickSlotAskers(
 
   for (const event of view.events) {
     if (event.date !== day || event.time !== half) continue
-    // The first attendee who is free and not already asking about another plan. A plan
-    // overrides the dice but not a block, so the block is tested here as well.
-    const messenger = event.charIds.find(
+    // Every attendee in the city not already asking about another plan. A plan overrides the
+    // dice but not a block, so the block is tested here as well.
+    const reachable = event.charIds.filter(
       (charId) =>
         !chosen.has(charId) &&
         game.characters[charId] &&
         !view.charInfo[charId]?.flags?.blocked &&
-        !charUnavailableNow(charId, day, half)
+        !charAwayNow(charId, day)
     )
+    // A free one first; one with class or work texts anyway, to meet him before or after it.
+    const messenger =
+      reachable.find((charId) => !charBusyNow(charId, day, half)) ?? reachable[0]
     if (messenger) take(messenger)
   }
 
@@ -1302,10 +1317,7 @@ export function addPlanContacts(events: readonly CalendarEvent[]): void {
   }
 }
 
-/**
- * Tells the reader which characters have backed out of a plan, and which of their two standing
- * commitments took them.
- */
+/** Tells the reader which characters have backed out of a plan, and what took them. */
 export function deliverEventCancellations(
   cancellations: readonly EventCancellation[]
 ): void {
