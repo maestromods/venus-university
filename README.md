@@ -8,7 +8,7 @@
 >
 > - **Photos.** Characters can send you a photo in DMs and post photos to the feed. How far a
 >   photo goes depends on your relationship and your content settings. To turn photos off, use
->   **No photos on Bunnyboard** in Settings → Content.
+>   **No DM and feed photos** in Settings → Content.
 > - **Body details.** An optional build, chest, hips and backside for each character, so her body
 >   looks the same in sprites, CGs and photos. Off by default. The switch is in Character Manage.
 >
@@ -27,7 +27,7 @@
 >   takes longer. To avoid that wait, start it early from Character Manage.
 > - If ComfyUI can't start, for example because a model is missing, characters still send photos,
 >   but they fail to draw. You'll see "Image failed to generate" with a Reroll button.
-> - If you don't want to run ComfyUI, turn on **No photos on Bunnyboard** and characters won't
+> - If you don't want to run ComfyUI, turn on **No DM and feed photos** and characters won't
 >   send any.
 >
 > ### Installing
