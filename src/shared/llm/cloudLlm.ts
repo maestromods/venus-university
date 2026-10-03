@@ -2,7 +2,13 @@ import { appError, isAppError, messageOf, tailOf, truncate } from '../errors'
 import { modelFor, providerToRun, reasoningToSend, serviceTierFor } from '../providers'
 import type { ModelConfig } from '../providers'
 import { DEFAULT_SECONDARY_KINDS, isPromptKind, type PromptKind } from '../promptKinds'
-import { maxOutputTokensOf, secondaryModelOf, writerKeyOf, writerModelOf } from '../settingsRules'
+import {
+  maxOutputTokensOf,
+  samplingOf,
+  secondaryModelOf,
+  writerKeyOf,
+  writerModelOf
+} from '../settingsRules'
 import type { Settings } from '../types'
 import { MAX_OUTPUT_TOKENS } from './adapter'
 import { adapterFor } from './index'
@@ -199,6 +205,8 @@ export async function completeStructured<T>(
   const serviceTier = serviceTierFor(settings.apiProvider, settings.serviceTier ?? 'priority')
   // The player's own cap where a custom endpoint names one, else the pinned ceiling.
   const maxOutputTokens = maxOutputTokensOf(settings) ?? MAX_OUTPUT_TOKENS
+  // `{}` under Gemini; a custom endpoint's stored sampling values, under their wire keys.
+  const sampling = samplingOf(settings)
   const adapter = adapterFor(provider)
 
   // Carried out of the attempt so the `JSON.parse` failure can name the stream's holes.
@@ -219,16 +227,21 @@ export async function completeStructured<T>(
       thinkingLevel,
       serviceTier,
       maxOutputTokens,
-      streaming
+      streaming,
+      sampling
     })
 
+    const samplingLog = Object.entries(sampling)
+      .map(([wire, value]) => `${wire}=${value}`)
+      .join(',')
     console.log(
       `[llm] → ${log.what} (thinking=${thinkingLevel}, tier=${serviceTier}` +
         `, maxTokens=${maxOutputTokens}` +
         `, schema=${request.schema.name}` +
         `${request.cacheKey ? `, cacheKey=${request.cacheKey}` : ''}` +
         `${request.kind ? `, kind=${request.kind}` : ''}` +
-        `${streaming ? ', streaming' : ''})`
+        `${streaming ? ', streaming' : ''}` +
+        `${samplingLog ? `, sampling=${samplingLog}` : ''})`
     )
     // The system prompt never varies while a playthrough runs, and a builder marks where its
     // user preamble ends: both stay out of the log, which says what it left out.

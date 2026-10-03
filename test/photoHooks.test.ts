@@ -61,7 +61,7 @@ const HOOKS: readonly {
     why: 'localPhotoService renders on this pipeline'
   },
   {
-    file: 'src/main/charImageProtocol.ts',
+    file: 'src/main/imageProtocols.ts',
     needs: ['PHOTO_SCHEME'],
     why: 'a second registerSchemesAsPrivileged replaces the first, so playimg joins this one'
   },

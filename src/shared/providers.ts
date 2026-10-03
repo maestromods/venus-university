@@ -1,4 +1,4 @@
-import { normalizeEndpoint } from './endpoint'
+import { normalizeEndpoint, sameEndpointHost } from './endpoint'
 import type { Settings } from './types'
 
 /** Cloud LLM provider table shared with Settings; main adapters key off `api`. */
@@ -67,17 +67,107 @@ export interface ProviderConfig {
 }
 
 /**
- * The resolutions an image model will answer at. Absent from a request
- * means the model's own default, which is what every room background gets.
+ * The resolutions an image model will answer at, smallest first, as both wire formats spell
+ * them. Absent from a request means the model's own default, which is what every room
+ * background gets.
  */
-const IMAGE_SIZES = ['1K', '2K', '4K'] as const
+export const IMAGE_SIZES = ['512', '1K', '2K', '4K'] as const
 export type ImageSize = (typeof IMAGE_SIZES)[number]
 
-/** The image model behind room backgrounds. */
+/** Type guard narrowing an arbitrary value to {@link ImageSize}. */
+export function isImageSize(value: unknown): value is ImageSize {
+  return IMAGE_SIZES.includes(value as ImageSize)
+}
+
+/** The image model behind Gemini's room backgrounds, and a custom endpoint's images model until it names another. */
 export const IMAGE_MODEL_ID = 'gemini-3.1-flash-image'
 
-/** The image model behind the graduation picture. `3`, not `3.1`: the vendor versions the pro image model separately. */
+/** The image model behind Gemini's graduation picture. `3`, not `3.1`: the vendor versions the pro image model separately. */
 export const ENDING_IMAGE_MODEL_ID = 'gemini-3-pro-image'
+
+/**
+ * What one image model takes, as the Create Photo modal offers it: an empty list is a field the
+ * model is never sent, and `maxReferences` is how many input images it accepts.
+ */
+export interface ImageModelCaps {
+  /** Sent as the request's model. */
+  id: string
+  label: string
+  sizes: readonly ImageSize[]
+  aspectRatios: readonly string[]
+  thinkingLevels: readonly ThinkingLevel[]
+  qualities: readonly string[]
+  maxReferences: number
+}
+
+/** Every ratio Gemini's pro image model draws at, the set most image models share. */
+const GEMINI_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9']
+
+/** The 3.1 flash image models' ratios: the common set, and the tall and wide extremes beside it. */
+const GEMINI_FLASH_RATIOS = [...GEMINI_RATIOS, '1:4', '4:1', '1:8', '8:1']
+
+/**
+ * The Gemini image models a photo may be drawn on, the default first. 2.5 is left out: it is
+ * retired in October 2026.
+ */
+export const GEMINI_IMAGE_MODELS: readonly ImageModelCaps[] = [
+  {
+    id: IMAGE_MODEL_ID,
+    label: 'Gemini 3.1 Flash Image',
+    sizes: IMAGE_SIZES,
+    aspectRatios: GEMINI_FLASH_RATIOS,
+    // The only levels it takes; it always thinks, so there is no off.
+    thinkingLevels: ['minimal', 'high'],
+    qualities: [],
+    maxReferences: 14
+  },
+  {
+    id: 'gemini-3.1-flash-lite-image',
+    label: 'Gemini 3.1 Flash Lite Image',
+    // It draws at 1K alone.
+    sizes: ['1K'],
+    aspectRatios: GEMINI_FLASH_RATIOS,
+    thinkingLevels: ['minimal', 'high'],
+    qualities: [],
+    maxReferences: 14
+  },
+  {
+    id: ENDING_IMAGE_MODEL_ID,
+    label: 'Gemini 3 Pro Image',
+    sizes: ['1K', '2K', '4K'],
+    aspectRatios: GEMINI_RATIOS,
+    // It always thinks, at a level nobody may set.
+    thinkingLevels: [],
+    qualities: [],
+    maxReferences: 14
+  }
+]
+
+/** What an image model this app has no table entry for is assumed to take, on Google's host. */
+export function genericGeminiCaps(id: string): ImageModelCaps {
+  return {
+    id,
+    label: id,
+    sizes: ['1K', '2K', '4K'],
+    aspectRatios: GEMINI_RATIOS,
+    thinkingLevels: [],
+    qualities: [],
+    maxReferences: 1
+  }
+}
+
+/** What a model on a host that publishes no model list is assumed to take. */
+export function genericImageCaps(id: string): ImageModelCaps {
+  return {
+    id,
+    label: id,
+    sizes: ['1K', '2K', '4K'],
+    aspectRatios: ['1:1', '2:3', '3:2', '3:4', '4:3', '9:16', '16:9'],
+    thinkingLevels: [],
+    qualities: [],
+    maxReferences: 1
+  }
+}
 
 const PROVIDERS: Record<ProviderApi, ProviderConfig> = {
   gemini: {
@@ -139,6 +229,17 @@ const PROVIDERS: Record<ProviderApi, ProviderConfig> = {
     // Model ids are free text: `modelFor` answers any id with `customModel`.
     models: []
   }
+}
+
+/** The wire formats a picture is asked for in: Gemini's native call, or OpenRouter's Images API. */
+export type ImageApi = 'gemini' | 'images'
+
+/** The root a custom provider's pictures are asked at until the player names another: Gemini's own. */
+export const DEFAULT_IMAGE_ENDPOINT = PROVIDERS.gemini.baseUrl
+
+/** Which format an images URL speaks: Gemini's native call on Google's own host, the Images API anywhere else. */
+export function imageApiFor(imageEndpointUrl: string): ImageApi {
+  return sameEndpointHost(imageEndpointUrl, DEFAULT_IMAGE_ENDPOINT) ? 'gemini' : 'images'
 }
 
 /** The config a custom endpoint's model id runs under: every level accepted, minimal by default. */

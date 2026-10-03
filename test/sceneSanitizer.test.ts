@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DEFAULT_PLAYER_STATS, statsForTiers } from '@shared/playerStats'
-import { emptyFlags, MEMORY_CAP } from '@shared/relationship'
+import { emptyFlags } from '@shared/relationship'
 import { giftStatusMarkedLine } from '@shared/shop'
 import type { LedgerResponse, SceneGift, SceneLine, SceneResponse } from '@shared/types'
 import { useAssetStore } from '../src/renderer/stores/assetStore'
@@ -911,9 +911,9 @@ describe('projectLedger', () => {
       // A roster, so the dating pass the two seams share has somebody to fold over.
       chars: ['a', 'b', 'c'],
       charInfo: {
-        // Full to the cap, so the eviction order is part of what is compared.
+        // A few memories already on file, so the append is part of what is compared.
         a: charInfo({
-          memories: Array.from({ length: MEMORY_CAP }, (_, at) => ({
+          memories: Array.from({ length: 3 }, (_, at) => ({
             date: 1,
             type: 'liked' as const,
             desc: `old ${at}`
@@ -958,7 +958,7 @@ describe('projectLedger', () => {
     expect(projected.charInfo).toEqual(useGameStore.getState().charInfo)
     expect(projected.charInfo.b.jealousyMemories).toHaveLength(1)
     // And it is a projection, not a write: the map it was handed is untouched.
-    expect(before.a.memories.at(-1)).toEqual({ date: 1, type: 'liked', desc: `old ${MEMORY_CAP - 1}` })
+    expect(before.a.memories).toHaveLength(3)
     expect(before.a.flags.hadSex).toBe(false)
   })
 

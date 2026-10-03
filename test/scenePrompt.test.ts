@@ -11,6 +11,7 @@ import {
   type ScenePromptState
 } from '../src/renderer/prompts/scenePrompt'
 import { cgAction } from '@shared/sceneActions'
+import { DEFAULT_MEMORY_BUDGETS } from '@shared/settingsRules'
 import { READER_SPEAKER, type SceneLine, type TimeSlot } from '@shared/types'
 import { character, charactersById } from './fixtures'
 
@@ -48,6 +49,7 @@ function promptState() {
     emotions: {},
     onStage: [],
     lessNsfwText: false,
+    memoryBudgets: DEFAULT_MEMORY_BUDGETS,
     cgReady: {},
     outfitReady: {},
     roomReady: {}

@@ -30,8 +30,8 @@ import {
 } from './lorebook'
 import { occasionLoreLines } from './occasions'
 import { objectSchema } from './schema'
-import { memoryLines, profileLines, scheduleLines, yearMajorLine } from './scenePrompt'
-import { springBreakLines } from './springBreak'
+import { memoryLines, notesLines, profileLines, scheduleLines, yearMajorLine } from './scenePrompt'
+import { isAwayForSpringBreak, springBreakLines } from './springBreak'
 import {
   bestFriendLines,
   hauntClause,
@@ -116,6 +116,8 @@ export interface TextingPromptState {
    * open through an absence, so this is what says she is texting from somewhere else.
    */
   springBreakAway?: readonly string[] | null
+  /** How many of her memories the thread carries: the one-character budget, the thread being the two of them. */
+  memoryBudget: number
 }
 
 /** A text's line breaks folded to spaces, so a message stays one prompt line. */
@@ -280,7 +282,7 @@ export function buildTextingPrompt(
   reader: string
 ): StructuredRequest {
   const name = character.firstName
-  const away = state.springBreakAway?.includes(character.charId) ?? false
+  const away = isAwayForSpringBreak(state.springBreakAway, character.charId, state.date)
   // The new text is the last line of the log, so it gets its own stamp when it lands in a new slot.
   const history = stampedStubs(
     [
@@ -342,7 +344,12 @@ export function buildTextingPrompt(
       character.charId,
       state.date
     ),
-    ...memoryLines(character, dedupedMemoriesFor(info), info?.textMemory),
+    ...memoryLines(
+      character,
+      dedupedMemoriesFor(info).slice(-state.memoryBudget),
+      info?.textMemory
+    ),
+    ...notesLines(name, info?.notes)
   ]
 
   const user = [
