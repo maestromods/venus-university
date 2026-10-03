@@ -61,6 +61,11 @@ const HOOKS: readonly {
     why: 'localPhotoService renders on this pipeline'
   },
   {
+    file: 'src/renderer/views/UpdateModal.tsx',
+    needs: ['${PHOTO_MOD_UPDATE_NOTE}'],
+    why: 'the update offer never says that updating removes the mod'
+  },
+  {
     file: 'src/main/ipc.ts',
     needs: ['await exportLocalPhotos(filePath)', 'await importLocalPhotos(filePaths[0])'],
     why: 'a backup leaves her DM and feed photos behind, and a restore never puts them back'
