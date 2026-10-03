@@ -47,3 +47,13 @@ describe('a teaser with a picture', () => {
     expect(posted(strangerFeed(drawn))).toEqual(['s1'])
   })
 })
+
+describe('the post photo brief', () => {
+  it('tells the model to leave "image" empty when no picture can be drawn', async () => {
+    const { postPhotoLines } = await import('../src/renderer/prompts/photoBrief')
+    const off = postPhotoLines(false)
+    expect(off).toHaveLength(1)
+    expect(off[0]).toContain('Leave "image" empty')
+    expect(postPhotoLines(true).join(' ')).toContain('Describe it in "image"')
+  })
+})
