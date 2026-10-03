@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, type AnimationPlaybackControls } from 'motion/react'
 import { toAppError } from '@shared/errors'
 import { classifySaveId, manualSlotOf } from '@shared/saveRules'
-import { hasNextTerm, seasonOf, termIndexOf, termLabel } from '@shared/term'
+import { hasNextTerm, seasonOf, seasonWords, termIndexOf, termLabel } from '@shared/term'
 import {
   MANUAL_SAVE_SLOTS,
   MAX_SLOT_SAVES,
@@ -694,9 +694,9 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
             id="finished-save"
             theme={theme}
             title="The semester is over"
-            message={`You can load this save to say your goodbyes, or carry it on into the ${termLabel(termIndexOf(choosingFinished.record) + 1)}.`}
+            message={`You can load this save to say your goodbyes, or carry it on through ${seasonWords(seasonOf(termIndexOf(choosingFinished.record))).endBreak} into the ${termLabel(termIndexOf(choosingFinished.record) + 1)}.`}
             confirmText="Load"
-            extraText={`Start the ${termLabel(termIndexOf(choosingFinished.record) + 1)}`}
+            extraText={`Start ${seasonWords(seasonOf(termIndexOf(choosingFinished.record))).endBreak}`}
             onExtra={() => {
               const entry = choosingFinished
               setChoosingFinished(null)

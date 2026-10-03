@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { AUDIO_FILES, pitchSemitonesOf, VOICE_PITCH_DEFAULT } from '@shared/audio'
 import { isPermanent } from '@shared/errors'
 import { gameOverSceneOf } from '@shared/gameOver'
-import { hasNextTerm, readerGraduatesNow, termLabel } from '@shared/term'
+import { hasNextTerm, readerGraduatesNow, seasonWords, termLabel } from '@shared/term'
 import { isPosition } from '@shared/positions'
 import { hashString } from '@shared/hash'
 import { isGameOver } from '@shared/money'
@@ -2360,7 +2360,7 @@ export function GameView(): JSX.Element {
               void exportEndingArt().finally(() => setSavingArt(false))
             }}
             // A semester with another after it offers that first, and the menu beside it.
-            confirmText={nextTerm ? `Continue to the ${nextTerm}` : 'Return to the main menu'}
+            confirmText={nextTerm ? `Continue to ${seasonWords().endBreak}` : 'Return to the main menu'}
             onConfirm={() => (nextTerm ? toNextTerm() : toMenu())}
             cancelText="Return to the main menu"
             onCancel={nextTerm ? () => toMenu() : undefined}
