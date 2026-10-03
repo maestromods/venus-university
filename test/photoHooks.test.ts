@@ -61,6 +61,11 @@ const HOOKS: readonly {
     why: 'localPhotoService renders on this pipeline'
   },
   {
+    file: 'src/main/ipc.ts',
+    needs: ['await exportLocalPhotos(filePath)', 'await importLocalPhotos(filePaths[0])'],
+    why: 'a backup leaves her DM and feed photos behind, and a restore never puts them back'
+  },
+  {
     file: 'src/main/imageProtocols.ts',
     needs: ['PHOTO_SCHEME'],
     why: 'a second registerSchemesAsPrivileged replaces the first, so playimg joins this one'

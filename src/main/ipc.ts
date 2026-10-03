@@ -102,6 +102,7 @@ import {
   saveExportFile
 } from './services/characterTransferService'
 import { exportBackup, importBackup } from './services/backupService'
+import { exportLocalPhotos, importLocalPhotos } from './localPhotoBackup'
 import {
   addCustomBackground,
   listCustomBackgrounds,
@@ -727,6 +728,7 @@ export function registerIpcHandlers(): void {
     if (canceled || filePath === undefined || filePath === '') return null
 
     await exportBackup(filePath)
+    await exportLocalPhotos(filePath)
     return filePath
   })
   // A backup read back over everything here; a dismissed dialog resolves `false`.
@@ -739,6 +741,7 @@ export function registerIpcHandlers(): void {
     if (canceled || filePaths.length === 0) return false
 
     await importBackup(filePaths[0])
+    await importLocalPhotos(filePaths[0])
     return true
   })
 
