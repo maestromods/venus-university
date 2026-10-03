@@ -746,8 +746,8 @@ export function GameView(): JSX.Element {
   }
 
   /**
-   * The winning ending's way on: the same crossing out as {@link toMenu}, landing on the roster
-   * of the semester after this one rather than on the menu. A playthrough that cannot be
+   * The winning ending's way on: the same crossing out as {@link toMenu}, landing on the break
+   * before the semester after this one rather than on the menu. A playthrough that cannot be
    * carried on says why over the menu.
    */
   function toNextTerm(): void {
@@ -761,7 +761,7 @@ export function GameView(): JSX.Element {
         setMenuTheme(leftIn)
         const next = playthroughId ? await resolveContinuation(playthroughId) : null
         if (next) stageContinuation(next)
-        setView(next ? 'newGame' : 'mainMenu')
+        setView(next ? 'break' : 'mainMenu')
         endCrossing()
       })()
     })

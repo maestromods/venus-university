@@ -1,0 +1,133 @@
+/* The break screen's own layout. Only the decor blob is placed absolutely against the stage;
+   everything the player reads is flex and grid with `gap`.
+
+   Imported from the view module, never from index.css: a screen's file must load after
+   base.css or its overrides of a primitive lose at equal specificity. */
+.vu-break {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+  padding: 44px 80px 58px;
+  overflow: hidden;
+  background: var(--vu-ground);
+  color: var(--vu-text);
+  font-family: var(--font-body);
+}
+
+/* An archway the size of the corner it hangs off, behind everything and taking no pointer.
+   Translucent rather than filled, so night's ground keeps it decoration and not a panel. */
+.vu-break-decor {
+  position: absolute;
+  top: -340px;
+  left: -180px;
+  width: 620px;
+  height: 900px;
+  border-radius: 999px 999px 0 0;
+  background: color-mix(in srgb, var(--vu-tint) 60%, transparent);
+  rotate: 28deg;
+  pointer-events: none;
+}
+
+/* ---- the header ------------------------------------------------------------ */
+
+.vu-break-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.vu-break-back {
+  flex: none;
+}
+
+/* Where the break stands, in the bookkeeping voice: flat, since a reading is not an answer,
+   and on the tint the title sits on. */
+.vu-break-clock {
+  flex: none;
+  margin-left: auto;
+  padding: 10px 20px;
+  border-radius: 999px 0 0 999px;
+  background: var(--vu-highlight);
+  color: var(--vu-accent);
+  font: 700 16px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- the reader ------------------------------------------------------------ */
+
+/* How much of the break is gone, over what it has left of him. The margin clears the title's
+   blob, which dips below the header under its own lean. */
+.vu-break-reader {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-top: 14px;
+}
+
+.vu-break-track {
+  height: 12px;
+}
+
+/* A small cluster, so one shallow lean rather than a fan; the padding is the room the chips'
+   own shadows paint into. */
+.vu-break-stats {
+  display: flex;
+  gap: 18px;
+  margin: 0;
+  padding: 0 0 6px;
+  list-style: none;
+  rotate: -0.8deg;
+  transform-origin: 0 50%;
+}
+
+/* ---- the grid -------------------------------------------------------------- */
+
+/* Six across and two down, the roster's own count: everybody who is coming back is on screen
+   at once and nothing here scrolls. */
+.vu-break-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 20px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vu-break-arch {
+  --card-zoom: 1.95;
+  height: 232px;
+}
+
+.vu-break-empty {
+  position: relative;
+}
+
+/* ---- the foot -------------------------------------------------------------- */
+
+/* The answers, and over them the one line said while the break is being written. */
+.vu-break-foot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 14px;
+  margin-top: auto;
+}
+
+.vu-break-writing {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--vu-text-muted);
+  font: 700 13px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}

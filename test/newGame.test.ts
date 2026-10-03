@@ -3,7 +3,13 @@ import { appError } from '@shared/errors'
 import { charKeyOf, type Result, type StructuredRequest } from '@shared/types'
 import type { ClassGenReply } from '../src/renderer/prompts/classPrompt'
 import type { ProfileGenReply } from '../src/renderer/prompts/profilePrompt'
-import { character, restoreApi, stubApi } from './fixtures'
+import { FINAL_DATE } from '@shared/classes'
+import { pointsForTier } from '@shared/playerStats'
+import { emptyFlags } from '@shared/relationship'
+import { setActiveTerm } from '@shared/term'
+import { emptyBunnyboard, type GameSave } from '@shared/types'
+import type { Continuation } from '../src/renderer/stores/newGame'
+import { character, playerStats, playthroughRecord, restoreApi, stubApi } from './fixtures'
 
 // The start reaches `gameLoop` for the ComfyUI nudge, and `jobStore` down that
 // chain subscribes to `jobs:progress` at module scope — so the bridge has to
@@ -155,6 +161,86 @@ describe('startNewGame', () => {
     if (outcome.status !== 'failed') return
     expect(outcome.error.code).toBe('OCCASION_GEN_INVALID')
     expect(outcome.missing).toHaveLength(1)
+  })
+})
+
+describe('a continued start', () => {
+  /** The semester `roster` finished: its one girl has met the reader and is coming back. */
+  function finished(): Continuation {
+    const charId = roster[0].charId
+    return {
+      playthroughId: '1',
+      save: {
+        stats: playerStats(pointsForTier(3), pointsForTier(3), pointsForTier(3)),
+        money: 100,
+        date: FINAL_DATE,
+        time: 0,
+        charInfo: {
+          [charId]: { memories: [], flags: { ...emptyFlags(), hasMet: true }, nameKnown: true }
+        },
+        bunnyboard: emptyBunnyboard(),
+        inventory: [],
+        npcRelationships: {},
+        gradesStanding: null,
+        bunnybotThrough: 24,
+        bunnymapUnlocked: true,
+        bunnyshopUnlocked: true,
+        venusJobIntroSent: true,
+        bunnybotContactIntroSent: true,
+        bunnybotFirstPostNudgeSent: false,
+        bunnybotTwoTimingTipSent: false,
+        bunnybotDeferred: [],
+        graduationSeen: true
+      } as unknown as GameSave,
+      record: playthroughRecord({
+        chars: [charId],
+        profiles: { [charId]: { year: 1, dorm: 'lowrise_4', major: 'Culinary Arts', schedule: {} } }
+      }),
+      characters: { [charId]: roster[0] }
+    }
+  }
+
+  // The break screen has already closed the break, and the player may have reworded it: a
+  // second call here would overwrite what he was shown.
+  it('takes a played break as it was closed and asks nothing more about it', async () => {
+    setActiveTerm(1)
+    const generateBreak = vi.fn(async () => dropped())
+    classes = vi.fn(async () => ({ ok: true, data: classReply() }))
+    profiles = vi.fn(async () => ({ ok: true, data: profileReply() }))
+    occasions = vi.fn(async (request: StructuredRequest) => ({
+      ok: true,
+      data: occasionReply(requestedIds(request))
+    }))
+    stubApi({
+      llm: {
+        generateClasses: classes,
+        generateProfiles: profiles,
+        generateOccasions: occasions,
+        generateBreak
+      },
+      jobs: { cancelGroup }
+    })
+
+    const charId = roster[0].charId
+    const stats = playerStats(pointsForTier(2) + 3, pointsForTier(2), pointsForTier(2))
+    const outcome = await settle(
+      startNewGame(roster, {
+        ...finished(),
+        played: {
+          stats,
+          memories: { [charId]: [{ type: 'loved', desc: 'the reader visited her in July' }] }
+        }
+      })
+    )
+    setActiveTerm(0)
+
+    expect(generateBreak).not.toHaveBeenCalled()
+    expect(outcome.status).toBe('ready')
+    if (outcome.status !== 'ready') return
+    expect(outcome.data.carried?.stats).toEqual(stats)
+    expect(outcome.data.carried?.carry.charInfo[charId].memories.map((m) => m.desc)).toEqual([
+      'the reader visited her in July'
+    ])
   })
 })
 

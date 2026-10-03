@@ -369,7 +369,7 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
 
   /**
    * Starts the semester after the one a finished save closed: the save is read whole and the
-   * roster screen opened on it under a plain cut, as the registrar is. A refusal has reported
+   * break before that semester opened on it under a plain cut, as the registrar is. A refusal has reported
    * itself.
    */
   async function beginNextTerm(playthroughId: string, entry: ResolvedSave): Promise<void> {
@@ -379,7 +379,7 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
       () => {
         stageContinuation(next)
         close()
-        setView('newGame')
+        setView('break')
       },
       { from: theme }
     )

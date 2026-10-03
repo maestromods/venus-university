@@ -111,6 +111,10 @@ const api: VenusUniversityApi = {
     read: (playthroughId, saveId) => ipcRenderer.invoke('saves:read', playthroughId, saveId),
     enroll: (draft) => ipcRenderer.invoke('saves:enroll', draft),
     enrollment: (playthroughId) => ipcRenderer.invoke('saves:enrollment', playthroughId),
+    break: (playthroughId) => ipcRenderer.invoke('saves:break', playthroughId),
+    writeBreak: (playthroughId, draft) =>
+      ipcRenderer.invoke('saves:writeBreak', playthroughId, draft),
+    removeBreak: (playthroughId) => ipcRenderer.invoke('saves:removeBreak', playthroughId),
     create: (playthrough, draft, playthroughId) =>
       ipcRenderer.invoke('saves:create', playthrough, draft, playthroughId),
     slot: (playthroughId, draft) => ipcRenderer.invoke('saves:slot', playthroughId, draft),
