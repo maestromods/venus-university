@@ -61,6 +61,16 @@ const HOOKS: readonly {
     why: 'localPhotoService renders on this pipeline'
   },
   {
+    file: 'src/renderer/stores/loop/feed.ts',
+    needs: ['pickTeaser(freshPhotos.length > 0 ? freshPhotos : fresh)'],
+    why: "a stranger's photo post is never the slot's teaser, and her picture is drawn for nobody"
+  },
+  {
+    file: 'src/renderer/stores/feedView.ts',
+    needs: ['if (!post || !postIsOut(post)) continue'],
+    why: 'a teaser with a picture shows before the picture exists'
+  },
+  {
     file: 'src/renderer/views/UpdateModal.tsx',
     needs: ['${PHOTO_MOD_UPDATE_NOTE}'],
     why: 'the update offer never says that updating removes the mod'
