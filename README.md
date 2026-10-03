@@ -15,6 +15,9 @@
 >   her affection like any other post.
 > - **Body details.** An optional build, chest, hips and backside for each character, so her body
 >   looks the same in sprites, CGs and photos. Off by default. The switch is in Character Manage.
+>   With it on, a character you create gets them from the start, and you can set them in the
+>   editor of any character of your own. The default characters can't be edited, so duplicate one
+>   first and give the copy her body details.
 >
 > ### Backups and character exports
 >

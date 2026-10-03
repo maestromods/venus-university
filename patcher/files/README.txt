@@ -11,6 +11,9 @@ What it adds
   the game's own feed posts: once posted, she doesn't remember them, and
   liking one counts toward her affection like any other post.
 - Body details: an optional build, chest, hips and backside per character.
+  Switch them on in Character Manage. A character you create gets them
+  from the start; the default characters can't be edited, so duplicate
+  one and give the copy her body details.
 - Both can be turned off in the game's settings.
 
 The setup contains only code. It does not include any of the game's
