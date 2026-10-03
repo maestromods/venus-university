@@ -7,6 +7,8 @@ Please don't report problems with it to Venus Dev.
 What it adds
 ------------
 - Characters can send you photos in DMs and post photos to the feed.
+  She remembers the photos she sent you in DMs. Feed photos work like
+  the game's own feed posts: once posted, she doesn't remember them.
 - Body details: an optional build, chest, hips and backside per character.
 - Both can be turned off in the game's settings.
 

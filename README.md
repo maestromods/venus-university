@@ -9,6 +9,9 @@
 > - **Photos.** Characters can send you a photo in DMs and post photos to the feed. How far a
 >   photo goes depends on your relationship and your content settings. To turn photos off, use
 >   **No DM and feed photos** in Settings → Content.
+>
+>   She remembers the photos she sent you in DMs and what was in them. Feed photos work like the
+>   game's own feed posts: once posted, she doesn't remember them.
 > - **Body details.** An optional build, chest, hips and backside for each character, so her body
 >   looks the same in sprites, CGs and photos. Off by default. The switch is in Character Manage.
 >
