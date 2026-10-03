@@ -1,13 +1,19 @@
 import type { CharJob, TimeSlot } from '@shared/types'
 import { shiftSlotOf } from '@shared/jobs'
+import { activeSeason, type Season } from '@shared/term'
 
 /**
- * In-game calendar helpers; fixed non-leap anchor keeps dates deterministic. 2015
- * is chosen so day 0 — January 19 — is a Monday, which the class schedule depends on.
+ * In-game calendar helpers; a fixed non-leap anchor per season keeps dates deterministic. 2015
+ * is chosen so both day 0s — January 19 and August 17 — are Mondays, which the class schedule
+ * depends on.
  */
 const ANCHOR_YEAR = 2015
-const ANCHOR_MONTH = 0 // January
-const ANCHOR_DAY = 19
+
+/** Day 0 of each season's semester, as a month index and a day of that month. */
+const ANCHORS: Record<Season, { month: number; day: number }> = {
+  spring: { month: 0, day: 19 },
+  fall: { month: 7, day: 17 }
+}
 
 const WEEKDAYS = [
   'Sunday',
@@ -36,27 +42,32 @@ const MONTHS = [
 
 /**
  * The calendar date a game day falls on, in UTC so the machine's timezone cannot shift it a
- * day; every reader below goes through here.
+ * day; every reader below goes through here. A screen outside any game names the season of the
+ * playthrough it is dating; everything else reads the active term's.
  */
-function dateFromDay(date: number): Date {
-  return new Date(Date.UTC(ANCHOR_YEAR, ANCHOR_MONTH, ANCHOR_DAY + date))
+function dateFromDay(date: number, season: Season = activeSeason()): Date {
+  const anchor = ANCHORS[season]
+  return new Date(Date.UTC(ANCHOR_YEAR, anchor.month, anchor.day + date))
 }
 
-/** "January 19" for date 0. Month and day only — the year is an implementation detail. */
-export function formatGameDate(date: number): string {
-  const at = dateFromDay(date)
+/**
+ * "January 19" for date 0 of a spring. Month and day only — the year is an implementation
+ * detail.
+ */
+export function formatGameDate(date: number, season?: Season): string {
+  const at = dateFromDay(date, season)
   return `${MONTHS[at.getUTCMonth()]} ${at.getUTCDate()}`
 }
 
 /** Compact date for memory entries in prompt cast blocks. */
-export function formatShortGameDate(date: number): string {
-  const at = dateFromDay(date)
+export function formatShortGameDate(date: number, season?: Season): string {
+  const at = dateFromDay(date, season)
   return `${MONTHS[at.getUTCMonth()].slice(0, 3)} ${at.getUTCDate()}`
 }
 
 /** `"1/28"` — the date as a figure, for the day-change splash's mono row. */
-export function formatNumericGameDate(date: number): string {
-  const at = dateFromDay(date)
+export function formatNumericGameDate(date: number, season?: Season): string {
+  const at = dateFromDay(date, season)
   return `${at.getUTCMonth() + 1}/${at.getUTCDate()}`
 }
 
@@ -161,13 +172,13 @@ export function formatTimeSlot(time: TimeSlot): string {
 }
 
 /** The date half of the banner, e.g. `"Monday, January 19"`. */
-export function formatDatePart(date: number): string {
-  return `${formatWeekday(date)}, ${formatGameDate(date)}`
+export function formatDatePart(date: number, season?: Season): string {
+  return `${formatWeekday(date)}, ${formatGameDate(date, season)}`
 }
 
 /** The slot-opening banner, e.g. `"Monday, January 19. Day."`. */
-export function formatDateBanner(date: number, time: TimeSlot): string {
-  return `${formatDatePart(date)}. ${formatTimeSlot(time)}.`
+export function formatDateBanner(date: number, time: TimeSlot, season?: Season): string {
+  return `${formatDatePart(date, season)}. ${formatTimeSlot(time)}.`
 }
 
 /** The first line of every slot opening: date, weekday and half, semester phrase. */

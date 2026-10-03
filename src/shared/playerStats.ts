@@ -125,6 +125,16 @@ export function statsForTiers(tiers: Record<StatKey, StatTier>): PlayerStats {
   }
 }
 
+/**
+ * The stats a reader comes back from a break with: each one a tier below where it stood, at the
+ * fewest points that buy that tier, and the floor left where it is.
+ */
+export function rustedStats(stats: PlayerStats): PlayerStats {
+  const rusted = (points: number): number =>
+    pointsForTier(Math.max(STARTING_TIER, tierOf(points) - 1) as StatTier)
+  return { brain: rusted(stats.brain), body: rusted(stats.body), heart: rusted(stats.heart) }
+}
+
 /** The tier `points` buys: the highest threshold it reaches, clamped both ends. */
 export function tierOf(points: number): StatTier {
   let tier: number = MIN_TIER

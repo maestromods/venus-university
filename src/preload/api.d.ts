@@ -116,6 +116,8 @@ export interface VenusUniversityApi {
     generateProfiles: <T>(request: StructuredRequest, group: string) => Promise<Result<T>>
     /** Generates the save's own calendar occasions once, at New Game. */
     generateOccasions: <T>(request: StructuredRequest, group: string) => Promise<Result<T>>
+    /** Generates what the returning roster remembers of the break, once, as a semester is continued. */
+    generateBreak: <T>(request: StructuredRequest, group: string) => Promise<Result<T>>
     /** Generates one exam's multiple-choice questions. Never streams. */
     generateQuiz: <T>(request: StructuredRequest) => Promise<Result<T>>
     /**

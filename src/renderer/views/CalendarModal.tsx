@@ -4,6 +4,7 @@ import { motion } from 'motion/react'
 import { kindSentenceOf } from '@shared/academics'
 import { FINAL_DATE, studentsOf, TIME_SLOTS } from '@shared/classes'
 import { jobDefOf, shiftSlotOf, WEEK_COLUMNS, WEEK_DAY_HEADERS } from '@shared/jobs'
+import { activeSeason, type Season } from '@shared/term'
 import type { CalendarEvent, ClassEntry, Occasion, TimeSlot } from '@shared/types'
 import { weatherAt, type Weather } from '@shared/weather'
 import { useModalShell } from '../components/useModalShell'
@@ -67,12 +68,18 @@ interface Month {
   last: number
 }
 
+/** Each season's months, worked out the first time a semester of that season opens the calendar. */
+const MONTHS_BY_SEASON = new Map<Season, readonly Month[]>()
+
 /**
- * The months the semester touches, each drawn whole: the first one's days before
- * the 19th and the last one's after graduation are on the grid, dimmed, so a month is always
- * a month and the arrows never change the shape of what they page.
+ * The months the semester being played touches, each drawn whole: the first one's days before
+ * day 0 and the last one's after the semester's end are on the grid, dimmed, so a month is
+ * always a month and the arrows never change the shape of what they page.
  */
-const MONTHS: readonly Month[] = ((): Month[] => {
+function monthsOf(): readonly Month[] {
+  const season = activeSeason()
+  const known = MONTHS_BY_SEASON.get(season)
+  if (known) return known
   const months: Month[] = []
   let first = 1 - dayOfMonth(0)
   while (first <= FINAL_DATE) {
@@ -81,14 +88,15 @@ const MONTHS: readonly Month[] = ((): Month[] => {
     months.push({ first, last: next - 1 })
     first = next
   }
+  MONTHS_BY_SEASON.set(season, months)
   return months
-})()
+}
 
-/** Which of {@link MONTHS} a date falls in. */
+/** Which of {@link monthsOf} a date falls in. */
 function monthIndexOf(date: number): number {
   return Math.max(
     0,
-    MONTHS.findIndex((month) => date >= month.first && date <= month.last)
+    monthsOf().findIndex((month) => date >= month.first && date <= month.last)
   )
 }
 
@@ -295,9 +303,10 @@ export function CalendarModal({ theme, onClose }: CalendarModalProps): JSX.Eleme
 
   const { host, overlayProps } = useModalShell(onClose)
 
-  const { first, last } = MONTHS[month]
+  const months = monthsOf()
+  const { first, last } = months[month]
   const firstMonth = month === 0
-  const lastMonth = month === MONTHS.length - 1
+  const lastMonth = month === months.length - 1
 
   /** The classes meeting on `date`, each with the half it meets in, Day then Night. */
   function classesOn(date: number): Array<{ time: TimeSlot; entry: ClassEntry }> {

@@ -5,13 +5,23 @@ import { assertEndingRequest, ENDING_PICTURE_SIZE, endingPicturePrompt } from '@
 import { generateImage } from '@shared/llm/cloudImage'
 import { LINEUP_MIME_TYPE } from '@shared/lineup'
 import { ENDING_IMAGE_MODEL_ID } from '@shared/providers'
+import { seasonOf, termIndexOf, type Season } from '@shared/term'
 import { getEndingArtPath } from '../paths'
-import { assertSafePlaythroughId } from './saveService'
+import { assertSafePlaythroughId, readPlaythroughRecord } from './saveService'
 
 /**
  * The graduation picture: the reader's friends at a party, drawn once per
  * playthrough from a reference sheet of their sprites and kept in the playthrough folder.
  */
+
+/** The half of the year the playthrough's semester is; a record that cannot be read is a spring. */
+async function seasonOfPlaythrough(playthroughId: string): Promise<Season> {
+  try {
+    return seasonOf(termIndexOf(await readPlaythroughRecord(playthroughId)))
+  } catch {
+    return 'spring'
+  }
+}
 
 /** Draws the picture, writes it into the playthrough folder and answers with the same bytes. */
 export async function generateEndingArt(
@@ -25,7 +35,7 @@ export async function generateEndingArt(
   assertEndingRequest(friendCount, bytes)
 
   const art = Buffer.from(
-    await generateImage(endingPicturePrompt(friendCount), {
+    await generateImage(endingPicturePrompt(friendCount, await seasonOfPlaythrough(playthroughId)), {
       model: ENDING_IMAGE_MODEL_ID,
       imageSize: ENDING_PICTURE_SIZE,
       sources: [{ bytes, mimeType: LINEUP_MIME_TYPE }],

@@ -1,5 +1,5 @@
-import { SENIOR_YEAR } from '@shared/classes'
 import { messageOf } from '@shared/errors'
+import { graduatesNow } from '@shared/term'
 import { isGameOver } from '@shared/money'
 import {
   charKeyOf,
@@ -103,7 +103,7 @@ export function armEndingPosts(): void {
       info,
       charKey,
       texted: hasTexted(game.bunnyboard.conversations[charId]),
-      senior: (info.year ?? 0) >= SENIOR_YEAR,
+      senior: graduatesNow(info.year),
       daysAfter: stamp.date - GRADUATION_DATE,
       time: stamp.time
     })

@@ -103,8 +103,29 @@ function courseSchema(): Record<string, unknown> {
   }
 }
 
-/** Every roster key, and the cast block the registrar and the profile call both open with. */
-export function rosterCastLines(roster: readonly Character[]): {
+/**
+ * What is already settled about a student who was enrolled last semester: the half of her
+ * profile a continued semester keeps rather than asks for again.
+ */
+export interface ReturningStudent {
+  /** Her class year this semester. */
+  year: number
+  major: string
+  dorm: DormId
+  handle?: string
+}
+
+/** The returning half of a roster, keyed by charKey; empty for a new story. */
+export type ReturningStudents = Readonly<Record<string, ReturningStudent>>
+
+/**
+ * Every roster key, and the cast block the registrar and the profile call both open with. A
+ * `notes` line, where a student has one, is printed under her personality.
+ */
+export function rosterCastLines(
+  roster: readonly Character[],
+  notes: Readonly<Record<string, string>> = {}
+): {
   keys: string[]
   cast: string[]
 } {
@@ -112,14 +133,26 @@ export function rosterCastLines(roster: readonly Character[]): {
   const cast = roster.flatMap((character, index) => [
     `${keys[index]} — ${fullNameOf(character)}`,
     character.personality,
+    ...(notes[keys[index]] ? [notes[keys[index]]] : []),
     ''
   ])
   return { keys, cast }
 }
 
 /** Builds the class-catalog request. */
-export function buildClassPrompt(roster: readonly Character[]): StructuredRequest {
-  const { keys, cast } = rosterCastLines(roster)
+export function buildClassPrompt(
+  roster: readonly Character[],
+  returning: ReturningStudents = {}
+): StructuredRequest {
+  const { keys, cast } = rosterCastLines(
+    roster,
+    Object.fromEntries(
+      Object.entries(returning).map(([key, student]) => [
+        key,
+        `RETURNING STUDENT: her major is already "${student.major}". Give her exactly that major.`
+      ])
+    )
+  )
 
   const system = [
     'You are a university registrar building a course catalog and enrolling students.',
@@ -226,7 +259,8 @@ export function clamp(value: number, min: number, max: number, what: string): nu
 /** Validates a reply, renumbers a colliding course code and folds interest classes into the catalog. */
 export function validateClassDraft(
   draft: ClassGenReply,
-  roster: readonly Character[]
+  roster: readonly Character[],
+  returning: ReturningStudents = {}
 ): ClassGenReply {
   const classes = draft.classes ?? []
   const seen = new Map<string, string>()
@@ -267,7 +301,9 @@ export function validateClassDraft(
     const profile = draft.characters?.[key]
     if (!profile) invalid(`${fullNameOf(character)} was left unenrolled.`)
 
-    const major = (profile.major ?? '').trim()
+    // A returning student keeps her major wherever the catalog offers it under that name.
+    const kept = returning[key]?.major
+    const major = kept && majorsOffered.has(kept) ? kept : (profile.major ?? '').trim()
     if (!majorsOffered.has(major)) {
       invalid(`No classes were created for ${character.firstName}'s major, "${major}".`)
     }

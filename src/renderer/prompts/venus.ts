@@ -1,7 +1,8 @@
 import { globalSlotOf } from '@shared/jobs'
 import { MIN_PLAYER_COURSES, MAX_PLAYER_CLASSES } from '@shared/classes'
+import { activeTermIndex } from '@shared/term'
 import { formatDatePart, formatGameDate } from './gameDate'
-import { ADD_DROP_DATE, FINALS_WEEK, MIDTERM_WEEK, STATIC_OCCASIONS } from './occasions'
+import { ADD_DROP_DATE, FINALS_WEEK, MIDTERM_WEEK, staticOccasions } from './occasions'
 
 /** VenusBot — the university's AI assistant, a Bunnyboard contact from the first night. */
 
@@ -28,31 +29,34 @@ export interface VenusMessage {
   texts: readonly string[]
 }
 
-/** Reading Day's date, read off the table. */
-const READING_DAY = STATIC_OCCASIONS.find((occasion) => occasion.id === 'reading-day')
-
 /** Every message Venus sends over a semester, ascending by trigger slot. */
-function venusCatalog(playerFirstName: string): readonly VenusMessage[] {
+function venusCatalog(playerFirstName: string, returning: boolean): readonly VenusMessage[] {
   const addDrop = formatDatePart(ADD_DROP_DATE)
   const midterms = `${formatGameDate(MIDTERM_WEEK.startDate)} to ${formatGameDate(MIDTERM_WEEK.endDate)}`
   const finals = `${formatGameDate(FINALS_WEEK.startDate)} to ${formatGameDate(FINALS_WEEK.endDate)}`
+  // Reading Day's date, read off the active season's table.
+  const readingDay = staticOccasions().find((occasion) => occasion.id === 'reading-day')
 
   return [
     {
       id: 'welcome',
       triggerSlot: globalSlotOf(0, 1),
       texts: [
-        `Hi ${playerFirstName}! I'm Venus, the university's assistant. I can help you change your classes and will remind you of important dates coming up during the semester.`,
+        returning
+          ? `Welcome back, ${playerFirstName}! It's Venus again. As always, I can help you change your classes and will remind you of important dates coming up during the semester.`
+          : `Hi ${playerFirstName}! I'm Venus, the university's assistant. I can help you change your classes and will remind you of important dates coming up during the semester.`,
         `If you want to change classes, you have until ${addDrop} — the add/drop deadline — to change it. The button below will take you to the scheduling website.`,
         `Keep in mind that you need at least ${MIN_PLAYER_COURSES} regular classes plus a PE class to stay enrolled, ${MAX_PLAYER_CLASSES} classes at most, and if you drop a class you won't be able to enroll in it again this semester.`,
-        `Concordia et Prosperitas. Welcome to campus!`
+        returning
+          ? `Concordia et Prosperitas. Welcome back to campus!`
+          : `Concordia et Prosperitas. Welcome to campus!`
       ]
     },
     {
       id: 'first-week',
       triggerSlot: globalSlotOf(8, 0),
       texts: [
-        `How's your first week been, ${playerFirstName}? Remember to keep up with your coursework! By the way, there are two types of classes: lecture classes and project classes.`,
+        `How's your first week ${returning ? 'back ' : ''}been, ${playerFirstName}? Remember to keep up with your coursework! By the way, there are two types of classes: lecture classes and project classes.`,
         `For lecture classes, you'll have a midterm and a final. Study hard and improve your Brains if you want a good grade. And if your professor says something will be on an exam, you should probably note it down.`,
         `For project classes, you'll have a final showcase instead of an exam. If you work on your project every week, you'll avoid having to crunch when the deadline approaches. And it definitely helps to have high Heart so you can present your project effectively.`,
         `Midterms run ${midterms}. Good luck! Wishing you "Concordia et Prosperitas."`
@@ -95,9 +99,9 @@ function venusCatalog(playerFirstName: string): readonly VenusMessage[] {
       texts: [
         `Ready for finals, ${playerFirstName}? They'll be held next week, from ${finals}.`,
         // A semester without a Reading Day sends one bubble fewer.
-        ...(READING_DAY
+        ...(readingDay
           ? [
-              `Classes will be cancelled on ${formatDatePart(READING_DAY.startDate)} for Reading Day, so catch up on your studies if you need to.`
+              `Classes will be cancelled on ${formatDatePart(readingDay.startDate)} for Reading Day, so catch up on your studies if you need to.`
             ]
           : []),
         `Here's to another successful semester! Concordia et Prosperitas.`
@@ -110,9 +114,11 @@ function venusCatalog(playerFirstName: string): readonly VenusMessage[] {
 export function venusMessagesDue(
   playerFirstName: string,
   through: number,
-  currentSlot: number
+  currentSlot: number,
+  // A reader who has been here a semester already is welcomed back rather than introduced to.
+  returning = activeTermIndex() > 0
 ): readonly VenusMessage[] {
-  return venusCatalog(playerFirstName).filter(
+  return venusCatalog(playerFirstName, returning).filter(
     (message) => message.triggerSlot > through && message.triggerSlot <= currentSlot
   )
 }

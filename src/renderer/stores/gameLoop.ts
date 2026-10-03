@@ -1,4 +1,6 @@
-import { GAME_OVER_SCENES, gameOverReasonOf } from '@shared/gameOver'
+import { GAME_OVER_SCENES, gameOverReasonOf, gameOverSceneOf } from '@shared/gameOver'
+import { affectionFor } from '@shared/relationship'
+import { readerGraduatesNow } from '@shared/term'
 import { earnLine, spendLine, spentOf } from '@shared/money'
 import {
   globalSlotOf,
@@ -43,8 +45,11 @@ import {
   introScrollLines,
   isOrientationSlot,
   isTutorialSlot,
+  newcomerPremise,
   ORIENTATION_PREMISE,
   orientationLeaderPremise,
+  returnScrollLines,
+  reunionPremise,
   tutorialLines
 } from '../prompts/introScript'
 import {
@@ -310,7 +315,9 @@ async function beginSlot(): Promise<void> {
     // goodbye; outside the branch below because a reload lands here too.
     armEpilogue()
     // Queued only: `graduationSeen` is raised where the scroll is read.
-    if (!state.graduationSeen) state.appendPendingLines(graduationScrollLines(seniorNames()))
+    if (!state.graduationSeen) {
+      state.appendPendingLines(graduationScrollLines(seniorNames(), readerGraduatesNow()))
+    }
     advance()
     // The curtain announces the morning like any other and peels back off the scroll's first
     // line, which `advance` has already put up.
@@ -324,11 +331,16 @@ async function beginSlot(): Promise<void> {
   state.clearSceneGifts()
   state.setSceneQuiz(null)
 
-  // The authored first slot: the arrival scroll, then freshman orientation.
+  // The authored first slot: the arrival scroll, then freshman orientation — or, on a semester
+  // continued from the one before, the scroll back onto campus and the scene it leads into.
   if (isOrientationSlot(state.date, state.time)) {
     state.setWaitingForLine(false)
     state.setAwaitingInput(false)
-    state.appendPendingLines(introScrollLines(state.stats, state.date))
+    state.appendPendingLines(
+      state.termIndex > 0
+        ? returnScrollLines(state.stats, state.date)
+        : introScrollLines(state.stats, state.date)
+    )
     advance()
     // The curtain the timetable was finalized under opens on the scroll.
     void revealSlot()
@@ -444,24 +456,69 @@ async function beginSlot(): Promise<void> {
   await foldOpeningIntoSlotSave(lines)
 }
 
-/** The playthrough's first scene, cast and sent without a classifier. */
-async function startOrientationScene(): Promise<void> {
-  const run = currentRun()
+/**
+ * Who a new story's first scene is with, and the premise it is written from: a freshman, or
+ * anyone at all when there are none, who gets the leader premise instead. No attendance filter:
+ * orientation cancels every class on day 0.
+ */
+function orientationOpening(): { cast: string[]; action: string } {
   const game = useGameStore.getState()
-
-  // A freshman, or anyone at all when there are none, who gets the leader premise instead.
-  // No attendance filter: orientation cancels every class on day 0.
   const freshmen = game.chars.filter((charId) => game.charInfo[charId]?.year === 1)
   const pool = freshmen.length > 0 ? freshmen : game.chars
   if (pool.length === 0) {
     console.warn('[intro] no characters on the roster; orientation plays solo')
   }
   const picked = pool.length > 0 ? anyOf(pool) : null
-  const cast = picked ? [picked] : []
-  const action =
-    picked && freshmen.length === 0
-      ? orientationLeaderPremise(game.characters[picked]?.firstName ?? 'she')
-      : ORIENTATION_PREMISE
+  return {
+    cast: picked ? [picked] : [],
+    action:
+      picked && freshmen.length === 0
+        ? orientationLeaderPremise(game.characters[picked]?.firstName ?? 'she')
+        : ORIENTATION_PREMISE
+  }
+}
+
+/**
+ * The same for a continued semester: somebody he has never met, a freshman first, and when
+ * there is nobody new at all, the girl he is closest to, seen again for the first time since
+ * the break. A tie keeps roster order.
+ */
+function returnOpening(): { cast: string[]; action: string } {
+  const game = useGameStore.getState()
+  const strangers = game.chars.filter((charId) => !game.charInfo[charId]?.flags.hasMet)
+  if (strangers.length > 0) {
+    const freshmen = strangers.filter((charId) => game.charInfo[charId]?.year === 1)
+    return {
+      cast: [anyOf(freshmen.length > 0 ? freshmen : strangers)],
+      action: newcomerPremise(freshmen.length > 0)
+    }
+  }
+
+  let closest: string | null = null
+  let best = -Infinity
+  for (const charId of game.chars) {
+    const affection = affectionFor(game.charInfo[charId], game.date, game.characters[charId])
+    if (affection > best) {
+      best = affection
+      closest = charId
+    }
+  }
+  if (!closest) {
+    console.warn('[intro] no characters on the roster; the first morning plays solo')
+    return { cast: [], action: newcomerPremise(false) }
+  }
+  return {
+    cast: [closest],
+    action: reunionPremise(game.characters[closest]?.firstName ?? 'her')
+  }
+}
+
+/** The playthrough's first scene, cast and sent without a classifier. */
+async function startOrientationScene(): Promise<void> {
+  const run = currentRun()
+  const game = useGameStore.getState()
+
+  const { cast, action } = game.termIndex > 0 ? returnOpening() : orientationOpening()
 
   const snapshot: TurnSnapshot = { scene: game.captureScene(), action, intro: true }
   loopState.lastTurn = snapshot
@@ -591,7 +648,9 @@ function endEpilogue(reason: 'gameComplete' | 'endingDebt'): void {
   game.setWaitingForLine(false)
   game.setAwaitingInput(false)
   game.setBusy(false)
-  game.appendPendingLines(GAME_OVER_SCENES[reason].lines.map((text) => ({ speaker: '', text })))
+  game.appendPendingLines(
+    gameOverSceneOf(reason, readerGraduatesNow()).lines.map((text) => ({ speaker: '', text }))
+  )
   advance()
 }
 

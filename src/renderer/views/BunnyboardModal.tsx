@@ -41,7 +41,7 @@ import {
 } from '../prompts/gameDate'
 import { handedBackAcedCount } from '../prompts/classProgress'
 import { ADD_DROP_DATE } from '../prompts/occasions'
-import { profileDescriptionOf } from '../prompts/setting'
+import { profileDescriptionOf, readerYearPhrase } from '../prompts/setting'
 import { isVenusChat, VENUS_EMOJI, VENUS_NAME, VENUS_TITLE } from '../prompts/venus'
 import { isBunnybotChat, BUNNYBOT_EMOJI, BUNNYBOT_NAME, BUNNYBOT_TITLE } from '../prompts/bunnybot'
 import { useBunnyboardStore, type BunnyboardTab } from '../stores/bunnyboardStore'
@@ -1526,7 +1526,7 @@ function ProfilePage(): JSX.Element {
             multiline
             rows={3}
             placeholder="Optional. Can be left blank."
-            hint="This is put in every prompt so try to keep it short and sweet. Use third-person past tense and continue this paragraph: The reader is a freshman named <Name>, a male who has a single dorm in Lowrise 4. The reader is <description based on current stats>. The reader is..."
+            hint={`This is put in every prompt so try to keep it short and sweet. Use third-person past tense and continue this paragraph: The reader is ${readerYearPhrase()} named <Name>, a male who has a single dorm in Lowrise 4. The reader is <description based on current stats>. The reader is...`}
           />
         </div>
 

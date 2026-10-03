@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, type JSX } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
+import { readerGraduatesNow } from '@shared/term'
 import { READER_SPEAKER } from '@shared/types'
 import { CheckField } from '../components/CheckField'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -72,7 +73,7 @@ export function ChatLogModal({ theme, onClose }: ChatLogModalProps): JSX.Element
   const visible = menu
     ? farewellLog.length > 0
       ? farewellLog
-      : graduationScrollLines(seniorNames())
+      : graduationScrollLines(seniorNames(), readerGraduatesNow())
     : sceneLog.slice(start)
 
   /**

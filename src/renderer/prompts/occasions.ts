@@ -2,8 +2,15 @@ import type { ExamPeriod } from '@shared/academics'
 import { FINAL_DATE, slotOf } from '@shared/classes'
 import { jobDefOf, slotFromId } from '@shared/jobs'
 import { locationDefOf } from '@shared/locations'
+import { activeSeason, type Season } from '@shared/term'
 import type { ClassSlot, HauntKind, Occasion, TimeSlot } from '@shared/types'
 import { classWeekdayOf, formatGameDate, formatWeekday } from './gameDate'
+import {
+  FALL_EXAM_LOOKAHEAD,
+  FALL_NO_LEAD_UP_IDS,
+  FALL_OUTING_OCCASION_IDS,
+  fallStaticOccasions
+} from './occasionsFall'
 
 /**
  * The occasion calendar: what is happening on campus and in Veridan on a given day,
@@ -276,9 +283,17 @@ export const STATIC_OCCASIONS: readonly Occasion[] = [...HOLIDAYS, ...ACADEMIC].
   (a, b) => a.startDate - b.startDate
 )
 
+/** The fall's fixed calendar, built beside the spring's so the two cannot disagree on a milestone. */
+const FALL_STATIC_OCCASIONS: readonly Occasion[] = fallStaticOccasions(ACADEMIC)
+
+/** The fixed calendar of one season; the active term's, unless a season is named. */
+export function staticOccasions(season: Season = activeSeason()): readonly Occasion[] {
+  return season === 'fall' ? FALL_STATIC_OCCASIONS : STATIC_OCCASIONS
+}
+
 /** The static set plus whatever this save generated, in calendar order. */
 function allOccasions(generated: readonly Occasion[] = []): Occasion[] {
-  return [...STATIC_OCCASIONS, ...generated].sort((a, b) => a.startDate - b.startDate)
+  return [...staticOccasions(), ...generated].sort((a, b) => a.startDate - b.startDate)
 }
 
 /** Everything happening on `date`, in either half of it — what the Calendar draws. */
@@ -365,7 +380,10 @@ export function outingOccasionAt(
 ): Occasion | null {
   return (
     occasionsAt(date, time, generated).find(
-      (occasion) => occasion.kind === 'campus' || OUTING_OCCASION_IDS.has(occasion.id)
+      (occasion) =>
+        occasion.kind === 'campus' ||
+        OUTING_OCCASION_IDS.has(occasion.id) ||
+        FALL_OUTING_OCCASION_IDS.has(occasion.id)
     ) ?? null
   )
 }
@@ -406,7 +424,7 @@ export function occasionLeadUpLines(
 ): string[] {
   const lines: string[] = []
   for (const occasion of allOccasions(generated)) {
-    if (NO_LEAD_UP_IDS.has(occasion.id)) continue
+    if (NO_LEAD_UP_IDS.has(occasion.id) || FALL_NO_LEAD_UP_IDS.has(occasion.id)) continue
     const sentence = leadUpSentence(occasion, date, time)
     if (sentence) lines.push(`${occasion.title}: ${occasion.description} ${sentence}`)
   }
@@ -515,6 +533,11 @@ const BREAK_WEEKS: ReadonlyArray<{ startDate: number; endDate: number }> = [
 /** The heads-up line for the week before each exam week, or null. */
 export function examLookaheadLine(date: number): string | null {
   const week = weekOf(date)
+  if (activeSeason() === 'fall') {
+    if (week === weekOf(MIDTERM_WEEK.startDate) - 1) return FALL_EXAM_LOOKAHEAD.midterm
+    if (week === weekOf(FINALS_WEEK.startDate) - 1) return FALL_EXAM_LOOKAHEAD.finals
+    return null
+  }
   if (week === weekOf(MIDTERM_WEEK.startDate) - 1) {
     return 'Midterms are next week, starting March 2nd. Every class is a week out from its exam or project showcase. Spring break is the week after.'
   }
@@ -536,15 +559,20 @@ const NO_OCCASIONS: readonly Occasion[] = []
 /** Memo for {@link meetingDatesOf}, keyed on the occasion list's identity. */
 const meetingsMemo = new WeakMap<readonly Occasion[], Map<ClassSlot, readonly number[]>>()
 
+/** The same memo for a fall semester. */
+const fallMeetingsMemo = new WeakMap<readonly Occasion[], Map<ClassSlot, readonly number[]>>()
+
 /** Every date a class in `slot` actually meets, in calendar order. */
 export function meetingDatesOf(
   slot: ClassSlot,
   generated: readonly Occasion[] = NO_OCCASIONS
 ): readonly number[] {
-  let bySlot = meetingsMemo.get(generated)
+  // Each season closes the university on days of its own, so the fall keeps a memo apart.
+  const memo = activeSeason() === 'fall' ? fallMeetingsMemo : meetingsMemo
+  let bySlot = memo.get(generated)
   if (!bySlot) {
     bySlot = new Map()
-    meetingsMemo.set(generated, bySlot)
+    memo.set(generated, bySlot)
   }
   const cached = bySlot.get(slot)
   if (cached) return cached

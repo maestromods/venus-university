@@ -50,6 +50,7 @@ import {
 } from '@shared/shop'
 import type { GameOverReason } from '@shared/gameOver'
 import type { Weather } from '@shared/weather'
+import { setActiveTerm, termIndexOf } from '@shared/term'
 import { MAX_RAISES, newJobState, RAISE_EVERY } from '@shared/jobs'
 import type { ExamPeriod } from '@shared/academics'
 import type { DatingPassOutcome } from '@shared/dating'
@@ -238,6 +239,8 @@ interface GameStoreState {
   jobClosures: Record<string, ShiftSlot[]>
   /** Every slot's sky, read off the record and never rewritten. */
   weather: Weather[]
+  /** Which semester of the reader's four years this playthrough is, off its record. */
+  termIndex: number
   /** What the reader has bought and not yet given away. Persisted. */
   inventory: OwnedItem[]
   /** What each of his classes has accumulated, keyed by class code. Persisted. */
@@ -1254,6 +1257,7 @@ const initialState = {
   jobsClosed: [] as string[],
   jobClosures: {} as Record<string, ShiftSlot[]>,
   weather: [] as Weather[],
+  termIndex: 0,
   inventory: [] as OwnedItem[],
   classRecords: {} as Record<string, ClassRecord>,
   gradesStanding: null as 'good' | 'bad' | null,
@@ -1341,10 +1345,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   ...initialState,
   loads: 0,
 
-  loadSave: (save, record, characters) =>
+  loadSave: (save, record, characters) => {
+    // The calendar every date and fixed occasion of this playthrough is read against.
+    setActiveTerm(termIndexOf(record))
     set({
       ...initialState,
       loads: get().loads + 1,
+      termIndex: termIndexOf(record),
       playthroughId: save.playthroughId,
       date: save.date,
       time: save.time,
@@ -1409,7 +1416,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       characters,
       charKeyToId: buildCharKeyToId(characters),
       ...freshStage()
-    }),
+    })
+  },
 
   reset: () => set({ ...initialState, loads: get().loads, ...freshStage() }),
 

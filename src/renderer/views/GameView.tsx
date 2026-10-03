@@ -12,7 +12,8 @@ import {
 import { AnimatePresence, motion } from 'motion/react'
 import { AUDIO_FILES, pitchSemitonesOf, VOICE_PITCH_DEFAULT } from '@shared/audio'
 import { isPermanent } from '@shared/errors'
-import { GAME_OVER_SCENES } from '@shared/gameOver'
+import { gameOverSceneOf } from '@shared/gameOver'
+import { hasNextTerm, readerGraduatesNow, termLabel } from '@shared/term'
 import { isPosition } from '@shared/positions'
 import { hashString } from '@shared/hash'
 import { isGameOver } from '@shared/money'
@@ -131,6 +132,7 @@ import {
   endCrossing,
   useCrossingStore
 } from '../stores/crossingStore'
+import { resolveContinuation, stageContinuation } from '../stores/newGame'
 import { menuCrossing, revealSceneOpening } from '../stores/slotCrossing'
 import { goToText, goToVerdict, slotActionsNow } from '../stores/slotActions'
 import { isWebBuild } from '../platform'
@@ -710,8 +712,14 @@ export function GameView(): JSX.Element {
   const classRecords = useGameStore((s) => s.classRecords)
   const occasions = useGameStore((s) => s.occasions)
 
-  /** The playthrough ended badly, and which way (`shared/gameOver.ts`). */
-  const gameOver = activeGameOver ? GAME_OVER_SCENES[activeGameOver] : null
+  const termIndex = useGameStore((s) => s.termIndex)
+
+  /** The playthrough has ended, and which way (`shared/gameOver.ts`). */
+  const gameOver = activeGameOver ? gameOverSceneOf(activeGameOver, readerGraduatesNow()) : null
+
+  /** The semester ended well and another follows it, which the ending's modal can go on into. */
+  const nextTerm =
+    activeGameOver === 'gameComplete' && hasNextTerm(termIndex) ? termLabel(termIndex + 1) : null
 
   /**
    * Writes the last decision point back and leaves, under a cover. The way out is a crossing like
@@ -732,6 +740,28 @@ export function GameView(): JSX.Element {
         setMenuTheme(leftIn)
         // ComfyUI stays running.
         setView('mainMenu')
+        endCrossing()
+      })()
+    })
+  }
+
+  /**
+   * The winning ending's way on: the same crossing out as {@link toMenu}, landing on the roster
+   * of the semester after this one rather than on the menu. A playthrough that cannot be
+   * carried on says why over the menu.
+   */
+  function toNextTerm(): void {
+    const leftIn = half
+    const playthroughId = useGameStore.getState().playthroughId
+    cancelCrossing()
+    beginCrossing(undefined, menuCrossing(leftIn))
+    coverSwap(() => {
+      void (async () => {
+        await leaveToMenu({ keepCrossing: true })
+        setMenuTheme(leftIn)
+        const next = playthroughId ? await resolveContinuation(playthroughId) : null
+        if (next) stageContinuation(next)
+        setView(next ? 'newGame' : 'mainMenu')
         endCrossing()
       })()
     })
@@ -2329,8 +2359,11 @@ export function GameView(): JSX.Element {
               setSavingArt(true)
               void exportEndingArt().finally(() => setSavingArt(false))
             }}
-            confirmText="Return to the main menu"
-            onConfirm={() => toMenu()}
+            // A semester with another after it offers that first, and the menu beside it.
+            confirmText={nextTerm ? `Continue to the ${nextTerm}` : 'Return to the main menu'}
+            onConfirm={() => (nextTerm ? toNextTerm() : toMenu())}
+            cancelText="Return to the main menu"
+            onCancel={nextTerm ? () => toMenu() : undefined}
           />
         )}
       </AnimatePresence>

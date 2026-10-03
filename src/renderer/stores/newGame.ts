@@ -1,21 +1,42 @@
+import { FALLBACK_DORM } from '@shared/dorms'
 import { appError, toAppError } from '@shared/errors'
+import { readerStandingOf } from '@shared/relationship'
 import { emptyTallies } from '@shared/tallies'
+import { isGameOver } from '@shared/money'
+import { hasNextTerm, seasonOf, termIndexOf, yearAfter } from '@shared/term'
+import {
+  carryTerm,
+  returningChars,
+  withBreakMemories,
+  type BreakMemory,
+  type CarriedTerm
+} from '@shared/termCarry'
 import {
   charKeyOf,
   type AppError,
   type Character,
   type Enrollment,
   type FeedAssignment,
+  type GameSave,
   type HiddenScheduleAssignment,
   type JobAssignment,
   type Occasion,
-  type Result
+  type PlaythroughRecord,
+  type Result,
+  type StructuredRequest
 } from '@shared/types'
+import {
+  buildBreakPrompt,
+  normalizeBreakReply,
+  type BreakCharInput,
+  type BreakGenReply
+} from '../prompts/breakPrompt'
 import {
   buildClassPrompt,
   decorateClasses,
   validateClassDraft,
-  type ClassGenReply
+  type ClassGenReply,
+  type ReturningStudents
 } from '../prompts/classPrompt'
 import {
   buildProfilePrompt,
@@ -36,15 +57,30 @@ import {
   type OccasionRequest
 } from '../prompts/occasionPrompt'
 import { SEED_WORD_BAG, SEED_WORDS } from '../prompts/seedWords'
+import { readerText } from '../prompts/setting'
 import { buildSchedules, type ScheduleResult } from './classScheduler'
 import { useGameStore } from './gameStore'
 import { useGrabBagStore } from './grabBagStore'
+import { useSaveStore } from './saveStore'
+import { useUiStore } from './uiStore'
 import { retrySilently } from './silentRetry'
 
-/** The cancellation group New Game's three one-shots register under. */
+/** The cancellation group New Game's one-shots register under. */
 export const NEW_GAME_LLM_GROUP = 'newGame:llm'
 
-/** Everything the three one-shot New Game calls produce, settled together. */
+/**
+ * A finished semester being continued: the playthrough, the save it ended on, the record that
+ * save is read against, and whoever of its roster is still on disk.
+ */
+export interface Continuation {
+  playthroughId: string
+  save: GameSave
+  record: PlaythroughRecord
+  /** The finished roster resolved, by charId; a character deleted since is absent. */
+  characters: Record<string, Character>
+}
+
+/** Everything the one-shot New Game calls produce, settled together. */
 export interface StartResult {
   schedules: ScheduleResult
   /** Who works where, by charId — the slots themselves are picked at Finalize. */
@@ -56,6 +92,11 @@ export interface StartResult {
   /** What each of them does with spring break, by charId. */
   springBreakPlans: Record<string, string>
   occasions: Occasion[]
+  /**
+   * What a continued semester takes over from the one before, the break's memories already
+   * filed on it; absent on a new story.
+   */
+  carried?: CarriedTerm
 }
 
 /**
@@ -74,16 +115,25 @@ interface StartAttempt {
   profileRequest: ReturnType<typeof buildProfilePrompt>
   occasionRequests: OccasionRequest[]
   occasionRequest: ReturnType<typeof buildOccasionPrompt>
+  /** What is already settled about whoever is returning, by charKey; empty on a new story. */
+  returning: ReturningStudents
+  /** What the semester before hands over, before the break is written onto it. */
+  carried?: CarriedTerm
+  /** Who the break call is asked about, and the call itself; absent when nobody he knows is back. */
+  breakInput?: BreakCharInput[]
+  breakRequest?: StructuredRequest
   classDraft?: ClassGenReply
   profiles?: ProfileGenDraft
   occasions?: Occasion[]
+  breakMemories?: Record<string, BreakMemory[]>
 }
 
 /** What each call is called on the modal, in the order failures are reported. */
 const CALL_LABELS = {
   classes: 'the class catalog',
   profiles: "the students' profiles",
-  occasions: 'the semester’s calendar'
+  occasions: 'the semester’s calendar',
+  break: 'what happened over the break'
 } as const
 
 let attempt: StartAttempt | null = null
@@ -106,6 +156,23 @@ export interface StagedEnrollment {
 
 let staged: StagedEnrollment | null = null
 
+let continuing: Continuation | null = null
+
+/** Hands New Game the finished semester the screen it is about to raise carries on from. */
+export function stageContinuation(next: Continuation): void {
+  continuing = next
+}
+
+/** What is staged, left where it is: a `useState` initializer runs twice under StrictMode. */
+export function stagedContinuation(): Continuation | null {
+  return continuing
+}
+
+/** Drops what was staged, once the screen holding it has mounted. */
+export function clearStagedContinuation(): void {
+  continuing = null
+}
+
 /** Hands New Game the enrollment the screen it is about to raise stands on. */
 export function stageEnrollment(next: StagedEnrollment): void {
   staged = next
@@ -119,6 +186,54 @@ export function stagedEnrollment(): StagedEnrollment | null {
 /** Drops what was staged, once the screen holding it has mounted. */
 export function clearStagedEnrollment(): void {
   staged = null
+}
+
+/**
+ * Reads a finished semester whole so the next one can be started from it: the save named, or
+ * the newest one taken after the semester's last morning. Null, with the reason reported, when
+ * the playthrough has no such save, the read was refused, or there is no semester after it.
+ */
+export async function resolveContinuation(
+  playthroughId: string,
+  saveId?: string
+): Promise<Continuation | null> {
+  const saves = useSaveStore.getState()
+  const refuse = (detail: string): null => {
+    useUiStore
+      .getState()
+      .showError(
+        appError('NEXT_TERM_UNAVAILABLE', 'The next semester could not be started.', detail)
+      )
+    return null
+  }
+
+  // The roster is resolved against the characters on disk now, not when a list was last read.
+  await saves.loadPlaythroughs()
+  let pick = saveId
+  if (!pick) {
+    const finished = (await saves.listSavesOf(playthroughId))
+      .filter((entry) => entry.summary?.graduationSeen)
+      .sort((a, b) => b.savedAt - a.savedAt)[0]
+    if (!finished) return refuse('That playthrough has no save from after its last day.')
+    pick = finished.saveId
+  }
+
+  // A refused read has reported itself.
+  const read = await useSaveStore.getState().readSave(playthroughId, pick)
+  if (!read) return null
+  if (!read.save.graduationSeen) return refuse('That save is from before the semester ended.')
+  if (!hasNextTerm(termIndexOf(read.record))) {
+    return refuse('That was the last semester there is: the reader has graduated.')
+  }
+  if (isGameOver(read.save.money)) {
+    return refuse('The reader is too far in debt to come back for another semester.')
+  }
+  return {
+    playthroughId,
+    save: read.save,
+    record: read.record,
+    characters: Object.fromEntries(read.characters.map((c) => [c.charId, c]))
+  }
 }
 
 /** Whether the run a continuation started under is still the live one. */
@@ -154,7 +269,10 @@ async function fetchClassDraft(current: StartAttempt): Promise<Result<ClassGenRe
   )
   if (!generated.ok) return { ok: false, error: generated.error }
   try {
-    return { ok: true, data: validateClassDraft(generated.data, current.roster) }
+    return {
+      ok: true,
+      data: validateClassDraft(generated.data, current.roster, current.returning)
+    }
   } catch (err) {
     return { ok: false, error: toAppError(err) }
   }
@@ -168,7 +286,10 @@ async function fetchProfiles(current: StartAttempt): Promise<Result<ProfileGenDr
   )
   if (!generated.ok) return { ok: false, error: generated.error }
   try {
-    return { ok: true, data: validateProfileDraft(generated.data, current.roster) }
+    return {
+      ok: true,
+      data: validateProfileDraft(generated.data, current.roster, current.returning)
+    }
   } catch (err) {
     return { ok: false, error: toAppError(err) }
   }
@@ -196,12 +317,23 @@ async function fetchOccasions(current: StartAttempt): Promise<Result<Occasion[]>
   return { ok: true, data: occasions }
 }
 
+/** Fetches what the returning roster remembers of the break; nothing to ask is an empty answer. */
+async function fetchBreak(current: StartAttempt): Promise<Result<Record<string, BreakMemory[]>>> {
+  if (!current.breakRequest || !current.breakInput) return { ok: true, data: {} }
+  const generated = await window.api.llm.generateBreak<BreakGenReply>(
+    current.breakRequest,
+    NEW_GAME_LLM_GROUP
+  )
+  if (!generated.ok) return { ok: false, error: generated.error }
+  return { ok: true, data: normalizeBreakReply(generated.data, current.breakInput) }
+}
+
 /**
- * Runs whatever the attempt is still missing, then composes the semester out of the three
+ * Runs whatever the attempt is still missing, then composes the semester out of the
  * replies.
  */
 async function runAttempt(current: StartAttempt, mine: object): Promise<StartOutcome> {
-  const [classResult, profileResult, occasionResult] = await Promise.all([
+  const [classResult, profileResult, occasionResult, breakResult] = await Promise.all([
     current.classDraft
       ? Promise.resolve<Result<ClassGenReply>>({ ok: true, data: current.classDraft })
       : sendUntilAnswered('classes', mine, () => fetchClassDraft(current)),
@@ -210,7 +342,13 @@ async function runAttempt(current: StartAttempt, mine: object): Promise<StartOut
       : sendUntilAnswered('profiles', mine, () => fetchProfiles(current)),
     current.occasions
       ? Promise.resolve<Result<Occasion[]>>({ ok: true, data: current.occasions })
-      : sendUntilAnswered('occasions', mine, () => fetchOccasions(current))
+      : sendUntilAnswered('occasions', mine, () => fetchOccasions(current)),
+    current.breakMemories
+      ? Promise.resolve<Result<Record<string, BreakMemory[]>>>({
+          ok: true,
+          data: current.breakMemories
+        })
+      : sendUntilAnswered('break', mine, () => fetchBreak(current))
   ])
   if (stale(mine)) return { status: 'cancelled' }
 
@@ -218,9 +356,10 @@ async function runAttempt(current: StartAttempt, mine: object): Promise<StartOut
   if (classResult.ok) current.classDraft = classResult.data
   if (profileResult.ok) current.profiles = profileResult.data
   if (occasionResult.ok) current.occasions = occasionResult.data
+  if (breakResult.ok) current.breakMemories = breakResult.data
 
   // The first failure is the one the modal shows; the rest are named beside it.
-  if (!classResult.ok || !profileResult.ok || !occasionResult.ok) {
+  if (!classResult.ok || !profileResult.ok || !occasionResult.ok || !breakResult.ok) {
     const failures: { label: string; error: AppError }[] = []
     if (!classResult.ok) failures.push({ label: CALL_LABELS.classes, error: classResult.error })
     if (!profileResult.ok) {
@@ -229,6 +368,7 @@ async function runAttempt(current: StartAttempt, mine: object): Promise<StartOut
     if (!occasionResult.ok) {
       failures.push({ label: CALL_LABELS.occasions, error: occasionResult.error })
     }
+    if (!breakResult.ok) failures.push({ label: CALL_LABELS.break, error: breakResult.error })
     return {
       status: 'failed',
       error: failures[0].error,
@@ -259,16 +399,82 @@ async function runAttempt(current: StartAttempt, mine: object): Promise<StartOut
       haunts: byCharId(hiddenScheduleAssignmentsOf(profiles)),
       feeds: byCharId(feedAssignmentsOf(profiles)),
       springBreakPlans: byCharId(springBreakAssignmentsOf(profiles)),
-      occasions: occasionResult.data
+      occasions: occasionResult.data,
+      ...(current.carried
+        ? {
+            carried: {
+              ...current.carried,
+              carry: withBreakMemories(current.carried.carry, breakResult.data)
+            }
+          }
+        : {})
     }
   }
 }
 
 /**
- * Start Game's generation pass: the three one-shots in parallel, then the local passes
- * that turn them into a semester.
+ * What a continued start settles before any call goes out: who of the new roster is returning
+ * and what is already known of each, what the finished semester hands over, and the break call
+ * about whoever of them has met the reader.
  */
-export async function startNewGame(roster: readonly Character[]): Promise<StartOutcome> {
+function continuedAttempt(
+  roster: readonly Character[],
+  from: Continuation
+): Pick<StartAttempt, 'returning' | 'carried' | 'breakInput' | 'breakRequest'> {
+  const { save, record } = from
+  const ended = seasonOf(termIndexOf(record))
+  const back = new Set(returningChars(record))
+  const kept = roster.filter((c) => back.has(c.charId) && save.charInfo[c.charId])
+  const carried = carryTerm(
+    save,
+    record,
+    kept.map((c) => c.charId)
+  )
+
+  const returning: Record<string, ReturningStudents[string]> = {}
+  for (const character of kept) {
+    const profile = record.profiles[character.charId]
+    if (!profile) continue
+    returning[charKeyOf(character.firstName, character.lastName)] = {
+      year: yearAfter(profile.year ?? 1, ended),
+      major: profile.major ?? '',
+      dorm: profile.dorm ?? FALLBACK_DORM,
+      ...(profile.handle ? { handle: profile.handle } : {})
+    }
+  }
+
+  // Only somebody who has met him has a break with him in it to remember.
+  const breakInput: BreakCharInput[] = kept
+    .filter((c) => carried.carry.charInfo[c.charId]?.flags.hasMet)
+    .map((character) => ({ character, state: carried.carry.charInfo[character.charId] }))
+  if (breakInput.length === 0) return { returning, carried }
+
+  const firstNames = Object.fromEntries(kept.map((c) => [c.charId, c.firstName]))
+  const reader = readerText(record.playerFirstName, record.playerLastName, save.stats, {
+    ...(save.bio ? { bio: save.bio } : {}),
+    ...readerStandingOf(
+      kept.map((c) => c.charId),
+      carried.carry.charInfo,
+      firstNames
+    )
+  })
+  return {
+    returning,
+    carried,
+    breakInput,
+    breakRequest: buildBreakPrompt({ returning: breakInput, reader, stats: save.stats })
+  }
+}
+
+/**
+ * Start Game's generation pass: the one-shots in parallel, then the local passes that turn
+ * them into a semester. `from` is the finished semester a continued one carries on from, and
+ * the term being enrolled for is already the active one.
+ */
+export async function startNewGame(
+  roster: readonly Character[],
+  from?: Continuation
+): Promise<StartOutcome> {
   const mine = {}
   run = mine
   sleepers = []
@@ -277,12 +483,14 @@ export async function startNewGame(roster: readonly Character[]): Promise<StartO
   const occasionRequests = planOccasionSlots((count) =>
     useGrabBagStore.getState().drawMany(SEED_WORD_BAG, SEED_WORDS, count)
   )
+  const continued = from ? continuedAttempt(roster, from) : { returning: {} }
   const current: StartAttempt = {
     roster,
-    classRequest: buildClassPrompt(roster),
-    profileRequest: buildProfilePrompt(roster),
+    classRequest: buildClassPrompt(roster, continued.returning),
+    profileRequest: buildProfilePrompt(roster, continued.returning),
     occasionRequests,
-    occasionRequest: buildOccasionPrompt(occasionRequests)
+    occasionRequest: buildOccasionPrompt(occasionRequests),
+    ...continued
   }
   attempt = current
 
@@ -293,9 +501,12 @@ export async function startNewGame(roster: readonly Character[]): Promise<StartO
  * The failure modal's Retry — resumes the stored attempt, re-sending only the calls with no
  * reply yet. With nothing held, it starts over.
  */
-export async function retryNewGameStart(roster: readonly Character[]): Promise<StartOutcome> {
+export async function retryNewGameStart(
+  roster: readonly Character[],
+  from?: Continuation
+): Promise<StartOutcome> {
   const current = attempt
-  if (!current) return startNewGame(roster)
+  if (!current) return startNewGame(roster, from)
   const mine = {}
   run = mine
   sleepers = []

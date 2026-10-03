@@ -34,6 +34,7 @@ import { ENDING_IMAGE_MODEL_ID } from '@shared/providers'
 import { assertProfilePicture } from '@shared/profilePicture'
 import { assertSafePlaythroughId } from '@shared/saveRules'
 import { storedEndpointKeyFor } from '@shared/settingsRules'
+import { activeSeason } from '@shared/term'
 import {
   MAX_LOG_RECORD_CHARS,
   type AppError,
@@ -110,7 +111,7 @@ async function generateEndingArt(
   const bytes = base64ToBytes(sheet)
   assertEndingRequest(friendCount, bytes)
 
-  const art = await generateImage(endingPicturePrompt(friendCount), {
+  const art = await generateImage(endingPicturePrompt(friendCount, activeSeason()), {
     model: ENDING_IMAGE_MODEL_ID,
     imageSize: ENDING_PICTURE_SIZE,
     sources: [{ bytes, mimeType: LINEUP_MIME_TYPE }],
@@ -167,6 +168,10 @@ export function buildApi(): VenusUniversityApi {
         ),
       generateOccasions: <T,>(request: StructuredRequest, group: string) =>
         result('generate the occasions', () =>
+          runAbortable(group, (signal) => completeStructured<T>(request, signal))
+        ),
+      generateBreak: <T,>(request: StructuredRequest, group: string) =>
+        result('generate the break', () =>
           runAbortable(group, (signal) => completeStructured<T>(request, signal))
         ),
       generateQuiz: <T,>(request: StructuredRequest) =>

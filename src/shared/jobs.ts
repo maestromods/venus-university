@@ -112,10 +112,10 @@ type CoreJobMessageKind =
   | 'sick2'
 
 /**
- * The core ten plus the two only a university employer sends: `holiday` for a campus closure
- * and `summer` for the last closure of the year, which lets him go.
+ * The core ten plus the three only a university employer sends: `holiday` for a campus closure,
+ * and `summer` or `winter` for the closure a spring or a fall semester ends on, which lets him go.
  */
-export type JobMessageKind = CoreJobMessageKind | 'holiday' | 'summer'
+export type JobMessageKind = CoreJobMessageKind | 'holiday' | 'summer' | 'winter'
 
 /** One opening on the jobs board. */
 export interface JobDef {
@@ -151,7 +151,7 @@ export interface JobDef {
   gains: readonly ShiftGain[]
   /**
    * An employer that keeps the university's calendar: a day an occasion closes campus
-   * cancels its shifts outright, and it owes a `holiday` and a `summer` text.
+   * cancels its shifts outright, and it owes a `holiday`, a `summer` and a `winter` text.
    */
   closesWithUniversity?: true
   /** One clause naming what he actually does, appended to a job action. */
@@ -161,7 +161,11 @@ export interface JobDef {
   /** The detail pane's job-ad prose. */
   description: string
   /** Every text this boss can send. */
-  messages: Record<CoreJobMessageKind, string> & { holiday?: string; summer?: string }
+  messages: Record<CoreJobMessageKind, string> & {
+    holiday?: string
+    summer?: string
+    winter?: string
+  }
 }
 
 /** Every opening in the game, in board order, which is pay order. */
@@ -238,7 +242,8 @@ We are looking for applicants who can start immediately.`,
       sick1: `Thanks for letting me know, please get some rest. I will file an excused absence for you.`,
       sick2: `I apologize, but I can only file one excused absence a semester for assistants. If you don't come in, it will count as an unexcused absence.`,
       holiday: `The university is closed today, so no need to come in for your shift. Enjoy the holiday.`,
-      summer: `The library is officially closed for summer break. Thank you for all your hard work this semester, I hope that you'll work with us again in the spring.`
+      summer: `The library is officially closed for summer break. Thank you for all your hard work this semester, I hope that you'll work with us again in the spring.`,
+      winter: `The library is officially closed for winter break. Thank you for all your hard work this semester, I hope that you'll work with us again in the new year.`
     }
   },
   {
@@ -347,7 +352,8 @@ Free gym access with the job. Can start immediately if needed.`,
       sick1: `Thanks for not coming in sick. Hope you feel better.`,
       sick2: `I'm sorry but campus policy only allows one excused absence for student jobs. Try to make it if you can.`,
       holiday: `Campus is closed so the gyms are too. No shifts til we're back. Enjoy the break.`,
-      summer: `Facilities are closed for the summer so that's it for the semester. Thanks for all your work. Come find me in the fall if you want your spot back.`
+      summer: `Facilities are closed for the summer so that's it for the semester. Thanks for all your work. Come find me in the fall if you want your spot back.`,
+      winter: `Facilities are closed over winter break so that's it for the semester. Thanks for all your work. Come find me in January if you want your spot back.`
     }
   },
   {
@@ -385,7 +391,8 @@ We are looking for applicants who can start immediately.`,
       sick1: `Please stay home and rest. I'll reassign your sessions for today.`,
       sick2: `I'm sorry, but I can only excuse one absence per semester. If you don't come in today I'll have to record it as unexcused.`,
       holiday: `The center is closed while the university is closed. You shouldn't have any appointments today, so enjoy the break.`,
-      summer: `The center is closed for the summer. Thank you for a great semester, your students clearly appreciated you. Your account will stay active if you'd like to return in the fall.`
+      summer: `The center is closed for the summer. Thank you for a great semester, your students clearly appreciated you. Your account will stay active if you'd like to return in the fall.`,
+      winter: `The center is closed for winter break. Thank you for a great semester, your students clearly appreciated you. Your account will stay active if you'd like to return in the spring.`
     }
   },
   {

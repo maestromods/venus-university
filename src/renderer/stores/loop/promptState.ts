@@ -1,4 +1,5 @@
-import { SENIOR_YEAR, slotFullLabel } from '@shared/classes'
+import { slotFullLabel } from '@shared/classes'
+import { graduatesNow, readerGraduatesNow } from '@shared/term'
 import { globalSlotOf, slotFromId } from '@shared/jobs'
 import type { PlayerStats } from '@shared/playerStats'
 import { POSITIONS } from '@shared/positions'
@@ -299,7 +300,7 @@ export function promptState(): PromptState {
   const farewell = goodbyeWith
     ? {
         firstName: goodbyeWith.firstName,
-        senior: (game.charInfo[goodbyeWith.charId]?.year ?? 0) >= SENIOR_YEAR
+        senior: readerGraduatesNow() || graduatesNow(game.charInfo[goodbyeWith.charId]?.year)
       }
     : null
 

@@ -36,6 +36,7 @@ const api: VenusUniversityApi = {
       ipcRenderer.invoke('llm:generateProfiles', request, group),
     generateOccasions: (request, group) =>
       ipcRenderer.invoke('llm:generateOccasions', request, group),
+    generateBreak: (request, group) => ipcRenderer.invoke('llm:generateBreak', request, group),
     generateQuiz: (request) => ipcRenderer.invoke('llm:generateQuiz', request),
     listModels: (endpointUrl, apiKey) => ipcRenderer.invoke('llm:listModels', endpointUrl, apiKey),
     testWriter: (candidate) => ipcRenderer.invoke('llm:testWriter', candidate),

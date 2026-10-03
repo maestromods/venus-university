@@ -293,6 +293,7 @@ export async function listPlaythroughs(): Promise<PlaythroughSummary[]> {
           ...base,
           enrolling: true,
           chars: enrollment.chars,
+          ...(enrollment.term ? { term: enrollment.term.index } : {}),
           date: FIRST_SLOT.date,
           time: FIRST_SLOT.time,
           savedAt: enrollment.savedAt,
@@ -330,6 +331,7 @@ export async function listPlaythroughs(): Promise<PlaythroughSummary[]> {
         summary = {
           ...base,
           chars: record?.chars ?? [],
+          ...(record?.term ? { term: record.term.index } : {}),
           date: save.date,
           time: save.time,
           savedAt: save.saveDate,

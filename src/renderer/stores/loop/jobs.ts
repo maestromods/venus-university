@@ -16,7 +16,9 @@ import {
   type ProjectPeriod
 } from '../../prompts/classProgress'
 import { shiftWeekdayOf } from '../../prompts/gameDate'
-import { closureOn, jobClosedOn, SUMMER_VACATION_ID } from '../../prompts/occasions'
+import { activeSeason } from '@shared/term'
+import { closureOn, jobClosedOn } from '../../prompts/occasions'
+import { isWindDown } from '../../prompts/termCalendar'
 import { useGameStore } from '../gameStore'
 import { deliverBossMessage } from '../textingLoop'
 
@@ -110,7 +112,8 @@ function noticeClosure(): void {
   const closure = closureOn(game.date, game.occasions)
   if (!closure || job.holidayNoticeDate === closure.startDate) return
   const messages = jobDefOf(job.jobId)?.messages
-  const kind: JobMessageKind = closure.id === SUMMER_VACATION_ID ? 'summer' : 'holiday'
+  const lastClosure: JobMessageKind = activeSeason() === 'spring' ? 'summer' : 'winter'
+  const kind: JobMessageKind = isWindDown(closure) ? lastClosure : 'holiday'
   const text = messages?.[kind] ?? messages?.holiday
   if (!text || !jobClosedOn(job.jobId, game.date, game.occasions)) return
 

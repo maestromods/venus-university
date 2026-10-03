@@ -575,6 +575,11 @@ export function registerIpcHandlers(): void {
     runAbortable(group, (signal) => completeStructured(request, signal))
   )
 
+  // The fourth, sent only when a semester is continued from the one before it.
+  handle('llm:generateBreak', (_event, request: StructuredRequest, group: string) =>
+    runAbortable(group, (signal) => completeStructured(request, signal))
+  )
+
   // The exam-question call: structured, unstreamed, no group.
   handle('llm:generateQuiz', (_event, request: StructuredRequest) => completeStructured(request))
 
