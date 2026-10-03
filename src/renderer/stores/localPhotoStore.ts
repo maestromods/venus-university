@@ -42,11 +42,7 @@ export function canSendPhotos(): boolean {
  * Hangs a picture on one of her texts, or takes it off again. The same shape the render reports:
  * pending while it draws, a file when it lands, failed when nothing arrives.
  */
-export function setMessagePhoto(
-  charId: string,
-  messageId: string,
-  photo: ChatPhoto | null
-): void {
+export function setMessagePhoto(charId: string, messageId: string, photo: ChatPhoto | null): void {
   useGameStore.setState((state) => {
     const chat = state.bunnyboard.conversations[charId]
     if (!chat) return {}
@@ -64,6 +60,17 @@ export function setMessagePhoto(
       }
     }
   })
+}
+
+/**
+ * Every picture name the save points at for her, on her thread and on her feed, whether or not
+ * the picture ever reached disk. A new picture is never given one of these.
+ */
+export function photoNamesInSave(charId: string): string[] {
+  const game = useGameStore.getState()
+  const onThread = game.bunnyboard.conversations[charId]?.messages ?? []
+  const onFeed = game.charInfo[charId]?.feed ?? []
+  return [...onThread, ...onFeed].flatMap((item) => (item.photo?.file ? [item.photo.file] : []))
 }
 
 /** The same, for a picture attached to one of her posts on the feed. */

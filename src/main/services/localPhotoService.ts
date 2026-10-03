@@ -72,7 +72,8 @@ async function takenPhotoNames(playthroughId: string, charId: string): Promise<s
 export async function reservePhotoName(
   playthroughId: string,
   character: Character,
-  kind: string
+  kind: string,
+  inSave: unknown = []
 ): Promise<string> {
   assertSafeCharId(character.charId)
   assertSafePlaythroughId(playthroughId)
@@ -81,8 +82,18 @@ export async function reservePhotoName(
   }
 
   const slug = photoSlug(character.firstName, character.charId)
-  const taken = await takenPhotoNames(playthroughId, character.charId)
-  const file = photoFileName(slug, kind as PhotoKind, nextPhotoIndex(taken, slug, kind as PhotoKind))
+  // The names the save already points at count as taken too, file or no file: a picture that
+  // never reached this folder — a render cut short, a save carried over without its pictures —
+  // must not have its name handed to the next one, or both bubbles show the new picture.
+  const saved = Array.isArray(inSave)
+    ? inSave.filter((name): name is string => typeof name === 'string' && isPhotoFile(name))
+    : []
+  const taken = [...(await takenPhotoNames(playthroughId, character.charId)), ...saved]
+  const file = photoFileName(
+    slug,
+    kind as PhotoKind,
+    nextPhotoIndex(taken, slug, kind as PhotoKind)
+  )
 
   const folder = getPhotosPath(playthroughId, character.charId)
   const held = reservedPhotoNames.get(folder) ?? new Set<string>()

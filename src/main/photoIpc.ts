@@ -48,8 +48,8 @@ export function registerPhotoIpc(handle: Handle): void {
   // is waiting for it can carry that name into the save straight away.
   handle(
     'comfy:reservePhotoName',
-    (_event, playthroughId: string, character: Character, kind: string) =>
-      reservePhotoName(playthroughId, character, kind)
+    (_event, playthroughId: string, character: Character, kind: string, inSave: unknown) =>
+      reservePhotoName(playthroughId, character, kind, inSave)
   )
 
   // Whether a picture a bubble is still waiting for is on disk after all — asked on load, for
