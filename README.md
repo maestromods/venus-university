@@ -70,8 +70,8 @@
 > Then follow Venus Dev's setup steps below. Run `git pull` on this branch to get updates, and
 > `git checkout main` to go back to the official version.
 >
-> This version is based on Venus Dev's mirror at commit `b56a990`. It doesn't update by itself
-> when a new official version comes out. If you've already updated to a newer official version,
+> This version is based on Venus Dev's mirror at commit `ec8f7ce`, Venus University 0.3.0. It
+> doesn't update by itself when a new official version comes out. If you've already updated to a newer official version,
 > switching to this one takes you back to an older version, and newer saves may not load.
 >
 > ### Licences
