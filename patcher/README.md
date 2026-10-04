@@ -20,6 +20,16 @@ Adapted from the setup of naudh1r's Photo Feature mod
 `Setup.exe install "<game folder>"` and `Setup.exe uninstall "<game folder>"` do the same
 without the window.
 
+## The no-exe download
+
+The build also writes `Continuing-Semesters-<version>-no-exe.zip`: the same `patch.mjs` and
+payload with two small launchers, `Install.cmd` and `Uninstall.cmd` (in `files/`), in place of
+the wizard. They start the patch on the game's own exe the same way and show what it prints.
+
+This is the download to offer. Antivirus tools flag an unsigned exe that unpacks a zip and
+rewrites another program's files, which is exactly what the wizard does, and asking players to
+make an exception for it is bad practice. Everything in the zip can be read before it is run.
+
 ## What it changes in the game folder
 
 - `resources/app.asar`: the few code files the mod changes are swapped for the mod's.
@@ -56,7 +66,8 @@ compiled elsewhere (Mono's `mcs`, for example) works, but Windows Defender block
 - **Anywhere else**, it leaves `build-setup.cmd` in `dist/` with the payload and the wizard's
   source. Copy `dist/` to a Windows PC and double-click `build-setup.cmd`.
 
-The result is the setup exe, `SHA256.txt` and the player `README.txt`. The build stops if
+The result is the no-exe zip with `SHA256-no-exe.txt`, the setup exe, `SHA256.txt` and the player
+`README.txt`. The build stops if
 anything other than code differs between the two `out` folders, so no asset can end up in it.
 The payload zip is reproducible: the same inputs always give the same file.
 

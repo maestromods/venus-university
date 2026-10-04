@@ -18,24 +18,30 @@
 > - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
 >   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
 >   are here only so the game builds from source.
+> - **Reuse is welcome.** Everything I wrote for this mod may be used by other mods under the
+>   game's AGPL licence, with or without asking. Venus Dev may additionally use any of it in the
+>   official game on whatever terms he chooses, with no credit needed. This does not cover the
+>   setup in `patcher/`, which is adapted from naudh1r's and stays under their terms.
 >
 > ### Installing this version
 >
-> **With the setup (recommended, Windows).** You need the official Venus University 0.3.0 from
+> **With the download (recommended, Windows).** You need the official Venus University 0.3.0 from
 > itch.io and nothing else.
 >
 > 1. Back up your saves (the `data` folder next to `Venus University.exe`) and close the game.
-> 2. Download `Continuing-Semesters-Setup-<version>.exe` from
->    [Releases](https://github.com/morrowkiln/venus-university/releases).
-> 3. Run it, choose your game folder and click **Install**. The exe is not signed, so Windows may
->    warn about an unknown publisher: click "More info", then "Run anyway".
+> 2. Download `Continuing-Semesters-<version>-no-exe.zip` from
+>    [Releases](https://github.com/morrowkiln/venus-university/releases) and extract it inside
+>    your game folder.
+> 3. Double-click `Install.cmd` in the extracted folder.
 >
-> Run the setup again and click **Uninstall** to put the official game back exactly as it was.
-> The setup carries only code, none of the game's images, music or characters, and refuses a
-> game that is not the official 0.3.0 or that already has another mod in it. If you accept an
-> official update in the game, it replaces the mod. The setup is adapted from
-> [naudh1r](https://github.com/naudh1r/venus-university)'s Photo Feature mod setup; its source
-> is in `patcher/`.
+> Double-click `Uninstall.cmd` to put the official game back exactly as it was. The download has
+> no exe in it: two small scripts start the patch on the game's own exe, and everything in the
+> zip is text you can read first. It carries only code, none of the game's images, music or
+> characters, and refuses a game that is not the official 0.3.0 or that already has another mod
+> in it. If you accept an official update in the game, it replaces the mod. The patch is adapted
+> from [naudh1r](https://github.com/naudh1r/venus-university)'s Photo Feature mod; its source
+> is in `patcher/`, which can also build a setup exe. That exe is unsigned and antivirus tools
+> flag it, so the zip is the one to use.
 >
 > **From source (any platform; needs Git and Node 22).** Starting fresh:
 >

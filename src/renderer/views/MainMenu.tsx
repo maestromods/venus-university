@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { toAppError } from '@shared/errors'
+import { modLine } from '@shared/modInfo'
 import { writerReady } from '@shared/settingsRules'
 import { shuffle } from '@shared/shuffle'
 import { seasonOf, type Season } from '@shared/term'
@@ -338,6 +339,9 @@ export function MainMenu(): JSX.Element {
           alt="Venus University"
           animate={breathe}
         />
+
+        {/* Under the name, so a screenshot of the menu says whose build this is. */}
+        <span className="vu-menu-mod">{modLine()}</span>
 
         <motion.nav className="vu-menu-actions vu-fan" variants={dealt(0.55)}>
           {/* One slot, three identities: the key first where there is none — nothing below it
