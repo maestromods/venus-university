@@ -17,7 +17,7 @@ import { placeNpcShifts, rollFreshmanJobStart, rollJobClosures } from '@shared/j
 import { rollSemesterWeather } from '@shared/weather'
 import { initialFlags } from '@shared/relationship'
 import { npcFriendsOf, rollInitialNpcRelationships } from '@shared/npcRelationships'
-import { rollPostLikes } from '@shared/feed'
+import { reachOf, rollAudienceLikes } from '@shared/postAudience'
 import { andList } from '@shared/sentences'
 import { shuffle } from '@shared/shuffle'
 import {
@@ -129,6 +129,7 @@ const WINTER_LAST_DAY = -6
 function dealWinterPosts(
   texts: readonly string[],
   friends: number,
+  reach: number,
   window = { first: WINTER_FIRST_DAY, last: WINTER_LAST_DAY }
 ): SocialPost[] {
   const slots = new Set<number>()
@@ -146,7 +147,7 @@ function dealWinterPosts(
       date: Math.floor(slot / 2),
       // `%` keeps the dividend's sign and every slot is negative, so the remainder is floored into 0/1.
       time: (((slot % 2) + 2) % 2) as TimeSlot,
-      likes: rollPostLikes(friends)
+      likes: rollAudienceLikes({ reach, friends, photoTier: 'none' })
     }))
 }
 
@@ -732,7 +733,11 @@ export function NewGameView(): JSX.Element {
           c.charId,
           roster.map((entry) => entry.charId)
         ).length
-        return [c.charId, dealWinterPosts(assignment?.winterPosts ?? [], friends, postWindow)] as const
+        const reach = reachOf(playthroughId, c.charId, c)
+        return [
+          c.charId,
+          dealWinterPosts(assignment?.winterPosts ?? [], friends, reach, postWindow)
+        ] as const
       })
     )
 
@@ -863,8 +868,8 @@ export function NewGameView(): JSX.Element {
       return
     }
 
-    // The reader's own picture follows him into the new playthrough's folder. A copy that fails
-    // costs nothing but the picture.
+    // The reader's own picture and the pictures the returning girls sent follow him into the
+    // new playthrough's folder. A copy that fails costs nothing but the pictures.
     if (term?.continuedFrom) {
       const to = written.data.save.playthroughId
       const picture = await window.api.saves.readProfilePicture(term.continuedFrom)
@@ -872,6 +877,12 @@ export function NewGameView(): JSX.Element {
         const copied = await window.api.saves.writeProfilePicture(to, bytesToBase64(picture.data))
         if (!copied.ok) console.warn('[new game] the profile picture was not carried over')
       }
+      const photos = await window.api.photo.carry(
+        term.continuedFrom,
+        to,
+        Object.keys(carry?.charInfo ?? {})
+      )
+      if (!photos.ok) console.warn('[new game] her photos were not carried over')
     }
 
     // Under the cover: the game boots and opens its first slot behind the splash announcing it,

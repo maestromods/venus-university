@@ -104,6 +104,8 @@ import {
   useGameStore,
   type SceneKind
 } from './gameStore'
+import { startHeldPostPhoto } from './photoPost'
+import { settlePendingPhotos } from './photoRecovery'
 import { useCharacterStore } from './characterStore'
 import { castOf, useSaveStore } from './saveStore'
 import {
@@ -448,8 +450,9 @@ async function beginSlot(): Promise<void> {
   // The texts the girls he left wrote, filed on the same terms.
   deliverSlotBreakups(opening.breakups)
 
-  // The status updates the same call wrote, filed before the fold on the same terms.
-  deliverSlotPosts(opening.posts)
+  // The status updates the same call wrote, filed before the fold on the same terms. Awaited
+  // for the picture's name, which has to be in the post before the fold writes it down.
+  await deliverSlotPosts(opening.posts)
 
   // Folded into the slot-save minted before the call went out, which is the start-of-slot
   // decision point.
@@ -1121,6 +1124,10 @@ export async function submitAction(
   game.setInputDraft('')
   game.setAwaitingInput(false)
   game.setBusy(true)
+  // The slot's held feed pictures, now that he is busy with something: they draw under the scene
+  // and the posts are waiting on the feed when he is free again. Takes the hold, so the turns
+  // after this one find nothing.
+  startHeldPostPhoto()
   // Stamped here, so the classifier's latency sits inside the reply floor.
   loopState.turnStartedAt = performance.now()
   // Set before `classifyAction`, so `advance()` never sees an empty queue with the scene not over.
@@ -2584,6 +2591,8 @@ export function enterGame(
   game.loadSave(save, record, characters)
   // A read nothing on screen is waiting on: the profile is not open yet.
   void loadProfilePicture()
+  // A picture whose render outlived the save that asked for it: found on disk, or given up on.
+  void settlePendingPhotos()
   // The file a slot opening is folded back into: a boundary's own save, never the autosave or a
   // manual one.
   loopState.slotSaveId = isSlotSaveId(save.saveId) ? save.saveId : null

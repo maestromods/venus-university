@@ -70,7 +70,16 @@ function carriedCharState(state: CharState, back: number, kept: ReadonlySet<stri
           feed: state.feed.map((post) => ({
             ...post,
             date: post.date - back,
-            ...(post.likedOn !== undefined ? { likedOn: post.likedOn - back } : {})
+            ...(post.likedOn !== undefined ? { likedOn: post.likedOn - back } : {}),
+            // A reply is kept back until its own slot, so its slot moves with the post's.
+            ...(post.comments
+              ? {
+                  comments: post.comments.map((comment) => ({
+                    ...comment,
+                    at: comment.at - back * 2
+                  }))
+                }
+              : {})
           }))
         }
       : {}),
