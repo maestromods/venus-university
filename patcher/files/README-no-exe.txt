@@ -26,7 +26,8 @@ Install
 
 It checks that your game is the official {{GAME_VERSION}} before changing anything,
 keeps a backup of the original game code, and refuses a game that already
-has another mod in it.
+has another mod in it. If you use naudh1r's Photo Feature, there is a
+separate download on the same page made to go on top of it.
 
 Uninstall
 ---------

@@ -30,6 +30,40 @@ This is the download to offer. Antivirus tools flag an unsigned exe that unpacks
 rewrites another program's files, which is exactly what the wizard does, and asking players to
 make an exception for it is bad practice. Everything in the zip can be read before it is run.
 
+## The download for a game with Photo Feature
+
+Two mods cannot be installed one after the other as they are: each replaces the same few
+bundles (`out/main/index.js`, the renderer's one script and one stylesheet), so the second
+would wipe the first. What goes on top of another mod is therefore a build of both mods'
+source merged, and the patch swaps it in over the other mod's files:
+
+```
+node build.mjs --base <out of a game with Photo Feature installed> --mod <out of semester-0.3-photo>
+               --game-version 0.3.0 --mod-version 0.1.1 --over photo-feature --over-version 1.1.3
+```
+
+- `--base` must come from the other mod's real download: install it into a copy of the official
+  game with its own setup, then extract that `app.asar`. Its hashes are what a player's game is
+  checked against.
+- `--mod` is `npx electron-vite build` on `semester-0.3-photo`, which is `semester-0.3` merged
+  with naudh1r's release tag.
+- The result is `Continuing-Semesters-<version>-for-Photo-Feature-<their version>-no-exe.zip`
+  with its own `SHA256-for-...-no-exe.txt`. No setup exe is built for it.
+
+Install then also asks for the other mod's marker (`resources/photo-mod.json`) at exactly that
+version, and uninstall puts back the game as that mod left it. The download for the official
+game, in turn, tells a player with Photo Feature to take this one.
+
+It is tied to one version of the other mod. When naudh1r releases, merge the new tag into
+`semester-0.3-photo` and rebuild; until then the old download refuses the new version.
+
+## When the game changes underneath
+
+The marker records the hash of the `app.asar` the install wrote. If the archive is no longer
+that one (an official update, or the other mod uninstalled or updated while this one sat on top
+of it), the mod is already gone and its backup is out of date. Uninstall, and a new install,
+then delete the backup and marker instead of restoring code the game has moved on from.
+
 ## What it changes in the game folder
 
 - `resources/app.asar`: the few code files the mod changes are swapped for the mod's.
