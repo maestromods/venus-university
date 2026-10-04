@@ -13,7 +13,7 @@ export interface ModInfo {
 export const MODS: readonly ModInfo[] = [
   { name: 'Continuing Semesters', version: '0.1.1' },
   // naudh1r's mod, merged into this personal build from their port-0.3.0 branch.
-  { name: 'Photo Feature', version: 'port-0.3.0' }
+  { name: 'Photo Feature', version: '0.3 port' }
 ]
 
 /** `"Continuing Semesters 0.1.1"`, or several joined with commas. */
@@ -21,7 +21,7 @@ export function modNames(mods: readonly ModInfo[] = MODS): string {
   return mods.map((mod) => `${mod.name} ${mod.version}`).join(', ')
 }
 
-/** The line the main menu prints under the game's name. */
+/** The line the main menu prints under the version. */
 export function modLine(mods: readonly ModInfo[] = MODS): string {
   return `Modded · ${modNames(mods)} · unofficial`
 }
