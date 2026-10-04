@@ -35,7 +35,11 @@ make an exception for it is bad practice. Everything in the zip can be read befo
 Two mods cannot be installed one after the other as they are: each replaces the same few
 bundles (`out/main/index.js`, the renderer's one script and one stylesheet), so the second
 would wipe the first. What goes on top of another mod is therefore a build of both mods'
-source merged, and the patch swaps it in over the other mod's files:
+source merged. The download does not carry that build, which would mean giving out the other
+mod's code: it carries one delta per code file, and install makes each merged file from the
+other mod's installed file and its delta, then checks the result's hash.
+
+It is built with:
 
 ```
 node build.mjs --base <out of a game with Photo Feature installed> --mod <out of semester-0.3-photo>
@@ -49,6 +53,9 @@ node build.mjs --base <out of a game with Photo Feature installed> --mod <out of
   with naudh1r's release tag.
 - The result is `Continuing-Semesters-<version>-for-Photo-Feature-<their version>-no-exe.zip`
   with its own `SHA256-for-...-no-exe.txt`. No setup exe is built for it.
+- The deltas are in Fossil's delta format, made and applied with the `fossil-delta` package
+  (BSD), which is bundled into `patch.mjs`. A bundle whose name carries a content hash
+  (`index-CQ260QeK.js`) is made from the other mod's bundle of the same name without the hash.
 
 Install then also asks for the other mod's marker (`resources/photo-mod.json`) at exactly that
 version, and uninstall puts back the game as that mod left it. The download for the official

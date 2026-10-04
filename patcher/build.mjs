@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { build } from 'esbuild'
+import { createDelta } from 'fossil-delta'
 import { zipSync } from 'fflate'
 import { createHash } from 'node:crypto'
 import { existsSync } from 'node:fs'
@@ -23,7 +24,9 @@ import { fileURLToPath } from 'node:url'
  * With `--over photo-feature --over-version 1.1.3` the download goes on top of another mod
  * instead of the official game. `--base` is then the `out` of a game with that mod installed by
  * its own setup, and `--mod` a build of both mods' source merged: the code of two mods cannot be
- * layered file by file, since both change the same few bundles. Only the no-exe zip is built.
+ * layered file by file, since both change the same few bundles. The download then carries no
+ * code file at all, only a delta for each: what turns the other mod's installed file into the
+ * merged one. None of the other mod's code is in it. Only the no-exe zip is built.
  *
  * The download is one exe, the setup wizard (`Setup.cs`), with the patch zipped inside it,
  * compiled with Windows' own C# compiler: here when this runs on Windows, or by the
@@ -95,9 +98,29 @@ for (const rel of [...code.filter((rel) => baseFiles.has(rel)), ...remove]) {
 
 await rm(DIST, { recursive: true, force: true })
 await mkdir(join(DIST, 'payload', 'code'), { recursive: true })
-for (const rel of code) {
-  await mkdir(dirname(join(DIST, 'payload', 'code', 'out', rel)), { recursive: true })
-  await cp(join(MOD, rel), join(DIST, 'payload', 'code', 'out', rel))
+
+// On top of another mod, each code file ships as a delta from that mod's file of the same
+// name. The bundler puts a hash of the content in some names (`index-CQ260QeK.js`), so a file
+// whose name is new is made from the removed one that has the same name without the hash.
+const patch = []
+if (over) {
+  const unhashed = (rel) => rel.replace(/-[\w-]{8}(\.\w+)$/, '$1')
+  const removed = new Map(remove.map((rel) => [unhashed(rel), rel]))
+  for (const rel of code) {
+    const from = baseFiles.has(rel) ? rel : removed.get(unhashed(rel))
+    if (!from) throw new Error(`${rel} has no file of ${over.name}'s to be made from.`)
+    const target = await readFile(join(MOD, rel))
+    const delta = Buffer.from(createDelta(await readFile(join(BASE, from)), target))
+    const file = join(DIST, 'payload', 'delta', 'out', `${rel}.delta`)
+    await mkdir(dirname(file), { recursive: true })
+    await writeFile(file, delta)
+    patch.push({ from: `out/${from}`, to: `out/${rel}`, delta: `out/${rel}.delta`, sha256: sha256(target) })
+  }
+} else {
+  for (const rel of code) {
+    await mkdir(dirname(join(DIST, 'payload', 'code', 'out', rel)), { recursive: true })
+    await cp(join(MOD, rel), join(DIST, 'payload', 'code', 'out', rel))
+  }
 }
 await writeFile(
   join(DIST, 'payload', 'expected.json'),
@@ -108,7 +131,9 @@ await writeFile(
       gameVersion: GAME_VERSION,
       over,
       base,
-      code: code.map((rel) => `out/${rel}`),
+      // Whole files to put in, or with `over`, the deltas that make them from the other mod's.
+      code: over ? [] : code.map((rel) => `out/${rel}`),
+      patch,
       remove: remove.map((rel) => `out/${rel}`)
     },
     null,
