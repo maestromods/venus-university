@@ -11,15 +11,17 @@ keeps it working. If you don't use {{OVER_NAME}}, take the plain Continuing
 Semesters download instead: this one refuses the official game.
 
 Two mods can't simply be stacked, because both change the same few code
-files. So the code in here is one build of both mods together, made from
-their merged source, and it replaces the files {{OVER_NAME}} installed.
+files. So this download holds no code files at all, only differences: what
+has to change in the files {{OVER_NAME}} installed so that they hold both
+mods. Install applies them to the files in your game. None of
+{{OVER_NAME}}'s own code is in this zip; it stays naudh1r's to give out.
 
 Everything in it is plain text you can read before running it:
 
   Install.cmd, Uninstall.cmd   start the patch on the game's own exe
   patch.mjs                    the patch itself (bundled JavaScript)
-  payload/                     the code files it installs, and
-                               expected.json: the hashes it checks first
+  payload/delta/               the differences it applies, one per file
+  payload/expected.json        the hashes it checks before and after
 
 It contains only code: none of the game's images, music or characters.
 
@@ -39,7 +41,8 @@ Install
    folder (the one with "Venus University.exe" in it).
 
 It checks that your game is {{GAME_VERSION}} with {{OVER_NAME}} {{OVER_VERSION}} before changing
-anything, and keeps a backup of the game code as it found it.
+anything, checks every file it makes against the hash it should have, and
+keeps a backup of the game code as it found it.
 
 Uninstall
 ---------
@@ -68,9 +71,10 @@ and both mods are gone. Wait for versions made for the new game version.
 Credits
 -------
 Venus Dev, for the game and for publishing its source.
-naudh1r, for {{OVER_NAME}}, whose code is part of this build, and for
-the patch this one is adapted from.
+naudh1r, for {{OVER_NAME}}, which this goes on top of, and for the patch
+this one is adapted from.
 
-Source code of this build (both mods merged):
-https://github.com/morrowkiln/venus-university/tree/semester-0.3-photo
+Source code: https://github.com/morrowkiln/venus-university
+  semester-0.3         Continuing Semesters
+  semester-0.3-photo   both mods merged, which the differences are made from
 {{OVER_NAME}}: https://github.com/naudh1r/venus-university

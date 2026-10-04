@@ -10,5 +10,8 @@
     "@electron/asar": "3.4.1",
     "esbuild": "0.25.12",
     "fflate": "0.8.3"
+  },
+  "dependencies": {
+    "fossil-delta": "^2.0.0"
   }
 }

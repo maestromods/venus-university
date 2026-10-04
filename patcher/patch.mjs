@@ -1,4 +1,5 @@
 import * as asar from '@electron/asar'
+import { applyDelta } from 'fossil-delta'
 import { createHash } from 'node:crypto'
 import { createReadStream, existsSync } from 'node:fs'
 import { cp, mkdir, mkdtemp, readFile, rename, rm, writeFile } from 'node:fs/promises'
@@ -12,8 +13,9 @@ import { fileURLToPath } from 'node:url'
  * https://github.com/naudh1r/venus-university.
  *
  * Installs Continuing Semesters into an official Venus University folder, and takes it out again.
- * A download built with `--over` goes into a game that already has one other mod instead, and
- * carries both mods' code: see `expected.over`.
+ * A download built with `--over` goes into a game that already has one other mod instead. It
+ * carries no code file, only deltas that turn that mod's files into a build of both mods
+ * together: see `expected.over` and `expected.patch`.
  *
  * The game's code lives in `resources/app.asar`. Installing swaps the few code files the mod
  * changes for its own. Nothing else in the game is touched: the art,
@@ -36,8 +38,8 @@ const expected = JSON.parse(await readFile(join(PAYLOAD, 'expected.json'), 'utf8
 
 /**
  * The other mod this download goes on top of (`{ name, version, marker }`), or undefined when it
- * is for the official game. Its code is in the payload too: the files installed are a build of
- * both mods together, swapped in over that mod's own.
+ * is for the official game. None of its code is in the payload: the files installed are a
+ * build of both mods together, made here from that mod's own files and the payload's deltas.
  */
 const over = expected.over
 const overLabel = over ? `${over.name} ${over.version}` : ''
@@ -176,7 +178,20 @@ async function install(game, force) {
   try {
     console.log('  Adding Continuing Semesters...')
     asar.extractAll(p.asar, work)
+    // Every delta is applied before anything is removed or written: the file one is made from
+    // may be one that goes, or the very file it replaces.
+    const made = []
+    for (const step of expected.patch ?? []) {
+      const delta = await readFile(join(PAYLOAD, 'delta', step.delta))
+      const file = Buffer.from(applyDelta(await readFile(join(work, step.from)), delta))
+      if (sha256(file) !== step.sha256) throw new Error(`${step.to} did not come out as it should.`)
+      made.push([step.to, file])
+    }
     for (const rel of expected.remove) await rm(join(work, rel), { force: true })
+    for (const [rel, file] of made) {
+      await mkdir(dirname(join(work, rel)), { recursive: true })
+      await writeFile(join(work, rel), file)
+    }
     for (const rel of expected.code) {
       await mkdir(dirname(join(work, rel)), { recursive: true })
       await cp(join(PAYLOAD, 'code', rel), join(work, rel))
