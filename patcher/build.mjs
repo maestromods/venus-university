@@ -123,6 +123,34 @@ const payload = zipSync(entries, { level: 9 })
 const payloadPath = join(OUT, `payload-${MOD_VERSION}.zip`)
 await writeFile(payloadPath, payload)
 
+// The same patch without an exe: two small launchers that run it on the game's own exe, the
+// patch and what it installs, all readable before anything is run. Antivirus tools flag an
+// unsigned exe that unpacks a zip and rewrites another program's files, which is what the wizard
+// is; this is the download for anyone who would rather not run one. Text files go out with
+// Windows line endings, whatever the checkout has.
+const crlf = (text) => text.replace(/\r?\n/g, '\r\n')
+const NO_EXE = `Continuing-Semesters-${MOD_VERSION}`
+const noExe = {}
+for (const [rel, entry] of Object.entries(entries)) noExe[`${NO_EXE}/${rel}`] = entry
+for (const name of ['Install.cmd', 'Uninstall.cmd']) {
+  noExe[`${NO_EXE}/${name}`] = [
+    Buffer.from(crlf(await readFile(join(HERE, 'files', name), 'utf8'))),
+    { mtime: new Date('2026-01-01T00:00:00Z') }
+  ]
+}
+noExe[`${NO_EXE}/README.txt`] = [
+  Buffer.from(
+    crlf(await readFile(join(HERE, 'files', 'README-no-exe.txt'), 'utf8'))
+      .replaceAll('{{MOD_VERSION}}', MOD_VERSION)
+      .replaceAll('{{GAME_VERSION}}', GAME_VERSION)
+  ),
+  { mtime: new Date('2026-01-01T00:00:00Z') }
+]
+const noExeName = `${NO_EXE}-no-exe.zip`
+const noExeZip = zipSync(noExe, { level: 9 })
+await writeFile(join(OUT, noExeName), noExeZip)
+await writeFile(join(OUT, 'SHA256-no-exe.txt'), `${sha256(noExeZip)}  ${noExeName}\r\n`)
+
 // The wizard, told which build it carries.
 const source = (await readFile(join(HERE, 'Setup.cs'), 'utf8'))
   .replace(/ModVersion = "[^"]*"/, `ModVersion = "${MOD_VERSION}"`)
@@ -169,5 +197,6 @@ if (process.platform === 'win32' && existsSync(csc)) {
 }
 await cp(join(HERE, 'files', 'README.txt'), join(OUT, 'README.txt'))
 console.log(existsSync(SETUP) ? `Built ${relative(HERE, SETUP)}` : `Ready in ${relative(HERE, OUT)}: run build-setup.cmd on Windows`)
+console.log(`  no-exe zip: ${noExeName}`)
 console.log(`  code files: ${code.length} (${code.join(', ')})`)
 console.log(`  removed:    ${remove.length} (${remove.join(', ')})`)
