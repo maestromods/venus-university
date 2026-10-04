@@ -46,6 +46,18 @@ Install
 The setup checks that your game is the official version before changing
 anything, and keeps a backup of the original game code.
 
+Without the setup exe
+---------------------
+Some antivirus programs flag the setup exe, because it is unsigned and
+patches another program's files. The "no-exe" zip does the same job with
+two plain scripts you can read in Notepad first:
+1. Close the game and back up your saves.
+2. Unzip it anywhere.
+3. Double-click Install.cmd and paste the path to your Venus University
+   folder when asked. If you unzipped it inside the game folder, it
+   finds the game by itself.
+Uninstall.cmd takes it out again, the same way.
+
 Backups
 -------
 "Back up game data" also writes a second file next to the backup,

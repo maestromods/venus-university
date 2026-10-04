@@ -165,6 +165,52 @@ if (process.platform === 'win32' && existsSync(csc)) {
   )
 }
 await cp(join(HERE, 'files', 'README.txt'), join(OUT, 'README.txt'))
+
+/**
+ * The same patch without the wizard, for anyone whose antivirus objects to an unsigned exe:
+ * `Install.cmd` and `Uninstall.cmd` run `patch.mjs` with the game's own exe, as the wizard does.
+ * Each finds the game folder the way the wizard does (the folder it was unzipped into, or asks
+ * for one) and shows the patch's output once it is done.
+ */
+const script = (action) =>
+  [
+    '@echo off',
+    'setlocal',
+    `rem ${action === 'install' ? 'Installs' : 'Uninstalls'} Photo Feature ${MOD_VERSION} with the game's own exe, as the setup does.`,
+    'set "GAME=%~1"',
+    'if not defined GAME if exist "%~dp0..\\Venus University.exe" set "GAME=%~dp0.."',
+    'if not defined GAME (echo. & set /p "GAME=  Path to your Venus University folder: ")',
+    'if not defined GAME goto missing',
+    'set "GAME=%GAME:"=%"',
+    'if not exist "%GAME%\\Venus University.exe" goto missing',
+    'set "LOG=%TEMP%\\venus-photo-mod.log"',
+    'set "ELECTRON_RUN_AS_NODE=1"',
+    `start "" /b /wait "%GAME%\\Venus University.exe" "%~dp0patch.mjs" ${action} "%GAME%" <nul >"%LOG%" 2>&1`,
+    'set "CODE=%ERRORLEVEL%"',
+    'type "%LOG%"',
+    'del "%LOG%" 2>nul',
+    'pause',
+    'exit /b %CODE%',
+    ':missing',
+    'echo. & echo   "Venus University.exe" was not found in that folder. & echo.',
+    'pause',
+    'exit /b 1',
+    ''
+  ].join('\r\n')
+
+const folder = `Venus-Photo-Feature-${MOD_VERSION}`
+const plain = { [`${folder}/Install.cmd`]: script('install'), [`${folder}/Uninstall.cmd`]: script('uninstall') }
+plain[`${folder}/README.txt`] = await readFile(join(HERE, 'files', 'README.txt'), 'utf8')
+const noExe = {}
+for (const [rel, text] of Object.entries(plain)) {
+  noExe[rel] = [Buffer.from(text.replace(/\r?\n/g, '\r\n')), { mtime: new Date('2026-01-01T00:00:00Z') }]
+}
+for (const rel of await files(DIST)) {
+  noExe[`${folder}/${rel}`] = [await readFile(join(DIST, rel)), { mtime: new Date('2026-01-01T00:00:00Z') }]
+}
+const noExePath = join(OUT, `${folder}-no-exe.zip`)
+await writeFile(noExePath, zipSync(noExe, { level: 9 }))
 console.log(existsSync(SETUP) ? `Built ${relative(HERE, SETUP)}` : `Ready in ${relative(HERE, OUT)}: run build-setup.cmd on Windows`)
+console.log(`  no-exe zip: ${relative(HERE, noExePath)}`)
 console.log(`  code files: ${code.length} (${code.join(', ')})`)
 console.log(`  removed:    ${remove.length} (${remove.join(', ')})`)

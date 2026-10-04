@@ -53,7 +53,10 @@ compiled elsewhere (Mono's `mcs`, for example) works, but Windows Defender block
 - **Anywhere else**, it leaves `build-setup.cmd` in `dist/` with the payload and the wizard's
   source. Copy `dist/` to a Windows PC and double-click `build-setup.cmd`.
 
-The result is the setup exe, `SHA256.txt` and the player `README.txt`. The build stops if
+The result is the setup exe, `SHA256.txt` and the player `README.txt`, plus
+`Venus-Photo-Feature-<version>-no-exe.zip`: the same patch without the wizard, for players whose
+antivirus flags the unsigned exe. Its `Install.cmd` and `Uninstall.cmd` run `patch.mjs` with the
+game's own exe, as the wizard does. The build stops if
 anything other than code differs between the two builds, so no asset can end up in it. The
 payload zip is reproducible: the same inputs always give the same file.
 
