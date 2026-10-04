@@ -435,11 +435,17 @@ function continuedAttempt(
   for (const character of kept) {
     const profile = record.profiles[character.charId]
     if (!profile) continue
+    const held = save.charInfo[character.charId]?.job
     returning[charKeyOf(character.firstName, character.lastName)] = {
       year: yearAfter(profile.year ?? 1, ended),
       major: profile.major ?? '',
       dorm: profile.dorm ?? FALLBACK_DORM,
-      ...(profile.handle ? { handle: profile.handle } : {})
+      ...(profile.handle ? { handle: profile.handle } : {}),
+      // Her job is not carried on the save, its shifts belonging to the old timetable; the
+      // employer is handed to New Game here, which places new shifts round her new classes.
+      ...(held && held.shifts.length > 0
+        ? { job: { jobId: held.jobId, shifts: held.shifts.length } }
+        : {})
     }
   }
 
