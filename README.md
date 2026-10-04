@@ -43,6 +43,15 @@
 > is in `patcher/`, which can also build a setup exe. That exe is unsigned and antivirus tools
 > flag it, so the zip is the one to use.
 >
+> **With naudh1r's Photo Feature as well.** Two mods cannot be stacked as they are, since both
+> replace the same few code files, so there is a second download for a game that already has
+> Photo Feature: `Continuing-Semesters-<version>-for-Photo-Feature-<their version>-no-exe.zip`.
+> Install Photo Feature with its own setup first, then this on top. It carries one build of both
+> mods together, from the [`semester-0.3-photo`](https://github.com/morrowkiln/venus-university/tree/semester-0.3-photo)
+> branch, and needs exactly the Photo Feature version in its name. Its `Uninstall.cmd` puts the
+> game back to Photo Feature alone; take this mod out first, before uninstalling or updating
+> Photo Feature.
+>
 > **From source (any platform; needs Git and Node 22).** Starting fresh:
 >
 > ```
