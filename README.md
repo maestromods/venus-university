@@ -18,6 +18,10 @@
 >   With it on, a character you create gets them from the start, and you can set them in the
 >   editor of any character of your own. The default characters can't be edited, so duplicate one
 >   first and give the copy her body details.
+>   You pick her build and chest; her hips, backside and pubic hair are drawn to fit, and Reroll
+>   draws another combination. On standing sprites the game's pose guide fixes her proportions, so
+>   petite, tall and average look nearly the same there, while curvy, toned and muscular show.
+>   Photos have no pose guide, so her build has more room to show in them.
 >
 > ### Backups and character exports
 >
