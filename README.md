@@ -18,6 +18,10 @@
 > - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
 >   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
 >   are here only so the game builds from source.
+> - **Reuse is welcome.** Everything I wrote for this mod may be used by other mods under the
+>   game's AGPL licence, with or without asking. Venus Dev may additionally use any of it in the
+>   official game on whatever terms he chooses, with no credit needed. This does not cover the
+>   setup in `patcher/`, which is adapted from naudh1r's and stays under their terms.
 >
 > ### Installing this version
 >
