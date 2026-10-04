@@ -112,6 +112,16 @@
   filter: hue-rotate(var(--vu-wordmark-hue));
 }
 
+/* The mod's own line, tucked under the wordmark and smaller than anything else on the rack: it
+   says what this build is without competing with the name over it. The margins take back most
+   of the rack's gap on both sides, so the answers below move down by less than a line. */
+.vu-menu-mod {
+  margin: -8px 0 -18px 4px;
+  color: var(--vu-text-muted);
+  font: 700 12px var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
 .vu-menu-actions {
   display: flex;
   flex-direction: column;
