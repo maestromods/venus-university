@@ -228,7 +228,19 @@ describe('a continued start', () => {
         ...finished(),
         played: {
           stats,
-          memories: { [charId]: [{ type: 'loved', desc: 'the reader visited her in July' }] }
+          memories: { [charId]: [{ type: 'loved', desc: 'the reader visited her in July' }] },
+          talks: [
+            {
+              slot: 0,
+              charId,
+              lines: [
+                { sender: 'player', text: 'hey' },
+                { sender: 'contact', text: 'hi' }
+              ],
+              ended: 'player',
+              verdict: 'neutral'
+            }
+          ]
         }
       })
     )
@@ -241,6 +253,9 @@ describe('a continued start', () => {
     expect(outcome.data.carried?.carry.charInfo[charId].memories.map((m) => m.desc)).toEqual([
       'the reader visited her in July'
     ])
+    expect(
+      outcome.data.carried?.carry.bunnyboard.conversations[charId].messages.map((m) => m.text)
+    ).toEqual(['hey', 'hi'])
   })
 })
 

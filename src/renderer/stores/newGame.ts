@@ -4,6 +4,7 @@ import { readerStandingOf } from '@shared/relationship'
 import { emptyTallies } from '@shared/tallies'
 import { isGameOver } from '@shared/money'
 import type { PlayerStats } from '@shared/playerStats'
+import { withBreakThreads, type BreakTalk } from '@shared/termBreak'
 import { hasNextTerm, seasonOf, termIndexOf, yearAfter } from '@shared/term'
 import {
   carryTerm,
@@ -84,7 +85,12 @@ export interface Continuation {
    * left them and what each returning girl remembers of it, by charId. Absent, the start asks
    * for the memories itself.
    */
-  played?: { stats: PlayerStats; memories: Record<string, BreakMemory[]> }
+  played?: {
+    stats: PlayerStats
+    memories: Record<string, BreakMemory[]>
+    /** The conversations had over it, which are filed on the phone. */
+    talks: BreakTalk[]
+  }
 }
 
 /** Everything the one-shot New Game calls produce, settled together. */
@@ -435,14 +441,31 @@ export function breakAskOf(
   kept: readonly Character[],
   carried: CarriedTerm
 ): BreakAsk | null {
-  const { save, record } = from
+  const { save } = from
   const breakInput: BreakCharInput[] = kept
     .filter((c) => carried.carry.charInfo[c.charId]?.flags.hasMet)
     .map((character) => ({ character, state: carried.carry.charInfo[character.charId] }))
   if (breakInput.length === 0) return null
 
+  return {
+    breakInput,
+    breakRequest: buildBreakPrompt({
+      returning: breakInput,
+      reader: breakReaderOf(from, kept, carried),
+      stats: save.stats
+    })
+  }
+}
+
+/** The reader's own block as a call about the break carries it: who he was when the semester ended. */
+export function breakReaderOf(
+  from: Continuation,
+  kept: readonly Character[],
+  carried: CarriedTerm
+): string {
+  const { save, record } = from
   const firstNames = Object.fromEntries(kept.map((c) => [c.charId, c.firstName]))
-  const reader = readerText(record.playerFirstName, record.playerLastName, save.stats, {
+  return readerText(record.playerFirstName, record.playerLastName, save.stats, {
     ...(save.bio ? { bio: save.bio } : {}),
     ...readerStandingOf(
       kept.map((c) => c.charId),
@@ -450,10 +473,6 @@ export function breakAskOf(
       firstNames
     )
   })
-  return {
-    breakInput,
-    breakRequest: buildBreakPrompt({ returning: breakInput, reader, stats: save.stats })
-  }
 }
 
 /** Whoever of `roster` is coming back from the finished semester, and what it hands over for them. */
@@ -489,7 +508,13 @@ function continuedAttempt(
   const { record, played, save } = from
   const ended = seasonOf(termIndexOf(record))
   const { kept, carried: handed } = keptFrom(roster, from)
-  const carried = played ? { ...handed, stats: played.stats } : handed
+  const carried = played
+    ? {
+        ...handed,
+        stats: played.stats,
+        carry: withBreakThreads(handed.carry, played.talks, ended)
+      }
+    : handed
 
   const returning: Record<string, ReturningStudents[string]> = {}
   for (const character of kept) {

@@ -131,3 +131,88 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+
+/* ---- who he can write to --------------------------------------------------- */
+
+/* The one line saying what a click on the faces under it does. */
+.vu-break-hint {
+  position: relative;
+  margin: 0;
+}
+
+/* How often he has written to her, hung on the card's flat corner. */
+.vu-break-texted {
+  right: -6px;
+}
+
+/* ---- the conversation ------------------------------------------------------ */
+
+/* The form modals' frame around one thread: the head clears the tab hung on its corner, and the
+   cap gives back what that tab and the paper's overhang need. The bubbles, the typing dots and
+   their colours are the phone's own.
+
+   No `overflow`: the tab overhangs, and the panel's own shadow pseudo would go with it. */
+.vu-breaktalk {
+  --paper-offset: 12px 11px;
+  --paper-tilt: -1.2deg;
+  --paper-shadow: var(--vu-panel-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(820px, 100% - 60px);
+  height: min(820px, 100% - 100px);
+  padding: 78px 56px 28px 100px;
+  border-radius: 120px 0 0 120px;
+  color: var(--vu-text);
+  font-family: var(--font-body);
+}
+
+/* Which week it is and how many texts he has had, in the bookkeeping voice. */
+.vu-breaktalk-count {
+  color: var(--vu-text-muted);
+  font: 700 12px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* The scroll box takes whatever height the panel has left, so the well and the foot keep
+   their place as the thread grows. */
+.vu-breaktalk-box {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The thread: a column of bubbles, each on its sender's side, padded for the fade at its foot. */
+.vu-breaktalk-thread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 4px 10px 34px 4px;
+  overflow: hidden auto;
+}
+
+/* What the panel is waiting on once nobody is typing, centred under the thread. */
+.vu-breaktalk-wait {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  color: var(--vu-text-muted);
+  font: 700 12px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* What the conversation came to, said to the player under the last thing she sent. */
+.vu-breaktalk-reason {
+  align-self: center;
+  padding-top: 8px;
+  text-align: center;
+  font-style: italic;
+}
