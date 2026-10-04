@@ -25,15 +25,15 @@ Install
    folder (the one with "Venus University.exe" in it).
 
 It checks that your game is the official {{GAME_VERSION}} before changing anything,
-keeps a backup of the original game code, and refuses a game that already
-has another mod in it. If you use naudh1r's Photo Feature, there is a
-separate download on the same page made to go on top of it.
+keeps a backup of the game code as it found it, and refuses a game with a
+mod in it that it does not know.
 
+{{OVER}}
 Uninstall
 ---------
-Close the game and double-click Uninstall.cmd. It puts the original game
-code back, so the game is exactly the official version again. Your saves
-and characters are not touched.
+Close the game and double-click Uninstall.cmd. It puts the game code back
+exactly as it was before the install. Your saves and characters are not
+touched.
 
 A semester started by continuing is a playthrough only this mod
 understands. After uninstalling, don't expect those saves to load in the

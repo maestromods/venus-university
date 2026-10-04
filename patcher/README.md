@@ -30,7 +30,7 @@ This is the download to offer. Antivirus tools flag an unsigned exe that unpacks
 rewrites another program's files, which is exactly what the wizard does, and asking players to
 make an exception for it is bad practice. Everything in the zip can be read before it is run.
 
-## The download for a game with Photo Feature
+## Going on top of Photo Feature
 
 Two mods cannot be installed one after the other as they are: each replaces the same few
 bundles (`out/main/index.js`, the renderer's one script and one stylesheet), so the second
@@ -39,30 +39,35 @@ source merged. The download does not carry that build, which would mean giving o
 mod's code: it carries one delta per code file, and install makes each merged file from the
 other mod's installed file and its delta, then checks the result's hash.
 
-It is built with:
+The same download does both. Given a game, the patch looks for the other mod's marker
+(`resources/photo-mod.json`): with it, it applies the deltas; without it, it holds the game to
+the official one and puts in the whole files. It is built with four `out` folders:
 
 ```
-node build.mjs --base <out of a game with Photo Feature installed> --mod <out of semester-0.3-photo>
-               --game-version 0.3.0 --mod-version 0.1.1 --over photo-feature --over-version 1.1.3
+node build.mjs --base <official out> --mod <out of semester-0.3>
+               --game-version 0.3.0 --mod-version 0.1.1
+               --over photo-feature --over-version 1.1.3
+               --over-base <out of a game with Photo Feature installed>
+               --over-mod <out of semester-0.3-photo>
 ```
 
-- `--base` must come from the other mod's real download: install it into a copy of the official
-  game with its own setup, then extract that `app.asar`. Its hashes are what a player's game is
-  checked against.
-- `--mod` is `npx electron-vite build` on `semester-0.3-photo`, which is `semester-0.3` merged
-  with naudh1r's release tag.
-- The result is `Continuing-Semesters-<version>-for-Photo-Feature-<their version>-no-exe.zip`
-  with its own `SHA256-for-...-no-exe.txt`. No setup exe is built for it.
-- The deltas are in Fossil's delta format, made and applied with the `fossil-delta` package
-  (BSD), which is bundled into `patch.mjs`. A bundle whose name carries a content hash
-  (`index-CQ260QeK.js`) is made from the other mod's bundle of the same name without the hash.
+- `--over-base` must come from the other mod's real download: install it into a copy of the
+  official game with its own setup, then extract that `app.asar`. Its hashes are what a
+  player's game is checked against.
+- `--over-mod` is `npx electron-vite build` on `semester-0.3-photo`, which is `semester-0.3`
+  merged with naudh1r's release tag.
+- The deltas go under `payload/over/photo-feature/`, in Fossil's delta format, made and applied
+  with the `fossil-delta` package (BSD), which is bundled into `patch.mjs`. A bundle whose name
+  carries a content hash (`index-CQ260QeK.js`) is made from the other mod's bundle of the same
+  name without the hash.
+- Without the `--over` arguments the download is for the official game only.
 
-Install then also asks for the other mod's marker (`resources/photo-mod.json`) at exactly that
-version, and uninstall puts back the game as that mod left it. The download for the official
-game, in turn, tells a player with Photo Feature to take this one.
+Install asks for exactly that version of the other mod, and uninstall puts back the game as
+that mod left it.
 
 It is tied to one version of the other mod. When naudh1r releases, merge the new tag into
-`semester-0.3-photo` and rebuild; until then the old download refuses the new version.
+`semester-0.3-photo` and rebuild; until then the download refuses a game with the new version,
+and still installs on the official game.
 
 ## When the game changes underneath
 

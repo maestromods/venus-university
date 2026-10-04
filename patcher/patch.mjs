@@ -13,9 +13,9 @@ import { fileURLToPath } from 'node:url'
  * https://github.com/naudh1r/venus-university.
  *
  * Installs Continuing Semesters into an official Venus University folder, and takes it out again.
- * A download built with `--over` goes into a game that already has one other mod instead. It
- * carries no code file, only deltas that turn that mod's files into a build of both mods
- * together: see `expected.over` and `expected.patch`.
+ * A download built with `--over` also goes into a game that already has one other mod, and
+ * tells by itself which of the two it was given. For that game it carries no code file, only
+ * deltas that turn the other mod's files into a build of both mods together: see `editions`.
  *
  * The game's code lives in `resources/app.asar`. Installing swaps the few code files the mod
  * changes for its own. Nothing else in the game is touched: the art,
@@ -37,15 +37,31 @@ const UNPACK = '**/node_modules/7zip-bin/**'
 const expected = JSON.parse(await readFile(join(PAYLOAD, 'expected.json'), 'utf8'))
 
 /**
- * The other mod this download goes on top of (`{ name, version, marker }`), or undefined when it
- * is for the official game. None of its code is in the payload: the files installed are a
- * build of both mods together, made here from that mod's own files and the payload's deltas.
+ * The other mods this download can go on top of, each `{ key, name, version, marker, base,
+ * patch, remove }`. None of their code is in the payload: for a game that has one, the files
+ * installed are a build of both mods together, made here from that mod's own files and the
+ * deltas under `payload/over/<key>`.
  */
-const over = expected.over
-const overLabel = over ? `${over.name} ${over.version}` : ''
+const editions = expected.over ?? []
 
-/** Mods with a download of their own to go on top of, by the marker their setup leaves. */
-const EDITIONS = [{ name: 'Photo Feature', marker: 'photo-mod.json' }]
+/**
+ * What to do to this game. One that has a mod this download knows, told by the marker that
+ * mod's setup leaves, gets that mod's deltas; any other is held to the official game and gets
+ * the whole files.
+ */
+function planFor(p) {
+  const over = editions.find((edition) => existsSync(join(p.res, edition.marker)))
+  if (!over) return { base: expected.base, code: expected.code, patch: [], remove: expected.remove }
+  return {
+    over,
+    label: `${over.name} ${over.version}`,
+    base: over.base,
+    code: [],
+    patch: over.patch,
+    remove: over.remove,
+    deltas: join(PAYLOAD, 'over', over.key)
+  }
+}
 
 const paths = (game) => {
   const res = join(game, 'resources')
@@ -56,7 +72,6 @@ const paths = (game) => {
     backup: join(res, 'app.asar.semesters-mod-backup'),
     backupUnpacked: join(res, 'app.asar.unpacked.semesters-mod-backup'),
     marker: join(res, 'continuing-semesters-mod.json'),
-    overMarker: over ? join(res, over.marker) : null,
     manifest: join(res, 'build-manifest.json')
   }
 }
@@ -94,10 +109,10 @@ async function findGame(given) {
 }
 
 /**
- * Refuses a folder that is not what this download was built for: the official version, or that
- * version with the one other mod this download goes on top of.
+ * Refuses a folder that is not what the plan was built for: the official version, or that
+ * version with exactly the release of the other mod the deltas were made from.
  */
-async function checkBase(p, force) {
+async function checkBase(p, plan, force) {
   const manifest = JSON.parse(await readFile(p.manifest, 'utf8').catch(() => 'null'))
   if (!manifest) fail('This folder has no build-manifest.json, so it is not an official build.')
   if (manifest.version !== expected.gameVersion) {
@@ -106,32 +121,21 @@ async function checkBase(p, force) {
     console.warn(`  warning: ${message} Continuing because of --force.`)
   }
 
-  let hint = 'Is another mod installed?'
-  if (over) {
-    const theirs = JSON.parse(await readFile(p.overMarker, 'utf8').catch(() => 'null'))
-    if (!theirs) {
-      fail(
-        `This download goes on top of ${overLabel}, which is not installed in this folder. ` +
-          `Install ${overLabel} first, or use the Continuing Semesters download for the official game. ` +
-          'Nothing was changed.'
-      )
-    }
-    if (theirs.modVersion !== over.version) {
-      const message = `This download is for ${overLabel}, but this folder has ${over.name} ${theirs.modVersion}.`
+  if (plan.over) {
+    const theirs = JSON.parse(await readFile(join(p.res, plan.over.marker), 'utf8').catch(() => 'null'))
+    if (theirs?.modVersion !== plan.over.version) {
+      const message =
+        `This folder has ${plan.over.name} ${theirs?.modVersion ?? '(unknown version)'}. ` +
+        `This download goes on the official game or on top of ${plan.label}, and no other version of it.`
       if (!force) fail(`${message} Nothing was changed.`)
       console.warn(`  warning: ${message} Continuing because of --force.`)
     }
-    hint = `Is a mod other than ${over.name} installed?`
-  } else {
-    const other = EDITIONS.find((edition) => existsSync(join(p.res, edition.marker)))
-    if (other) {
-      hint = `${other.name} is installed here: use the Continuing Semesters download made for ${other.name}.`
-    }
   }
 
-  const wanted = over ? `the one ${overLabel} installs` : `the official ${expected.gameVersion} one`
+  const wanted = plan.over ? `the one ${plan.label} installs` : `the official ${expected.gameVersion} one`
+  const hint = plan.over ? `Is a mod other than ${plan.over.name} installed?` : 'Is another mod installed?'
   const listed = new Set(asar.listPackage(p.asar).map((f) => f.replace(/\\/g, '/').replace(/^\//, '')))
-  for (const [rel, hash] of Object.entries(expected.base)) {
+  for (const [rel, hash] of Object.entries(plan.base)) {
     const ok = listed.has(rel) && sha256(asar.extractFile(p.asar, native(rel))) === hash
     if (!ok) {
       const message = `The game's ${rel} is not ${wanted}.`
@@ -168,9 +172,16 @@ async function install(game, force) {
     console.log("  The game's code was replaced after an earlier install; clearing what that left behind...")
     await clearLeftovers(p)
   }
-  await checkBase(p, force)
+  const plan = planFor(p)
+  await checkBase(p, plan, force)
 
-  console.log(over ? `  Backing up the game code as ${overLabel} left it...` : '  Backing up the original game code...')
+  if (plan.over) {
+    console.log(`  This game has ${plan.label}: Continuing Semesters goes on top of it.`)
+    console.log(`  Backing up the game code as ${plan.label} left it...`)
+  } else {
+    console.log('  This is the official game.')
+    console.log('  Backing up the original game code...')
+  }
   await cp(p.asar, p.backup)
   if (existsSync(p.unpacked)) await cp(p.unpacked, p.backupUnpacked, { recursive: true })
 
@@ -181,18 +192,18 @@ async function install(game, force) {
     // Every delta is applied before anything is removed or written: the file one is made from
     // may be one that goes, or the very file it replaces.
     const made = []
-    for (const step of expected.patch ?? []) {
-      const delta = await readFile(join(PAYLOAD, 'delta', step.delta))
+    for (const step of plan.patch) {
+      const delta = await readFile(join(plan.deltas, step.delta))
       const file = Buffer.from(applyDelta(await readFile(join(work, step.from)), delta))
       if (sha256(file) !== step.sha256) throw new Error(`${step.to} did not come out as it should.`)
       made.push([step.to, file])
     }
-    for (const rel of expected.remove) await rm(join(work, rel), { force: true })
+    for (const rel of plan.remove) await rm(join(work, rel), { force: true })
     for (const [rel, file] of made) {
       await mkdir(dirname(join(work, rel)), { recursive: true })
       await writeFile(join(work, rel), file)
     }
-    for (const rel of expected.code) {
+    for (const rel of plan.code) {
       await mkdir(dirname(join(work, rel)), { recursive: true })
       await cp(join(PAYLOAD, 'code', rel), join(work, rel))
     }
@@ -219,7 +230,7 @@ async function install(game, force) {
         modVersion: expected.modVersion,
         gameVersion: expected.gameVersion,
         // What uninstall puts back is the game with this mod under it, when there is one.
-        over: over ? { name: over.name, version: over.version } : undefined,
+        over: plan.over ? { name: plan.over.name, version: plan.over.version } : undefined,
         // The archive as this install left it: uninstall restores the backup only over this.
         asar: await hashFile(p.asar)
       },
@@ -227,7 +238,7 @@ async function install(game, force) {
       2
     )
   )
-  const where = over ? `on top of ${overLabel}, in` : 'in'
+  const where = plan.over ? `on top of ${plan.label}, in` : 'in'
   console.log(`\n  Done. Continuing Semesters is installed ${where}:\n  ${game}\n`)
 }
 
@@ -263,8 +274,7 @@ const [command, ...rest] = process.argv.slice(2)
 const force = rest.includes('--force')
 const given = rest.find((arg) => !arg.startsWith('--'))
 
-const target = `Venus University ${expected.gameVersion}${over ? ` with ${overLabel}` : ''}`
-console.log(`\n  ${expected.mod} ${expected.modVersion} (for ${target})`)
+console.log(`\n  ${expected.mod} ${expected.modVersion} (for Venus University ${expected.gameVersion})`)
 console.log('  Close the game before continuing.\n')
 
 if (command === 'install') await install(await findGame(given), force)
