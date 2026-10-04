@@ -12,8 +12,8 @@ export interface ModInfo {
 
 export const MODS: readonly ModInfo[] = [
   { name: 'Continuing Semesters', version: '0.1.1' },
-  // naudh1r's mod, merged into this personal build from their port-0.3.0 branch.
-  { name: 'Photo Feature', version: '0.3 port' }
+  // naudh1r's mod, merged into this branch from their release tag of that version.
+  { name: 'Photo Feature', version: '1.1.3' }
 ]
 
 /** `"Continuing Semesters 0.1.1"`, or several joined with commas. */
