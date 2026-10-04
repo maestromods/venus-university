@@ -340,9 +340,6 @@ export function MainMenu(): JSX.Element {
           animate={breathe}
         />
 
-        {/* Under the name, so a screenshot of the menu says whose build this is. */}
-        <span className="vu-menu-mod">{modLine()}</span>
-
         <motion.nav className="vu-menu-actions vu-fan" variants={dealt(0.55)}>
           {/* One slot, three identities: the key first where there is none — nothing below it
               can be played without one — then Continue with a playthrough on disk, Quickstart
@@ -476,6 +473,8 @@ export function MainMenu(): JSX.Element {
             </button>
           )}
           <span className="vu-menu-version">{versionLine(__APP_VERSION__)}</span>
+          {/* Under the version, so a screenshot of the menu says whose build this is. */}
+          <span className="vu-menu-mod">{modLine()}</span>
         </motion.div>
       </motion.aside>
 

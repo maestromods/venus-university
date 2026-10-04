@@ -17,7 +17,7 @@ export function modNames(mods: readonly ModInfo[] = MODS): string {
   return mods.map((mod) => `${mod.name} ${mod.version}`).join(', ')
 }
 
-/** The line the main menu prints under the game's name. */
+/** The line the main menu prints under the version. */
 export function modLine(mods: readonly ModInfo[] = MODS): string {
   return `Modded · ${modNames(mods)} · unofficial`
 }
