@@ -179,7 +179,7 @@ const script = (action) =>
     `rem ${action === 'install' ? 'Installs' : 'Uninstalls'} Photo Feature ${MOD_VERSION} with the game's own exe, as the setup does.`,
     'set "GAME=%~1"',
     'if not defined GAME if exist "%~dp0..\\Venus University.exe" set "GAME=%~dp0.."',
-    'if not defined GAME (echo. & set /p "GAME=  Path to your Venus University folder: ")',
+    'if not defined GAME (echo. & echo   Drag your Venus University folder into this window, or paste its path. & set /p "GAME=  Then press Enter: ")',
     'if not defined GAME goto missing',
     'set "GAME=%GAME:"=%"',
     'if not exist "%GAME%\\Venus University.exe" goto missing',
