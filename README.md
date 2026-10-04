@@ -41,21 +41,21 @@
 > Double-click `Uninstall.cmd` to put the official game back exactly as it was. The download has
 > no exe in it: two small scripts start the patch on the game's own exe, and everything in the
 > zip is text you can read first. It carries only code, none of the game's images, music or
-> characters, and refuses a game that is not the official 0.3.0 or that already has another mod
-> in it. If you accept an official update in the game, it replaces the mod. The patch is adapted
-> from [naudh1r](https://github.com/naudh1r/venus-university)'s Photo Feature mod; its source
-> is in `patcher/`, which can also build a setup exe. That exe is unsigned and antivirus tools
-> flag it, so the zip is the one to use.
+> characters, and refuses a game that is not the official 0.3.0 or that has a mod in it other
+> than the one named below. If you accept an official update in the game, it replaces the mod.
+> The patch is adapted from [naudh1r](https://github.com/naudh1r/venus-university)'s Photo
+> Feature mod; its source is in `patcher/`, which can also build a setup exe. That exe is
+> unsigned and antivirus tools flag it, so the zip is the one to use.
 >
-> **With naudh1r's Photo Feature as well.** Two mods cannot be stacked as they are, since both
-> replace the same few code files, so there is a second download for a game that already has
-> Photo Feature: `Continuing-Semesters-<version>-for-Photo-Feature-<their version>-no-exe.zip`.
-> Install Photo Feature with its own setup first, then this on top. It carries none of Photo
-> Feature's code: only the differences that turn the files Photo Feature installed into a build
-> of both mods together, made from the [`semester-0.3-photo`](https://github.com/morrowkiln/venus-university/tree/semester-0.3-photo)
-> branch. It needs exactly the Photo Feature version in its name. Its `Uninstall.cmd` puts the
-> game back to Photo Feature alone; take this mod out first, before uninstalling or updating
-> Photo Feature.
+> **With naudh1r's Photo Feature as well.** The same download also goes on top of a game that
+> already has Photo Feature: `Install.cmd` tells which game it is given. Install Photo Feature
+> with its own setup first, then this. Two mods cannot be stacked as they are, since both
+> replace the same few code files, so for that case the download carries the differences that
+> turn the files Photo Feature installed into a build of both mods together, made from the
+> [`semester-0.3-photo`](https://github.com/morrowkiln/venus-university/tree/semester-0.3-photo)
+> branch, and none of Photo Feature's own code. It needs exactly the Photo Feature version the
+> release names. `Uninstall.cmd` then puts the game back to Photo Feature alone; take this mod
+> out first, before uninstalling or updating Photo Feature.
 >
 > **From source (any platform; needs Git and Node 22).** Starting fresh:
 >

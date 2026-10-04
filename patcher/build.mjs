@@ -21,12 +21,13 @@ import { fileURLToPath } from 'node:url'
  *   node build.mjs --base <official out dir> --mod <mod out dir>
  *                  --game-version 0.3.0 --mod-version 0.1.0
  *
- * With `--over photo-feature --over-version 1.1.3` the download goes on top of another mod
- * instead of the official game. `--base` is then the `out` of a game with that mod installed by
- * its own setup, and `--mod` a build of both mods' source merged: the code of two mods cannot be
- * layered file by file, since both change the same few bundles. The download then carries no
- * code file at all, only a delta for each: what turns the other mod's installed file into the
- * merged one. None of the other mod's code is in it. Only the no-exe zip is built.
+ * With `--over photo-feature --over-version 1.1.3 --over-base <dir> --over-mod <dir>` the same
+ * download also goes on top of that other mod: the patch tells which game it is given and does
+ * the right thing. `--over-base` is the `out` of a game with that mod installed by its own
+ * setup, and `--over-mod` a build of both mods' source merged: the code of two mods cannot be
+ * layered file by file, since both change the same few bundles. For that case the download
+ * carries no code file, only a delta for each: what turns the other mod's installed file into
+ * the merged one. None of the other mod's code is in it.
  *
  * The download is one exe, the setup wizard (`Setup.cs`), with the patch zipped inside it,
  * compiled with Windows' own C# compiler: here when this runs on Windows, or by the
@@ -47,17 +48,17 @@ const OVER = {
   'photo-feature': { name: 'Photo Feature', marker: 'photo-mod.json' }
 }
 if (has('over') && !OVER[raw('over')]) throw new Error(`--over must be one of: ${Object.keys(OVER)}`)
-if (has('over') && !has('over-version')) throw new Error('--over-version is required with --over')
-const over = has('over') ? { ...OVER[raw('over')], version: raw('over-version') } : undefined
-/** What sets this download's file names apart from the one for the official game. */
-const EDITION = over ? `-for-${over.name.replaceAll(' ', '-')}-${over.version}` : ''
+for (const name of ['over-version', 'over-base', 'over-mod']) {
+  if (has('over') && !has(name)) throw new Error(`--${name} is required with --over`)
+}
+const over = has('over') ? { key: raw('over'), ...OVER[raw('over')], version: raw('over-version') } : undefined
 
 const BASE = arg('base')
 const MOD = arg('mod')
 const GAME_VERSION = raw('game-version')
 const MOD_VERSION = raw('mod-version')
 const OUT = join(HERE, 'dist')
-const DIST = join(OUT, `continuing-semesters-${MOD_VERSION}${EDITION.toLowerCase()}`)
+const DIST = join(OUT, `continuing-semesters-${MOD_VERSION}`)
 const SETUP = join(OUT, `Continuing-Semesters-Setup-${MOD_VERSION}.exe`)
 
 const sha256 = (buffer) => createHash('sha256').update(buffer).digest('hex')
@@ -72,55 +73,68 @@ async function files(dir) {
 }
 
 const CODE = /\.(js|mjs|cjs|css|html)$/
-const baseFiles = new Set(await files(BASE))
-const modFiles = await files(MOD)
 
-const code = []
-for (const rel of modFiles) {
-  const changed =
-    !baseFiles.has(rel) ||
-    sha256(await readFile(join(MOD, rel))) !== sha256(await readFile(join(BASE, rel)))
-  if (!changed) continue
-  if (!CODE.test(rel)) throw new Error(`${rel} differs and is not code; the mod ships no assets.`)
-  code.push(rel)
-}
-const modSet = new Set(modFiles)
-const remove = [...baseFiles].filter((rel) => !modSet.has(rel))
-for (const rel of remove) {
-  if (!CODE.test(rel)) throw new Error(`${rel} is gone from the mod build and is not code.`)
+/**
+ * What turns the game code in `baseDir` into the one in `modDir`: the code files to put in,
+ * the ones to take out, and the hash every file touched must have in a player's game. Throws
+ * if anything other than code differs, so no asset can end up in the download.
+ */
+async function compare(baseDir, modDir) {
+  const baseFiles = new Set(await files(baseDir))
+  const modFiles = await files(modDir)
+  const code = []
+  for (const rel of modFiles) {
+    const changed =
+      !baseFiles.has(rel) ||
+      sha256(await readFile(join(modDir, rel))) !== sha256(await readFile(join(baseDir, rel)))
+    if (!changed) continue
+    if (!CODE.test(rel)) throw new Error(`${rel} differs and is not code; the mod ships no assets.`)
+    code.push(rel)
+  }
+  const modSet = new Set(modFiles)
+  const remove = [...baseFiles].filter((rel) => !modSet.has(rel))
+  for (const rel of remove) {
+    if (!CODE.test(rel)) throw new Error(`${rel} is gone from the mod build and is not code.`)
+  }
+  const base = {}
+  for (const rel of [...code.filter((rel) => baseFiles.has(rel)), ...remove]) {
+    base[`out/${rel}`] = sha256(await readFile(join(baseDir, rel)))
+  }
+  return { baseFiles, code, remove, base }
 }
 
-// Every base file the patch replaces or removes, with the hash the official game must have.
-const base = {}
-for (const rel of [...code.filter((rel) => baseFiles.has(rel)), ...remove]) {
-  base[`out/${rel}`] = sha256(await readFile(join(BASE, rel)))
-}
+// For the official game: the whole files.
+const { code, remove, base } = await compare(BASE, MOD)
 
 await rm(DIST, { recursive: true, force: true })
 await mkdir(join(DIST, 'payload', 'code'), { recursive: true })
+for (const rel of code) {
+  await mkdir(dirname(join(DIST, 'payload', 'code', 'out', rel)), { recursive: true })
+  await cp(join(MOD, rel), join(DIST, 'payload', 'code', 'out', rel))
+}
 
-// On top of another mod, each code file ships as a delta from that mod's file of the same
+// For a game with the other mod: each code file as a delta from that mod's file of the same
 // name. The bundler puts a hash of the content in some names (`index-CQ260QeK.js`), so a file
 // whose name is new is made from the removed one that has the same name without the hash.
-const patch = []
+const editions = []
 if (over) {
+  const overBase = arg('over-base')
+  const overMod = arg('over-mod')
+  const found = await compare(overBase, overMod)
   const unhashed = (rel) => rel.replace(/-[\w-]{8}(\.\w+)$/, '$1')
-  const removed = new Map(remove.map((rel) => [unhashed(rel), rel]))
-  for (const rel of code) {
-    const from = baseFiles.has(rel) ? rel : removed.get(unhashed(rel))
+  const removed = new Map(found.remove.map((rel) => [unhashed(rel), rel]))
+  const patch = []
+  for (const rel of found.code) {
+    const from = found.baseFiles.has(rel) ? rel : removed.get(unhashed(rel))
     if (!from) throw new Error(`${rel} has no file of ${over.name}'s to be made from.`)
-    const target = await readFile(join(MOD, rel))
-    const delta = Buffer.from(createDelta(await readFile(join(BASE, from)), target))
-    const file = join(DIST, 'payload', 'delta', 'out', `${rel}.delta`)
+    const target = await readFile(join(overMod, rel))
+    const delta = Buffer.from(createDelta(await readFile(join(overBase, from)), target))
+    const file = join(DIST, 'payload', 'over', over.key, 'out', `${rel}.delta`)
     await mkdir(dirname(file), { recursive: true })
     await writeFile(file, delta)
     patch.push({ from: `out/${from}`, to: `out/${rel}`, delta: `out/${rel}.delta`, sha256: sha256(target) })
   }
-} else {
-  for (const rel of code) {
-    await mkdir(dirname(join(DIST, 'payload', 'code', 'out', rel)), { recursive: true })
-    await cp(join(MOD, rel), join(DIST, 'payload', 'code', 'out', rel))
-  }
+  editions.push({ ...over, base: found.base, patch, remove: found.remove.map((rel) => `out/${rel}`) })
 }
 await writeFile(
   join(DIST, 'payload', 'expected.json'),
@@ -129,12 +143,11 @@ await writeFile(
       mod: 'Venus University Continuing Semesters',
       modVersion: MOD_VERSION,
       gameVersion: GAME_VERSION,
-      over,
       base,
-      // Whole files to put in, or with `over`, the deltas that make them from the other mod's.
-      code: over ? [] : code.map((rel) => `out/${rel}`),
-      patch,
-      remove: remove.map((rel) => `out/${rel}`)
+      code: code.map((rel) => `out/${rel}`),
+      remove: remove.map((rel) => `out/${rel}`),
+      // The other mods this download goes on top of, each with its own hashes and deltas.
+      over: editions
     },
     null,
     2
@@ -162,7 +175,7 @@ for (const rel of await files(DIST)) {
   entries[rel] = [await readFile(join(DIST, rel)), { mtime: new Date('2026-01-01T00:00:00Z') }]
 }
 const payload = zipSync(entries, { level: 9 })
-const payloadPath = join(OUT, `payload-${MOD_VERSION}${EDITION}.zip`)
+const payloadPath = join(OUT, `payload-${MOD_VERSION}.zip`)
 await writeFile(payloadPath, payload)
 
 // The same patch without an exe: two small launchers that run it on the game's own exe, the
@@ -171,7 +184,7 @@ await writeFile(payloadPath, payload)
 // is; this is the download for anyone who would rather not run one. Text files go out with
 // Windows line endings, whatever the checkout has.
 const crlf = (text) => text.replace(/\r?\n/g, '\r\n')
-const NO_EXE = `Continuing-Semesters-${MOD_VERSION}${EDITION}`
+const NO_EXE = `Continuing-Semesters-${MOD_VERSION}`
 const noExe = {}
 for (const [rel, entry] of Object.entries(entries)) noExe[`${NO_EXE}/${rel}`] = entry
 for (const name of ['Install.cmd', 'Uninstall.cmd']) {
@@ -182,7 +195,9 @@ for (const name of ['Install.cmd', 'Uninstall.cmd']) {
 }
 noExe[`${NO_EXE}/README.txt`] = [
   Buffer.from(
-    crlf(await readFile(join(HERE, 'files', over ? 'README-no-exe-over.txt' : 'README-no-exe.txt'), 'utf8'))
+    crlf(await readFile(join(HERE, 'files', 'README-no-exe.txt'), 'utf8'))
+      // The part about the other mod is only there when the download goes on top of one.
+      .replace('{{OVER}}\r\n', over ? crlf(await readFile(join(HERE, 'files', 'README-no-exe-over.txt'), 'utf8')) : '')
       .replaceAll('{{MOD_VERSION}}', MOD_VERSION)
       .replaceAll('{{GAME_VERSION}}', GAME_VERSION)
       .replaceAll('{{OVER_NAME}}', over?.name ?? '')
@@ -193,19 +208,7 @@ noExe[`${NO_EXE}/README.txt`] = [
 const noExeName = `${NO_EXE}-no-exe.zip`
 const noExeZip = zipSync(noExe, { level: 9 })
 await writeFile(join(OUT, noExeName), noExeZip)
-await writeFile(join(OUT, `SHA256${EDITION}-no-exe.txt`), `${sha256(noExeZip)}  ${noExeName}\r\n`)
-
-const report = () => {
-  console.log(`  no-exe zip: ${noExeName}`)
-  console.log(`  code files: ${code.length} (${code.join(', ')})`)
-  console.log(`  removed:    ${remove.length} (${remove.join(', ')})`)
-}
-// The wizard is only made for the official game: its window and its checks say so.
-if (over) {
-  console.log(`Built for ${over.name} ${over.version}, in ${relative(HERE, OUT)}`)
-  report()
-  process.exit(0)
-}
+await writeFile(join(OUT, 'SHA256-no-exe.txt'), `${sha256(noExeZip)}  ${noExeName}\r\n`)
 
 // The wizard, told which build it carries.
 const source = (await readFile(join(HERE, 'Setup.cs'), 'utf8'))
@@ -253,4 +256,9 @@ if (process.platform === 'win32' && existsSync(csc)) {
 }
 await cp(join(HERE, 'files', 'README.txt'), join(OUT, 'README.txt'))
 console.log(existsSync(SETUP) ? `Built ${relative(HERE, SETUP)}` : `Ready in ${relative(HERE, OUT)}: run build-setup.cmd on Windows`)
-report()
+console.log(`  no-exe zip: ${noExeName}`)
+console.log(`  code files: ${code.length} (${code.join(', ')})`)
+console.log(`  removed:    ${remove.length} (${remove.join(', ')})`)
+for (const edition of editions) {
+  console.log(`  also over:  ${edition.name} ${edition.version}, ${edition.patch.length} deltas`)
+}
