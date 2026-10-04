@@ -21,7 +21,23 @@
 >
 > ### Installing this version
 >
-> Starting fresh:
+> **With the setup (recommended, Windows).** You need the official Venus University 0.3.0 from
+> itch.io and nothing else.
+>
+> 1. Back up your saves (the `data` folder next to `Venus University.exe`) and close the game.
+> 2. Download `Continuing-Semesters-Setup-<version>.exe` from
+>    [Releases](https://github.com/morrowkiln/venus-university/releases).
+> 3. Run it, choose your game folder and click **Install**. The exe is not signed, so Windows may
+>    warn about an unknown publisher: click "More info", then "Run anyway".
+>
+> Run the setup again and click **Uninstall** to put the official game back exactly as it was.
+> The setup carries only code, none of the game's images, music or characters, and refuses a
+> game that is not the official 0.3.0 or that already has another mod in it. If you accept an
+> official update in the game, it replaces the mod. The setup is adapted from
+> [naudh1r](https://github.com/naudh1r/venus-university)'s Photo Feature mod setup; its source
+> is in `patcher/`.
+>
+> **From source (any platform; needs Git and Node 22).** Starting fresh:
 >
 > ```
 > git clone -b semester-0.3 https://github.com/morrowkiln/venus-university.git
@@ -37,7 +53,8 @@
 > ```
 >
 > Then set it up as Venus Dev's instructions below describe. `git checkout main` takes you back
-> to his version.
+> to his version. If `npm run dev` stops on "Electron uninstall", run
+> `node node_modules/electron/install.js` once.
 >
 > **Saves.** A save made on Venus Dev's own version loads here, a finished one included.
 > A semester started by continuing is a playthrough only this version understands: do not expect
