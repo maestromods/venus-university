@@ -113,6 +113,11 @@ export interface ReturningStudent {
   major: string
   dorm: DormId
   handle?: string
+  /**
+   * The part-time job she held when the last semester ended, and how many shifts a week: she
+   * still works there. Absent where she had none, which leaves the choice to the model.
+   */
+  job?: { jobId: string; shifts: number }
 }
 
 /** The returning half of a roster, keyed by charKey; empty for a new story. */

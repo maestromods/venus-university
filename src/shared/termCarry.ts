@@ -45,7 +45,7 @@ function movedMemory(memory: CharMemory, back: number): CharMemory {
 /**
  * One returning character's moving half as the new term opens on it: what she remembers, what
  * the two of them are to each other and what she has posted, all dated before day 0; and
- * nothing that belonged to the old timetable — her job, where he had found her, what she was
+ * nothing that belonged to the old timetable — her shifts, where he had found her, what she was
  * suspecting that week, what he had been told about her standards.
  */
 function carriedCharState(state: CharState, back: number, kept: ReadonlySet<string>): CharState {

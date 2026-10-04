@@ -90,7 +90,10 @@ const MAX_WINTER_POSTS = 3
 /** What a returning student's entry in the cast block says is already settled about her. */
 function returningNote(student: ReturningStudent): string {
   const handle = student.handle ? `, and posts as "${student.handle}"` : ''
-  return `RETURNING STUDENT: she is year ${student.year} (${yearLabel(student.year)}) this semester, lives in ${student.dorm}${handle}. Keep all of these.`
+  const job = student.job
+    ? `, and still works at ${student.job.jobId} (${student.job.shifts} ${student.job.shifts === 1 ? 'shift' : 'shifts'} a week)`
+    : ''
+  return `RETURNING STUDENT: she is year ${student.year} (${yearLabel(student.year)}) this semester, lives in ${student.dorm}${handle}${job}. Keep all of these.`
 }
 
 /** The validated shape every consumer reads: profiles keyed by charKey. */
@@ -327,15 +330,21 @@ export function validateProfileDraft(
     const profile = folded[key]
     if (!profile) invalid(`${fullNameOf(character)} was left unprofiled.`)
 
-    const job = (profile.job ?? '').trim()
+    // What a returning student already is wins over whatever the model wrote for her.
+    const settled = returning[key]
+
+    // The job she held last semester is still hers, where its employer is still in the catalog.
+    const kept = settled?.job && jobDefOf(settled.job.jobId) ? settled.job : undefined
+    const job = kept ? kept.jobId : (profile.job ?? '').trim()
     const known = job !== '' && Boolean(jobDefOf(job))
     if (job !== '' && !known) {
       console.warn(`[profiles] ${key} was given the unknown employer "${job}"; leaving her jobless.`)
     }
-    const jobShifts = known ? clamp(profile.jobShifts, 0, MAX_NPC_SHIFTS, `${key} jobShifts`) : 0
-
-    // What a returning student already is wins over whatever the model wrote for her.
-    const settled = returning[key]
+    const jobShifts = kept
+      ? clamp(kept.shifts, 1, MAX_NPC_SHIFTS, `${key} jobShifts`)
+      : known
+        ? clamp(profile.jobShifts, 0, MAX_NPC_SHIFTS, `${key} jobShifts`)
+        : 0
 
     // An unknown dorm is repaired to the fallback, like the job, not fatal.
     const dorm = settled?.dorm ?? (profile.dorm ?? '').trim()
