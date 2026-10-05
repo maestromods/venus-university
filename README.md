@@ -82,6 +82,10 @@
 > The code is AGPL-3.0-only (`LICENSE`). Images, audio and video are © Venus Dev, all rights
 > reserved (`LICENSE-ASSETS.md`). They're included only so the game builds from source.
 >
+> Reuse is welcome. Everything I wrote for this mod, the setup in `patcher/` included, may be used
+> by other mods under the game's AGPL licence, with or without asking. Venus Dev may also use any
+> of it in the official game on whatever terms he chooses, with no credit needed.
+>
 > Venus Dev's own README follows, unchanged.
 
 # Venus University

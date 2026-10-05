@@ -96,4 +96,11 @@ run an older setup's Uninstall then: wait for a version of this mod made
 for the new game version and install it. It clears what the old one left
 behind.
 
+Licence
+-------
+The mod's code is AGPL-3.0-only, the same as the game's (LICENSE, in
+this folder). Other mods may reuse any of it under that licence, with
+or without asking, and Venus Dev may use any of it in the official game
+on whatever terms he chooses, with no credit needed.
+
 Source code: https://github.com/naudh1r/venus-university/tree/photo-feature

@@ -165,6 +165,7 @@ if (process.platform === 'win32' && existsSync(csc)) {
   )
 }
 await cp(join(HERE, 'files', 'README.txt'), join(OUT, 'README.txt'))
+await cp(join(HERE, '..', 'LICENSE'), join(OUT, 'LICENSE'))
 
 /**
  * The same patch without the wizard, for anyone whose antivirus objects to an unsigned exe:
@@ -201,6 +202,8 @@ const script = (action) =>
 const folder = `Venus-Photo-Feature-${MOD_VERSION}`
 const plain = { [`${folder}/Install.cmd`]: script('install'), [`${folder}/Uninstall.cmd`]: script('uninstall') }
 plain[`${folder}/README.txt`] = await readFile(join(HERE, 'files', 'README.txt'), 'utf8')
+// The licence travels with the code, as the AGPL asks.
+plain[`${folder}/LICENSE`] = await readFile(join(HERE, '..', 'LICENSE'), 'utf8')
 const noExe = {}
 for (const [rel, text] of Object.entries(plain)) {
   noExe[rel] = [Buffer.from(text.replace(/\r?\n/g, '\r\n')), { mtime: new Date('2026-01-01T00:00:00Z') }]
