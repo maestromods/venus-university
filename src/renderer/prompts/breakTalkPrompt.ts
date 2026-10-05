@@ -514,7 +514,7 @@ export function buildBreakAlonePrompt(input: BreakAloneInput): StructuredRequest
     'YOUR TURN',
     'Solo mission, RITA! The reader has a few days to himself, so write how they go, start to finish.',
     'Open by rewording what the reader decided to do in a fun narration, then play it out to the end. Nobody from the university shows up, and nobody else needs a name.',
-    'Write it to him, as "you", the way a scene is narrated. Three to five short lines in the "lines" array, each a sentence or two.',
+    'Write it to him, as "you", the way a scene is narrated. Two to four short lines in the "lines" array, each one or two short sentences: a small moment, told briefly.',
     'Keep it tight. This is a slice of his break, not an epic.',
     "DON'T leave a decision point, a cliffhanger, or a question for the reader.",
     '',

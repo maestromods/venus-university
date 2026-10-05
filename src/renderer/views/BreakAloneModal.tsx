@@ -62,9 +62,6 @@ const SUGGESTIONS_IN = dealt(0.1, 0.05)
 /** Milliseconds per character of the typewriter, the scene box's own pace. */
 const REVEAL_MS = 18
 
-/** How many of those ticks pass between one line and the next. */
-const LINE_BEAT = 18
-
 /** What has a sound as it is typed: a letter or a digit, and nothing a space or a mark says. */
 const VOICED = /[\p{L}\p{N}]/u
 
@@ -120,18 +117,14 @@ export function BreakAloneModal({
   // What it did for him, in the lines a scene's ending gives the same thing.
   const gains = spent ? aloneGains(spent.exercised).lines : []
 
-  // How it went is typed out as a scene's narration is: a letter at a time under the narrator's
-  // blip, a beat between lines, and a click to have the rest at once. A slot that was already
-  // written when the panel opened is shown whole.
+  // How it went is typed out as a scene's narration is: one line at a time, a letter at a time
+  // under the narrator's blip. A click lands the line being typed, and the next click starts
+  // the one after it. A slot that was already written when the panel opened is shown whole.
   const lines = spent?.lines ?? []
-  const starts: number[] = []
-  let total = 0
-  for (const line of lines) {
-    starts.push(total)
-    total += line.length + LINE_BEAT
-  }
-  const [typed, setTyped] = useState(spent ? total : 0)
-  const typing = spent !== null && typed < total
+  const [line, setLine] = useState(spent ? lines.length : 0)
+  const [typed, setTyped] = useState(0)
+  const current = lines[line]
+  const typing = current !== undefined && typed < current.length
   useEffect(() => {
     if (!typing) return
     const timer = setInterval(() => setTyped((count) => count + 1), REVEAL_MS)
@@ -143,19 +136,44 @@ export function BreakAloneModal({
   useEffect(() => {
     const before = typedBefore.current
     typedBefore.current = typed
-    if (typed !== before + 1) return
-    const at = starts.findLastIndex((start) => start < typed)
-    const line = lines[at]
-    const within = typed - (starts[at] ?? 0)
-    if (!line || within > line.length || !VOICED.test(line[within - 1] ?? '')) return
+    if (typed !== before + 1 || !current || !VOICED.test(current[typed - 1] ?? '')) return
     let voiced = 0
-    for (const character of line.slice(0, within)) if (VOICED.test(character)) voiced += 1
+    for (const character of current.slice(0, typed)) if (VOICED.test(character)) voiced += 1
     if (voiced % 3 === 0) useAudioStore.getState().play('narrator')
-    // The lines and their starts are the slot's own and do not change under a count.
+    // The line is the slot's own and does not change under a count.
   }, [typed])
 
+  // The last line needs no click after it: what it did for him follows on its own.
+  const last = line >= lines.length - 1
+  const waiting = current !== undefined && !typing && !last
+
+  /** The click on the telling: the rest of the line being typed, or else the next line. */
+  function advance(): void {
+    if (typing) setTyped(current.length)
+    else if (waiting) {
+      setLine(line + 1)
+      setTyped(0)
+    }
+  }
+
+  // Space and Enter are that same click, as they are on the scene box.
+  const advanceRef = useRef(advance)
+  advanceRef.current = advance
+  const telling = spent !== null
+  useEffect(() => {
+    if (!telling) return
+    const onKey = (event: KeyboardEvent): void => {
+      if (event.key !== ' ' && event.key !== 'Enter') return
+      if (event.target instanceof HTMLButtonElement) return
+      event.preventDefault()
+      advanceRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [telling])
+
   // What it did for him arrives once the telling is over, with the sting it has in a scene.
-  const told = spent !== null && !typing
+  const told = spent !== null && !typing && !waiting
   const stung = useRef(spent !== null)
   const gained = gains.length > 0
   useEffect(() => {
@@ -206,18 +224,19 @@ export function BreakAloneModal({
         <span className="vu-breaktalk-count">Week {week}</span>
 
         {spent ? (
-          // A click anywhere on the telling lands the rest of it, as one does on the box.
-          <div className="vu-breakalone-told" onClick={() => setTyped(total)}>
-            {spent.lines.map((line, index) => {
-              const shown = Math.max(0, Math.min(line.length, typed - (starts[index] ?? 0)))
+          // A click anywhere on the telling is the click the scene box takes.
+          <div className="vu-breakalone-told" onClick={advance}>
+            {spent.lines.map((text, index) => {
+              const shown = index < line ? text.length : index === line ? typed : 0
               return (
                 <p key={index} className="vu-note-text">
-                  {line.slice(0, shown)}
+                  {text.slice(0, shown)}
                   {/* The words not yet typed hold their room, so nothing below them moves. */}
-                  <span className="vu-breakalone-untyped">{line.slice(shown)}</span>
+                  <span className="vu-breakalone-untyped">{text.slice(shown)}</span>
                 </p>
               )
             })}
+            {waiting && <span className="vu-breaktalk-wait">Click to go on</span>}
             {told && (
               <ul className="vu-breaktalk-came">
                 {gains.map((gain, index) => (
