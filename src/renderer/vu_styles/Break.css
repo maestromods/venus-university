@@ -281,27 +281,13 @@
   text-align: center;
 }
 
-/* A run of such a line in a colour of its own, the scene box's: the verb she remembers it by in
-   the colour of which way it went, a stat and the figure it moved by in that stat's hue. Ink and
-   nothing else. */
+/* The verb she remembers it by, in the colour of which way it went. Ink and nothing else. */
 .vu-breaktalk-mark[data-tone='gain'] {
   color: var(--vu-good);
 }
 
 .vu-breaktalk-mark[data-tone='loss'] {
   color: var(--vu-danger);
-}
-
-.vu-breaktalk-mark[data-tone='brain'] {
-  color: var(--vu-stat-brain);
-}
-
-.vu-breaktalk-mark[data-tone='body'] {
-  color: var(--vu-stat-body);
-}
-
-.vu-breaktalk-mark[data-tone='heart'] {
-  color: var(--vu-stat-heart);
 }
 
 /* ---- a slot to himself ------------------------------------------------------ */
@@ -312,14 +298,19 @@
   max-height: calc(100% - 100px);
 }
 
-/* How it went, a paragraph a line, over what it did for him; it scrolls where a long telling
-   would push the foot off the panel. */
-.vu-breakalone-told {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-height: 0;
-  overflow: hidden auto;
+/* The telling: the whole screen under a veil that takes the click, and the scene's box on it. */
+.vu-break-told {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--vu-accent-shadow) 35%, transparent);
+  cursor: pointer;
+}
+
+/* Over a screen of faces rather than a scene's background, so the box is close to solid. */
+.vu-break-told .vu-box-face {
+  --glass: 96%;
+  --glass-shadow: 85%;
 }
 
 /* What he might do with it, one a stat: the landing's own quiet suggestions, stacked. */
@@ -352,9 +343,4 @@
 .vu-breakalone-idea b {
   color: var(--stat);
   font-weight: 700;
-}
-
-/* The words of a line not yet typed: there, so the line keeps its room, and unseen. */
-.vu-breakalone-untyped {
-  visibility: hidden;
 }

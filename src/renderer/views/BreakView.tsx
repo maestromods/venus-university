@@ -62,6 +62,7 @@ import {
 import { useUiStore } from '../stores/uiStore'
 import { isWebBuild } from '../platform'
 import { BreakAloneModal } from './BreakAloneModal'
+import { BreakNarration } from './BreakNarration'
 import { BreakMemoriesModal } from './BreakMemoriesModal'
 import { BreakTalkModal, type TalkPhase } from './BreakTalkModal'
 import { heldScreenTheme } from './clockTheme'
@@ -133,12 +134,14 @@ export function BreakView(): JSX.Element | null {
   const [alone, setAlone] = useState(false)
   const [aloneWriting, setAloneWriting] = useState(false)
   const [aloneSpent, setAloneSpent] = useState<BreakAlone | null>(null)
+  // The box is up from the moment the slot is asked for until its last line is clicked past.
+  const telling = aloneWriting || aloneSpent !== null
 
   // Escape opens the menu where nothing else is up to answer it; a panel in front has already
   // taken the key for itself.
   useWindowKeydown((event) => {
     if (event.key !== 'Escape') return
-    if (menu || talking || alone || editing || confirmingSkip || failure || appModals > 0) return
+    if (menu || talking || alone || telling || editing || confirmingSkip || failure || appModals > 0) return
     setMenu(true)
   })
 
@@ -365,6 +368,7 @@ export function BreakView(): JSX.Element | null {
    */
   async function spendAlone(action: string): Promise<void> {
     if (!from || !draft) return
+    setAlone(false)
     setAloneWriting(true)
     const outcome = await spendTimeAlone(from, draft, action)
     setAloneWriting(false)
@@ -382,9 +386,8 @@ export function BreakView(): JSX.Element | null {
     await keep(next)
   }
 
-  /** Puts that panel away, and closes the break where that was its last slot. */
+  /** The telling has been read: closes the break where that was its last slot. */
   function closeAlone(): void {
-    setAlone(false)
     setAloneSpent(null)
     if (draft && !breakOver(draft) && breakSpent(draft, ended)) void closePlayed(draft)
   }
@@ -631,18 +634,22 @@ export function BreakView(): JSX.Element | null {
       </AnimatePresence>
 
       <AnimatePresence>
+        {telling && !failure && (
+          <BreakNarration key="told" spent={aloneSpent} onDone={closeAlone} />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {alone && draft && !failure && (
           <BreakAloneModal
             key="alone"
             theme={theme}
-            week={breakClock(aloneSpent?.slot ?? draft.spent.length, ended).week}
+            week={breakClock(draft.spent.length, ended).week}
             slot={draft.spent.length}
             ended={ended}
             stats={draft.stats}
-            spent={aloneSpent}
-            writing={aloneWriting}
             onStart={(action) => void spendAlone(action)}
-            onClose={closeAlone}
+            onClose={() => setAlone(false)}
           />
         )}
       </AnimatePresence>
