@@ -8,6 +8,7 @@ import { useEffect, useRef, useState, type JSX } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'motion/react'
 
+import { memoryStatusLine } from '@shared/relationship'
 import { TALK_TURNS, talkTurns, type BreakTalk } from '@shared/termBreak'
 import type { Character } from '@shared/types'
 import { TitleTab } from '../components/TitleTab'
@@ -162,8 +163,35 @@ export function BreakTalkModal({
                 The conversation is over
               </span>
             )}
-            {done && talk?.reason && (
-              <p className="vu-note-text vu-breaktalk-reason">{talk.reason}</p>
+            {done && (
+              <ul className="vu-breaktalk-came">
+                {(talk?.memories ?? []).map((memory, index) => {
+                  // What it left her remembering, said as a scene's ending says it: the verb
+                  // painted in the colour of which way it went.
+                  const { text: said, status } = memoryStatusLine(character.firstName, memory)
+                  const mark = status?.marks?.[0]
+                  return (
+                    <li key={index} className="vu-note-text">
+                      {mark ? (
+                        <>
+                          {said.slice(0, mark.start)}
+                          <span className="vu-breaktalk-mark" data-tone={mark.tone}>
+                            {said.slice(mark.start, mark.end)}
+                          </span>
+                          {said.slice(mark.end)}
+                        </>
+                      ) : (
+                        said
+                      )}
+                    </li>
+                  )
+                })}
+                {(talk?.memories ?? []).length === 0 && (
+                  <li className="vu-note-text">
+                    {character.firstName} will not remember much of this one.
+                  </li>
+                )}
+              </ul>
             )}
           </div>
           <div className="vu-scroll-fade" />

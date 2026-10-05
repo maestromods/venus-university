@@ -254,10 +254,24 @@
   text-transform: uppercase;
 }
 
-/* What the conversation came to, said to the player under the last thing she sent. */
-.vu-breaktalk-reason {
-  align-self: center;
-  padding-top: 8px;
+/* What the conversation came to, under the last thing she sent: one line per thing it left
+   her remembering, in the words a scene's ending uses. */
+.vu-breaktalk-came {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 0 0;
+  list-style: none;
   text-align: center;
-  font-style: italic;
+}
+
+/* The verb she remembers it by, in the colour of which way it went. Ink and nothing else. */
+.vu-breaktalk-mark[data-tone='gain'] {
+  color: var(--vu-accent);
+}
+
+.vu-breaktalk-mark[data-tone='loss'] {
+  color: var(--vu-danger);
 }
