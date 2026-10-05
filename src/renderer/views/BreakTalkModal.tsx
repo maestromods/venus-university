@@ -13,6 +13,7 @@ import { TALK_TURNS, talkTurns, type BreakTalk } from '@shared/termBreak'
 import type { Character } from '@shared/types'
 import { TitleTab } from '../components/TitleTab'
 import { useModalShell } from '../components/useModalShell'
+import { useAudioStore } from '../stores/audioStore'
 import { typingDelayFor } from '../stores/textingPace'
 import type { ScreenTheme } from './clockTheme'
 import { gestures, lift, panelUnderTab, press, spin, typingDot, veilIn } from './motion'
@@ -77,6 +78,19 @@ export function BreakTalkModal({
   const settled = landed >= lines
   // Over as far as the player has been shown.
   const done = judged && settled
+
+  // What it came to arrives with the sting a scene's ending gives the same line: once, as the
+  // lines land, and never for a conversation that was already over when the panel opened.
+  const stung = useRef(judged)
+  const first = talk?.memories?.[0]?.type
+  useEffect(() => {
+    if (!done || stung.current) return
+    stung.current = true
+    if (!first) return
+    useAudioStore
+      .getState()
+      .play(first === 'liked' || first === 'loved' ? 'positive' : 'negative')
+  }, [done, first])
 
   const turns = talk ? talkTurns(talk) : 0
   const waiting = phase !== 'idle' || !settled
