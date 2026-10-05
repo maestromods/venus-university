@@ -307,3 +307,35 @@
   min-height: 0;
   overflow: hidden auto;
 }
+
+/* What he might do with it, one a stat: the landing's own quiet suggestions, stacked. */
+.vu-breakalone-ideas {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* `block` and not `flex`: the stat word inside is its own element, and a flex container would
+   strip the spaces either side of it. Flat on the left like every other action. */
+.vu-breakalone-idea {
+  display: block;
+  max-width: 100%;
+  padding: 10px 24px 10px 20px;
+  border: 2.5px solid var(--vu-border);
+  border-radius: 0 999px 999px 0;
+  background: color-mix(in srgb, var(--vu-surface) 82%, transparent);
+  color: var(--vu-text-body);
+  font: 500 17px var(--font-body);
+  text-align: left;
+  transform-origin: left center;
+}
+
+/* The stat the suggestion is about, in its own identity hue. */
+.vu-breakalone-idea b {
+  color: var(--stat);
+  font-weight: 700;
+}

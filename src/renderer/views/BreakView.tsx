@@ -636,6 +636,9 @@ export function BreakView(): JSX.Element | null {
             key="alone"
             theme={theme}
             week={breakClock(aloneSpent?.slot ?? draft.spent.length, ended).week}
+            slot={draft.spent.length}
+            ended={ended}
+            stats={draft.stats}
             spent={aloneSpent}
             writing={aloneWriting}
             onStart={(action) => void spendAlone(action)}

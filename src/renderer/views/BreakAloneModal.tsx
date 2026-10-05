@@ -3,16 +3,36 @@
  * been written how it went and what it did for his stats. Saying what he does is what spends
  * the slot, so the panel can be opened and left before that.
  */
-import { useEffect, useRef, useState, type JSX } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type JSX } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'motion/react'
 
+import {
+  STAT_KEYS,
+  STAT_LABELS,
+  statsLowestFirst,
+  type PlayerStats
+} from '@shared/playerStats'
+import type { Season } from '@shared/term'
 import { aloneGains, type BreakAlone } from '@shared/termBreak'
 import { TitleTab } from '../components/TitleTab'
 import { useModalShell } from '../components/useModalShell'
+import { breakStatAction } from '../prompts/breakStatActions'
 import { useAudioStore } from '../stores/audioStore'
 import type { ScreenTheme } from './clockTheme'
-import { gestures, lift, panelUnderTab, press, spin, veilIn } from './motion'
+import {
+  dealt,
+  dealtItem,
+  dealtItemDead,
+  gestures,
+  lift,
+  panelUnderTab,
+  press,
+  quietLift,
+  quietPress,
+  spin,
+  veilIn
+} from './motion'
 import '../vu_styles/Break.css'
 
 export interface BreakAloneModalProps {
@@ -20,6 +40,12 @@ export interface BreakAloneModalProps {
   theme: ScreenTheme
   /** The week of the break the slot falls in. */
   week: number
+  /** The slot that would be spent, which is what its suggestions are dealt by. */
+  slot: number
+  /** The season of the semester the break follows. */
+  ended: Season
+  /** His stats as they stand: the suggestions lead with his weakest. */
+  stats: PlayerStats
   /** The slot as it was spent, once it has been; absent while he is still saying what he will do. */
   spent: BreakAlone | null
   /** Whether the call that writes it is out. */
@@ -30,9 +56,28 @@ export interface BreakAloneModalProps {
   onClose: () => void
 }
 
+const SUGGESTIONS_IN = dealt(0.1, 0.05)
+
+/** A suggestion with the stat it exercises drawn in that stat's own hue. */
+function IdeaWords({ text }: { text: string }): JSX.Element {
+  const key = STAT_KEYS.find((stat) => text.includes(STAT_LABELS[stat]))
+  if (!key) return <>{text}</>
+  const at = text.indexOf(STAT_LABELS[key])
+  return (
+    <>
+      {text.slice(0, at)}
+      <b style={{ '--stat': `var(--vu-stat-${key})` } as CSSProperties}>{STAT_LABELS[key]}</b>
+      {text.slice(at + STAT_LABELS[key].length)}
+    </>
+  )
+}
+
 export function BreakAloneModal({
   theme,
   week,
+  slot,
+  ended,
+  stats,
   spent,
   writing,
   onStart,
@@ -60,6 +105,9 @@ export function BreakAloneModal({
   function start(): void {
     if (canStart) onStart(text)
   }
+
+  // One thing to do per stat, his weakest first, as the semester's own row deals them.
+  const suggestions = statsLowestFirst(stats).map((stat) => breakStatAction(stat, slot, ended))
 
   if (!host) return null
 
@@ -114,16 +162,32 @@ export function BreakAloneModal({
           </div>
         ) : (
           <>
-            <p className="vu-note-text">
-              What do you do with it? Saying so spends this slot, and whatever it works on — your
-              smarts, your fitness, your way with people — is what it builds.
-            </p>
+            <motion.ul
+              className="vu-breakalone-ideas"
+              variants={SUGGESTIONS_IN}
+              initial="hidden"
+              animate="shown"
+            >
+              {suggestions.map((idea) => (
+                <motion.li key={idea} variants={writing ? dealtItemDead : dealtItem}>
+                  <motion.button
+                    type="button"
+                    className="vu-breakalone-idea"
+                    disabled={writing}
+                    {...gestures(writing, quietLift, quietPress)}
+                    onClick={() => onStart(idea)}
+                  >
+                    <IdeaWords text={idea} />
+                  </motion.button>
+                </motion.li>
+              ))}
+            </motion.ul>
             <label className="vu-field">
               <input
                 id="break-alone-text"
                 className="vu-input"
                 aria-label="What you do with the slot"
-                placeholder="go running every morning"
+                placeholder="What do you do?"
                 value={text}
                 disabled={writing}
                 autoFocus
@@ -169,7 +233,7 @@ export function BreakAloneModal({
                 {...gestures(!canStart, lift, press)}
                 disabled={!canStart}
               >
-                Spend the slot
+                Go
               </motion.button>
             </>
           )}
