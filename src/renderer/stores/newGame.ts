@@ -4,7 +4,7 @@ import { readerStandingOf } from '@shared/relationship'
 import { emptyTallies } from '@shared/tallies'
 import { isGameOver } from '@shared/money'
 import type { PlayerStats } from '@shared/playerStats'
-import { withBreakThreads, type BreakTalk } from '@shared/termBreak'
+import { withBreakThreads, type BreakReach, type BreakTalk } from '@shared/termBreak'
 import { hasNextTerm, seasonOf, termIndexOf, yearAfter } from '@shared/term'
 import {
   carryTerm,
@@ -90,6 +90,8 @@ export interface Continuation {
     memories: Record<string, BreakMemory[]>
     /** The conversations had over it, which are filed on the phone. */
     talks: BreakTalk[]
+    /** What the girls sent on their own, of which the unanswered are filed there too. */
+    reaches?: BreakReach[]
   }
 }
 
@@ -512,7 +514,7 @@ function continuedAttempt(
     ? {
         ...handed,
         stats: played.stats,
-        carry: withBreakThreads(handed.carry, played.talks, ended)
+        carry: withBreakThreads(handed.carry, played.talks, ended, played.reaches)
       }
     : handed
 

@@ -99,6 +99,22 @@ export interface BreakTalk {
   memories?: BreakMemory[]
 }
 
+/** Why she wrote when she did: the middle of the summer, or the last week before going back. */
+export type ReachBeat = 'mid' | 'last'
+
+/** Texts she sent on her own at the top of a week, which cost nothing to read. */
+export interface BreakReach {
+  /** The week of the break they arrived in, counted from 1. */
+  week: number
+  charId: string
+  lines: string[]
+  beat?: ReachBeat
+  /** He has opened them. */
+  read?: boolean
+  /** He wrote back, which opened a conversation on them. */
+  answered?: boolean
+}
+
 /** Something he told her he would do, each completing "the reader promised to ___". */
 export interface BreakPromise {
   text: string
@@ -125,6 +141,10 @@ export interface TermBreak {
   cards?: Record<string, BreakCard>
   /** Every slot he spent on himself, in order; absent until the first one. */
   alone?: BreakAlone[]
+  /** Everything the girls sent on their own, in order; absent until the first of it. */
+  reaches?: BreakReach[]
+  /** The last week whose own texts have been asked for; absent before the first. */
+  reachedWeek?: number
   /**
    * What each returning girl remembers of the break, by charId. Present once the break is over,
    * played out or skipped, and the player's to reword until the next semester is generated.
@@ -193,7 +213,8 @@ export function withSlotSpent(draft: BreakDraft, ended: Season): BreakDraft {
 }
 
 /**
- * The break with a slot spent on a conversation with `charId`, opened on his first text; where
+ * The break with a slot spent on a conversation with `charId`, opened on his first text and on
+ * whatever she had sent that he had not answered; where
  * no slot can be spent, or the text is blank, it is left as it is.
  */
 export function withTalkStarted(
@@ -204,13 +225,115 @@ export function withTalkStarted(
 ): BreakDraft {
   const said = text.trim()
   if (!slotFree(draft, ended) || said === '') return draft
+  // Texts of hers he has not answered are what the conversation opens on.
+  const reach = unansweredReach(draft, charId)
+  const opening: BreakLine[] = (reach?.lines ?? []).map((line) => ({
+    sender: 'contact',
+    text: line
+  }))
   return {
     ...draft,
     spent: [...draft.spent, { kind: 'text', charId }],
     talks: [
       ...draft.talks,
-      { slot: draft.spent.length, charId, lines: [{ sender: 'player', text: said }] }
-    ]
+      {
+        slot: draft.spent.length,
+        charId,
+        lines: [...opening, { sender: 'player', text: said }]
+      }
+    ],
+    ...(reach
+      ? {
+          reaches: draft.reaches?.map((other) =>
+            other === reach ? { ...other, read: true, answered: true } : other
+          )
+        }
+      : {})
+  }
+}
+
+/** The week of a summer in which more of them write than usual. */
+const MID_SUMMER_WEEK = 6
+
+/** A number off a charId that is the same every time, so who writes when never reshuffles. */
+function seedOf(charId: string): number {
+  let seed = 0
+  for (const character of charId) seed = (seed * 31 + character.charCodeAt(0)) >>> 0
+  return seed
+}
+
+/**
+ * Whether she writes to him on her own in `week`, and on which occasion. A lover writes most
+ * weeks of a summer and once in a winter; somebody friendly every third week of a summer;
+ * somebody who only knows him once a summer. Everybody close writes in the last week of either
+ * break and in the middle of a summer, and nobody who has soured on him writes at all.
+ */
+export function reachOutDue(
+  charId: string,
+  standing: BreakStanding,
+  week: number,
+  ended: Season
+): ReachBeat | 'plain' | null {
+  const { disposition, lover } = standing
+  if (disposition === 'annoyed' || disposition === 'hostile') return null
+  const close = lover || disposition !== 'neutral'
+  // The first days home are everybody's own.
+  if (week <= 1) return null
+  if (week === breakWeeks(ended)) return close ? 'last' : null
+  const seed = seedOf(charId)
+  if (ended === 'fall') return lover && week === 2 ? 'plain' : null
+  if (week === MID_SUMMER_WEEK) return close || seed % 2 === 0 ? 'mid' : null
+  if (lover) return (week + seed) % 3 !== 0 ? 'plain' : null
+  if (close) return (week + seed) % 3 === 0 ? 'plain' : null
+  return week === 2 + (seed % 9) ? 'plain' : null
+}
+
+/** The week whose own texts have not been asked for yet; `null` where there is none to ask for. */
+export function pendingReachWeek(draft: BreakDraft, ended: Season): number | null {
+  if (breakOver(draft) || breakSpent(draft, ended) || openTalk(draft) !== null) return null
+  const { week } = breakClock(draft.spent.length, ended)
+  return week > (draft.reachedWeek ?? 0) ? week : null
+}
+
+/** The break with `week` asked for and whatever arrived in it filed; nothing said is nothing filed. */
+export function withReaches(
+  draft: BreakDraft,
+  week: number,
+  arrived: ReadonlyArray<Pick<BreakReach, 'charId' | 'lines' | 'beat'>>
+): BreakDraft {
+  const filed: BreakReach[] = arrived.flatMap(({ charId, lines, beat }) => {
+    const said = lines.map((line) => line.trim()).filter((line) => line !== '')
+    return said.length > 0 ? [{ week, charId, lines: said, ...(beat ? { beat } : {}) }] : []
+  })
+  return {
+    ...draft,
+    reachedWeek: week,
+    ...(filed.length > 0 ? { reaches: [...(draft.reaches ?? []), ...filed] } : {})
+  }
+}
+
+/** The newest thing she sent that he has not written back to; `null` with none. */
+export function unansweredReach(
+  draft: Pick<BreakDraft, 'reaches'>,
+  charId: string
+): BreakReach | null {
+  const hers = (draft.reaches ?? []).filter((reach) => reach.charId === charId)
+  const last = hers[hers.length - 1]
+  return last && !last.answered ? last : null
+}
+
+/** How many times she has written this break and had nothing back. */
+export function reachesIgnored(draft: Pick<BreakDraft, 'reaches'>, charId: string): number {
+  return (draft.reaches ?? []).filter((reach) => reach.charId === charId && !reach.answered).length
+}
+
+/** The break with what she last sent opened; with nothing unread from her, as it is. */
+export function withReachRead(draft: BreakDraft, charId: string): BreakDraft {
+  const reach = unansweredReach(draft, charId)
+  if (!reach || reach.read) return draft
+  return {
+    ...draft,
+    reaches: draft.reaches?.map((other) => (other === reach ? { ...other, read: true } : other))
   }
 }
 
@@ -507,33 +630,58 @@ export function breakSlotDate(slot: number, ended: Season): { date: number; time
 }
 
 /**
- * `carry` with the break's conversations filed on the phone: each one's texts appended to her
- * thread on the day its slot fell on, read already. Somebody who is not coming back, and a
- * conversation with nothing said in it, are left out.
+ * `carry` with the break filed on the phone: each conversation's texts appended to her thread on
+ * the day its slot fell on, and whatever she sent that he never answered on the first day of its
+ * week, all of it read already. Somebody who is not coming back, and a conversation with nothing
+ * said in it, are left out.
  */
 export function withBreakThreads(
   carry: TermCarry,
   talks: readonly BreakTalk[],
-  ended: Season
+  ended: Season,
+  reaches: readonly BreakReach[] = []
 ): TermCarry {
+  // Each run of texts under the slot it belongs to; hers come before anything spent in her week.
+  const runs = [
+    ...talks.map((talk) => ({
+      at: talk.slot,
+      slot: talk.slot,
+      id: `break-${talk.slot}`,
+      charId: talk.charId,
+      lines: talk.lines
+    })),
+    ...reaches
+      .filter((reach) => !reach.answered)
+      .map((reach) => {
+        const slot = (reach.week - 1) * BREAK_SLOTS_PER_WEEK
+        return {
+          at: slot - 0.5,
+          slot,
+          id: `break-reach-${reach.week}`,
+          charId: reach.charId,
+          lines: reach.lines.map((text): BreakLine => ({ sender: 'contact', text }))
+        }
+      })
+  ].sort((a, b) => a.at - b.at)
+
   const conversations = { ...carry.bunnyboard.conversations }
-  for (const talk of talks) {
-    if (!carry.charInfo[talk.charId] || talk.lines.length === 0) continue
-    const { date, time } = breakSlotDate(talk.slot, ended)
-    const messages: ChatMessage[] = talk.lines.map((line, index) => ({
-      id: `break-${talk.slot}-${index}`,
+  for (const run of runs) {
+    if (!carry.charInfo[run.charId] || run.lines.length === 0) continue
+    const { date, time } = breakSlotDate(run.slot, ended)
+    const messages: ChatMessage[] = run.lines.map((line, index) => ({
+      id: `${run.id}-${index}`,
       sender: line.sender,
       text: line.text,
       date,
       time
     }))
-    const thread = conversations[talk.charId] ?? {
-      charId: talk.charId,
+    const thread = conversations[run.charId] ?? {
+      charId: run.charId,
       messages: [],
       unread: 0,
       summary: null
     }
-    conversations[talk.charId] = { ...thread, messages: [...thread.messages, ...messages] }
+    conversations[run.charId] = { ...thread, messages: [...thread.messages, ...messages] }
   }
   return { ...carry, bunnyboard: { ...carry.bunnyboard, conversations } }
 }
@@ -543,7 +691,7 @@ export function stampBreak(draft: BreakDraft, savedAt: number): TermBreak {
   return { ...draft, schemaVersion: BREAK_SCHEMA_VERSION, savedAt }
 }
 
-const BREAK_REQUIRED: Record<keyof Omit<TermBreak, 'memories' | 'cards' | 'alone'>, true> = {
+const BREAK_REQUIRED: Record<keyof Omit<TermBreak, 'memories' | 'cards' | 'alone' | 'reaches' | 'reachedWeek'>, true> = {
   schemaVersion: true,
   savedAt: true,
   stats: true,

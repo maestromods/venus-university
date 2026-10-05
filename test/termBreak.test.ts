@@ -11,12 +11,15 @@ import {
   breakSpent,
   openBreak,
   openTalk,
+  pendingReachWeek,
   playedMemories,
+  reachOutDue,
   stampBreak,
   TALK_TURNS,
   withBreakClosed,
   withBreakThreads,
   withPlayerLine,
+  withReaches,
   withReply,
   withSlotSpent,
   withTimeAlone,
@@ -379,5 +382,63 @@ describe('the break record', () => {
     expect(() =>
       validateRecord({ ...stamped, schemaVersion: stamped.schemaVersion + 1 }, 'here', BREAK_READ)
     ).toThrow(/unsupported schemaVersion/)
+  })
+})
+
+describe('what the girls send on their own', () => {
+  const fresh: BreakDraft = {
+    stats: { brain: 0, body: 0, heart: 0 },
+    spent: [],
+    talks: [],
+    promises: {}
+  }
+
+  it('asks for a week once, and never over an open conversation or a finished break', () => {
+    expect(pendingReachWeek(fresh, 'spring')).toBe(1)
+    const asked = withReaches(fresh, 1, [])
+    expect(pendingReachWeek(asked, 'spring')).toBeNull()
+    const second = withSlotSpent(withSlotSpent(asked, 'spring'), 'spring')
+    expect(pendingReachWeek(second, 'spring')).toBe(2)
+    const talking = withTalkStarted(second, 'a', 'hey', 'spring')
+    expect(pendingReachWeek(talking, 'spring')).toBeNull()
+    expect(pendingReachWeek(withBreakClosed(second, {}), 'spring')).toBeNull()
+  })
+
+  it('opens his reply on her texts, answers them, and files only the unanswered on the phone', () => {
+    const written = withReaches(fresh, 2, [
+      { charId: 'a', lines: ['hey stranger', ' '] },
+      { charId: 'b', lines: ['you alive?'] },
+      { charId: 'c', lines: ['  '] }
+    ])
+    expect(written.reaches?.map((reach) => reach.charId)).toEqual(['a', 'b'])
+    const talking = withTalkStarted(written, 'a', 'hi!', 'spring')
+    expect(openTalk(talking)?.lines).toEqual([
+      { sender: 'contact', text: 'hey stranger' },
+      { sender: 'player', text: 'hi!' }
+    ])
+    expect(talking.reaches?.map((reach) => reach.answered === true)).toEqual([true, false])
+
+    const state = {} as CharState
+    const carry = {
+      charInfo: { a: state, b: state },
+      bunnyboard: emptyBunnyboard()
+    } as unknown as TermCarry
+    const filed = withBreakThreads(carry, talking.talks, 'spring', talking.reaches)
+    expect(filed.bunnyboard.conversations.a?.messages.map((m) => m.text)).toEqual([
+      'hey stranger',
+      'hi!'
+    ])
+    expect(filed.bunnyboard.conversations.b?.messages.map((m) => m.text)).toEqual(['you alive?'])
+  })
+
+  it('has nobody who soured on him write, and everybody close write in the last week', () => {
+    const lover: BreakStanding = { disposition: 'devoted', lover: true }
+    const sour: BreakStanding = { disposition: 'annoyed', lover: false }
+    const known: BreakStanding = { disposition: 'neutral', lover: false }
+    for (let week = 1; week <= 12; week += 1) expect(reachOutDue('a', sour, week, 'spring')).toBeNull()
+    expect(reachOutDue('a', lover, 12, 'spring')).toBe('last')
+    expect(reachOutDue('a', lover, 4, 'fall')).toBe('last')
+    expect(reachOutDue('a', known, 12, 'spring')).toBeNull()
+    expect(reachOutDue('a', known, 4, 'fall')).toBeNull()
   })
 })

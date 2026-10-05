@@ -31,6 +31,8 @@ export interface BreakTalkModalProps {
   week: number
   /** The conversation as it stands: open, just judged, or absent before his first text. */
   talk: BreakTalk | null
+  /** What she sent on her own that he has not answered, which a first text of his replies to. */
+  opening: readonly string[]
   phase: TalkPhase
   /** His next text; the first one opens the conversation and spends the slot. */
   onSend: (text: string) => void
@@ -45,6 +47,7 @@ export function BreakTalkModal({
   character,
   week,
   talk,
+  opening,
   phase,
   onSend,
   onLeave,
@@ -63,6 +66,14 @@ export function BreakTalkModal({
   // it would have taken her to type, as her texts do on the phone.
   const lines = talk?.lines.length ?? 0
   const [landed, setLanded] = useState(lines)
+  // Her own texts as they stood when the panel opened: they are on screen already, so the
+  // conversation that opens on them starts with them landed.
+  const [waitingTexts] = useState(opening)
+  const [begun, setBegun] = useState(talk !== null)
+  if (!begun && talk) {
+    setBegun(true)
+    setLanded(waitingTexts.length)
+  }
   const next = talk?.lines[landed]
   useEffect(() => {
     if (!next) return
@@ -153,9 +164,17 @@ export function BreakTalkModal({
 
         <div className="vu-scroll-box vu-breaktalk-box">
           <div className="vu-breaktalk-thread" ref={thread}>
+            {talk === null &&
+              waitingTexts.map((line, index) => (
+                <div key={index} className="vu-bb-bubble vu-bb-bubble--theirs">
+                  {line}
+                </div>
+              ))}
             {talk === null && (
               <p className="vu-empty vu-empty--flush">
-                The first text spends this slot on {character.firstName}.
+                {waitingTexts.length > 0
+                  ? `Writing back spends this slot on ${character.firstName}.`
+                  : `The first text spends this slot on ${character.firstName}.`}
               </p>
             )}
             {talk?.lines.slice(0, landed).map((line, index) => (

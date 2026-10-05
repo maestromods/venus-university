@@ -3,9 +3,12 @@ import { affectionFor, dispositionOf } from '@shared/relationship'
 import { daysToNextTerm, seasonOf, setActiveTerm, termIndexOf, type Season } from '@shared/term'
 import {
   openTalk,
+  reachesIgnored,
+  reachOutDue,
   strongAllowed,
   type BreakCard,
   type BreakDraft,
+  type BreakReach,
   type BreakStanding,
   type TalkJudgement
 } from '@shared/termBreak'
@@ -16,14 +19,18 @@ import {
   buildBreakAlonePrompt,
   buildBreakCardsPrompt,
   buildBreakJudgePrompt,
+  buildBreakReachPrompt,
   buildBreakTalkPrompt,
   normalizeBreakAlone,
   normalizeBreakCards,
   normalizeBreakJudgement,
+  normalizeBreakReach,
   type BreakAloneReply,
   type BreakCardsReply,
   type BreakGirl,
   type BreakJudgeReply,
+  type BreakReachGirl,
+  type BreakReachReply,
   type BreakSetting,
   type BreakTalkReply
 } from '../prompts/breakTalkPrompt'
@@ -192,6 +199,78 @@ export async function writeBreakCards(
   )
 }
 
+/** What a week's own texts came to: whoever wrote, and the cards where they had to be written first. */
+export interface ReachOuts {
+  arrived: Array<Pick<BreakReach, 'charId' | 'lines' | 'beat'>>
+  cards?: Record<string, BreakCard>
+}
+
+/**
+ * Asks for what the girls send on their own at the top of `week`: whoever is due to write by
+ * how she stands with him, among those who have his number. A week nobody writes in is an empty
+ * answer and no call; the first week somebody does asks for everybody's cards first.
+ */
+export async function writeReachOuts(
+  from: Continuation,
+  draft: BreakDraft,
+  week: number
+): Promise<BreakOutcome<ReachOuts>> {
+  const { girls, setting } = castFor(from)
+  const standings = breakStandings(from)
+  const due = girls.flatMap((girl) => {
+    const charId = girl.character.charId
+    const standing = standings[charId]
+    const beat =
+      standing && canText(from, charId) ? reachOutDue(charId, standing, week, setting.ended) : null
+    return beat ? [{ girl, beat }] : []
+  })
+  if (due.length === 0) return { status: 'done', data: { arrived: [] } }
+
+  let cards = draft.cards
+  let written: Record<string, BreakCard> | undefined
+  if (due.some(({ girl }) => !cards?.[girl.character.charId])) {
+    const outcome = await writeBreakCards(from)
+    if (outcome.status !== 'done') return outcome
+    written = outcome.data
+    cards = { ...cards, ...written }
+  }
+
+  const writing: BreakReachGirl[] = due.flatMap(({ girl, beat }) => {
+    const charId = girl.character.charId
+    const card = cards?.[charId]
+    if (!card) return []
+    return [
+      {
+        girl,
+        card,
+        beat,
+        earlier: draft.talks.filter(
+          (talk) => talk.charId === charId && talk.verdict !== undefined
+        ),
+        promises: draft.promises[charId] ?? [],
+        ignored: reachesIgnored(draft, charId)
+      }
+    ]
+  })
+  if (writing.length === 0) return { status: 'done', data: { arrived: [], cards: written } }
+
+  return mapped(
+    await send<BreakReachReply>('reach', buildBreakReachPrompt(writing, week, setting)),
+    (reply) => {
+      const texts = normalizeBreakReach(reply, writing)
+      return {
+        arrived: writing.flatMap(({ girl, beat }) => {
+          const lines = texts[girl.character.charId]
+          return lines
+            ? [{ charId: girl.character.charId, lines, ...(beat === 'plain' ? {} : { beat }) }]
+            : []
+        }),
+        ...(written ? { cards: written } : {})
+      }
+    }
+  )
+}
+
 /** What the open conversation's calls read, or `null` where there is none or she has no card. */
 function talkInputOf(from: Continuation, draft: BreakDraft) {
   const talk = openTalk(draft)
@@ -208,6 +287,7 @@ function talkInputOf(from: Continuation, draft: BreakDraft) {
       (other) => other.charId === talk.charId && other.verdict !== undefined
     ),
     promises: draft.promises[talk.charId] ?? [],
+    ignored: reachesIgnored(draft, talk.charId),
     setting
   }
 }

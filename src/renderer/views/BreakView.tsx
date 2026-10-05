@@ -21,7 +21,11 @@ import {
   BREAK_SLOTS_PER_WEEK,
   openBreak,
   openTalk,
+  pendingReachWeek,
   playedMemories,
+  unansweredReach,
+  withReaches,
+  withReachRead,
   replyOwed,
   withBreakClosed,
   withPlayerLine,
@@ -57,8 +61,10 @@ import {
   replyToTalk,
   spendTimeAlone,
   writeBreakCards,
-  writeBreakMemories
+  writeBreakMemories,
+  writeReachOuts
 } from '../stores/termBreak'
+import { useAudioStore } from '../stores/audioStore'
 import { useUiStore } from '../stores/uiStore'
 import { isWebBuild } from '../platform'
 import { BreakAloneModal } from './BreakAloneModal'
@@ -100,6 +106,8 @@ interface Failure {
   error: AppError
   title: string
   retry: () => void
+  /** What answering the failure with no does, where that is more than putting it away. */
+  abandon?: () => void
 }
 
 export function BreakView(): JSX.Element | null {
@@ -136,6 +144,11 @@ export function BreakView(): JSX.Element | null {
   const [aloneSpent, setAloneSpent] = useState<BreakAlone | null>(null)
   // The box is up from the moment the slot is asked for until its last line is clicked past.
   const telling = aloneWriting || aloneSpent !== null
+
+  // The call for what the girls send at the top of a week is out.
+  const [checking, setChecking] = useState(false)
+  // The week that call was last made for, so one week is asked for once.
+  const asked = useRef<number | null>(null)
 
   // Escape opens the menu where nothing else is up to answer it; a panel in front has already
   // taken the key for itself.
@@ -188,6 +201,17 @@ export function BreakView(): JSX.Element | null {
     // Once, on the break as it was read: the ref above is what holds it to that.
   }, [draft])
 
+  // A week is opened by whatever the girls send on their own in it, asked for once the screen
+  // is clear of the panel that spent the slot before it.
+  useEffect(() => {
+    if (!from || !draft || failure || talking || telling || alone) return
+    const week = pendingReachWeek(draft, seasonOf(termIndexOf(from.record)))
+    if (week === null || asked.current === week) return
+    asked.current = week
+    void checkPhone(draft, week)
+    // `checkPhone` reads nothing that is not named here.
+  }, [from, draft, failure, talking, telling, alone])
+
   if (!from) return null
 
   const ended = seasonOf(termIndexOf(from.record))
@@ -202,7 +226,7 @@ export function BreakView(): JSX.Element | null {
   const over = draft !== null && breakOver(draft)
   const spent = draft !== null && breakSpent(draft, ended)
   const underWay = draft !== null && openTalk(draft) !== null
-  const dead = draft === null || writing || underWay
+  const dead = draft === null || writing || underWay || checking
   const played = draft !== null && breakPlayed(draft)
 
   /** Puts the break as it stands on screen and on disk; a refused write is reported and play goes on. */
@@ -211,6 +235,28 @@ export function BreakView(): JSX.Element | null {
     if (!from) return
     const written = await window.api.saves.writeBreak(from.playthroughId, next)
     if (!written.ok) showError(written.error)
+  }
+
+  /** Asks who writes to him in `week`, and files what they send; nothing else moves meanwhile. */
+  async function checkPhone(base: BreakDraft, week: number): Promise<void> {
+    if (!from) return
+    setChecking(true)
+    const outcome = await writeReachOuts(from, base, week)
+    setChecking(false)
+    if (outcome.status === 'cancelled') return
+    if (outcome.status === 'failed') {
+      setFailure({
+        error: outcome.error,
+        title: "Couldn't check your phone",
+        retry: () => void checkPhone(base, week),
+        // The week goes on with nobody having written, rather than asking for ever.
+        abandon: () => void keep(withReaches(base, week, []))
+      })
+      return
+    }
+    const { arrived, cards } = outcome.data
+    if (arrived.length > 0) useAudioStore.getState().play('text_in')
+    await keep(withReaches(cards ? { ...base, cards: { ...base.cards, ...cards } } : base, week, arrived))
   }
 
   /** Closes a break nobody played on memories written for it, and opens them to be reworded. */
@@ -407,11 +453,29 @@ export function BreakView(): JSX.Element | null {
       played: {
         stats: draft.stats,
         memories: draft.memories,
-        talks: draft.talks.filter((talk) => talk.verdict !== undefined)
+        talks: draft.talks.filter((talk) => talk.verdict !== undefined),
+        reaches: draft.reaches ?? []
       }
     })
     setView('newGame')
   }
+
+  /** Whether she has sent something he has not answered, and whether he has opened it. */
+  function wroteOf(charId: string): 'new' | 'seen' | null {
+    const reach = draft ? unansweredReach(draft, charId) : null
+    return reach ? (reach.read ? 'seen' : 'new') : null
+  }
+
+  /** Puts her conversation panel up, which is what reads anything she has sent. */
+  function openTalkPanel(charId: string): void {
+    setTalking(charId)
+    if (!draft) return
+    const next = withReachRead(draft, charId)
+    if (next !== draft) void keep(next)
+  }
+
+  // Who has written and not been opened yet, for the line over the faces.
+  const unread = faces.filter((c) => wroteOf(c.charId) === 'new').map((c) => c.firstName)
 
   const talkingTo = talking ? cast.find((c) => c.charId === talking) : undefined
   const open = draft ? openTalk(draft) : null
@@ -472,7 +536,13 @@ export function BreakView(): JSX.Element | null {
 
       {faces.length > 0 ? (
         <>
-          {!over && <p className="vu-hint vu-break-hint">Click somebody to text her.</p>}
+          {!over && (
+            <p className="vu-hint vu-break-hint">
+              {unread.length > 0
+                ? `${listed(unread)} wrote to you. Reading is free; writing back spends a slot.`
+                : 'Click somebody to text her.'}
+            </p>
+          )}
           <motion.ul className="vu-break-grid" variants={GRID_IN} initial="hidden" animate="shown">
             {faces.map((character) => (
               <BreakFace
@@ -481,7 +551,8 @@ export function BreakView(): JSX.Element | null {
                 texted={draft?.talks.filter((talk) => talk.charId === character.charId).length ?? 0}
                 // A girl he cannot reach, and anybody once the slots are gone, is only a face.
                 opens={!over && !spent && !dead && canText(from, character.charId)}
-                onOpen={() => setTalking(character.charId)}
+                wrote={wroteOf(character.charId)}
+                onOpen={() => openTalkPanel(character.charId)}
               />
             ))}
           </motion.ul>
@@ -491,10 +562,10 @@ export function BreakView(): JSX.Element | null {
       )}
 
       <motion.footer className="vu-break-foot" variants={FOOT_IN} initial="hidden" animate="shown">
-        {writing && (
+        {(writing || checking) && (
           <span className="vu-break-writing">
             <motion.span className="vu-ring" animate={spin} />
-            Writing the break
+            {writing ? 'Writing the break' : 'Checking your phone'}
           </span>
         )}
 
@@ -625,6 +696,7 @@ export function BreakView(): JSX.Element | null {
             character={talkingTo}
             week={breakClock(panelTalk?.slot ?? draft.spent.length, ended).week}
             talk={panelTalk?.charId === talkingTo.charId ? panelTalk : null}
+            opening={unansweredReach(draft, talkingTo.charId)?.lines ?? []}
             phase={phase}
             onSend={(text) => void send(talkingTo.charId, text)}
             onLeave={leave}
@@ -669,7 +741,11 @@ export function BreakView(): JSX.Element | null {
               setFailure(null)
               retry()
             }}
-            onAbandon={() => setFailure(null)}
+            onAbandon={() => {
+              const { abandon } = failure
+              setFailure(null)
+              abandon?.()
+            }}
           />
         )}
       </AnimatePresence>
@@ -753,14 +829,23 @@ function BreakCalendar({
 }
 
 /** One girl who is coming back: her archway and her name, and how often he has written to her. */
+/** Names as a sentence lists them: "Ami", "Ami and Lili", "Ami, Lili and Gwen". */
+function listed(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? ''
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
+}
+
 function BreakFace({
   character,
   texted,
+  wrote,
   opens,
   onOpen
 }: {
   character: Character
   texted: number
+  /** Whether she has sent something he has not answered, and whether he has opened it. */
+  wrote: 'new' | 'seen' | null
   opens: boolean
   onOpen: () => void
 }): JSX.Element {
@@ -783,6 +868,13 @@ function BreakFace({
         </motion.button>
       ) : (
         <div className="vu-card-face">{face}</div>
+      )}
+      {wrote && (
+        <span
+          className={`vu-sticker vu-break-wrote${wrote === 'new' ? ' vu-sticker--accent' : ''}`}
+        >
+          {wrote === 'new' ? 'New text' : 'Wrote you'}
+        </span>
       )}
       {texted > 0 && (
         <span className="vu-sticker vu-break-texted">

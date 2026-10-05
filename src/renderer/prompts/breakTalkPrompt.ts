@@ -12,6 +12,7 @@ import {
   type BreakCard,
   type BreakLine,
   type BreakPromise,
+  type ReachBeat,
   type BreakTalk,
   type BreakVerdict,
   type TalkJudgement
@@ -96,14 +97,21 @@ function transcriptLines(lines: readonly BreakLine[], name: string): string[] {
   return lines.map((line) => `${line.sender === 'player' ? 'Reader' : name}: ${line.text}`)
 }
 
-/** What the earlier conversations with her came to, and what he still owes her. */
+/** What the earlier conversations with her came to, what he still owes her, and what he ignored. */
 function historyLines(
   name: string,
   earlier: readonly BreakTalk[],
   promises: readonly BreakPromise[],
-  ended: Season
+  ended: Season,
+  ignored = 0
 ): string[] {
   const lines: string[] = []
+  if (ignored > 0) {
+    lines.push(
+      `${name} has texted the reader ${ignored === 1 ? 'once' : `${ignored} times`} this break and had nothing back. She has not forgotten it.`,
+      ''
+    )
+  }
   if (earlier.length > 0) {
     lines.push('EARLIER THIS BREAK')
     for (const talk of earlier) {
@@ -234,6 +242,128 @@ export function normalizeBreakCards(
   return cards
 }
 
+/** One girl who writes this week, and what the call reads to write her texts. */
+export interface BreakReachGirl {
+  girl: BreakGirl
+  card: BreakCard
+  /** What has her writing: an ordinary week, the middle of the summer, or the last week. */
+  beat: ReachBeat | 'plain'
+  /** The conversations with her already judged, oldest first. */
+  earlier: readonly BreakTalk[]
+  promises: readonly BreakPromise[]
+  /** How many times she has already written this break and had nothing back. */
+  ignored: number
+}
+
+/** The reply as the reach-out call returns it: one record per character, each naming its charKey. */
+export interface BreakReachReply {
+  characters: Array<{ key: string; messages?: string[] }>
+}
+
+/** What has her writing, as the call is told it. */
+const BEAT_LINES: Record<ReachBeat | 'plain', (name: string, backIn: string) => string> = {
+  plain: (name) =>
+    `${name} is writing because something in her week made her think of the reader: a bit of news, a photo she describes, a complaint, a question.`,
+  mid: (name) =>
+    `It is the middle of the summer and something is on where ${name} is — a festival, a family do, a trip, a heatwave — and she is writing from the thick of it.`,
+  last: (name, backIn) =>
+    `It is the last week before everybody goes back, and ${name} is writing about that: how her break went, and seeing him again in ${backIn}. How glad she sounds about it is how the break has gone between them.`
+}
+
+/** Builds the request for everything the girls send on their own at the top of one week. */
+export function buildBreakReachPrompt(
+  writing: readonly BreakReachGirl[],
+  week: number,
+  setting: BreakSetting
+): StructuredRequest {
+  const words = seasonWords(setting.ended)
+  const keys = writing.map(({ girl }) =>
+    charKeyOf(girl.character.firstName, girl.character.lastName)
+  )
+
+  const preamble = [
+    'NOW',
+    `It is week ${week} of ${breakWeeks(setting.ended)} of ${words.endBreak}. Everybody is home until ${words.backIn}, hours apart, and all there is between any of them and the reader is texting.`,
+    '',
+    'YOUR TURN',
+    'Each character below texts the reader first this week, on her own, in a private DM. Write what each of them sends as her "messages" array: one or two text bubbles, never more.',
+    'Stay in each one\'s voice and keep it text-length. It comes out of her own break and of how things stand between the two of them now, including anything said, promised or ignored earlier this break.',
+    'She writes about her own side of things and may ask him something. She NEVER states what the reader did, is doing or will do, and nobody suggests meeting up.',
+    'Somebody he has ignored writes shorter and cooler than somebody he has been good to.',
+    '---',
+    ''
+  ].join('\n')
+
+  const rest = [
+    'characters holds one entry per character below, its key exactly as written before her name, in the order listed.',
+    '',
+    'THE READER',
+    setting.reader,
+    '',
+    'CHARACTERS',
+    ...writing.flatMap(({ girl, card, beat, earlier, promises, ignored }, index) => {
+      const name = girl.character.firstName
+      return [
+        `${keys[index]} — ${fullNameOf(girl.character)}`,
+        ...girlLines(girl, setting),
+        ...cardLines(name, card),
+        ...historyLines(name, earlier, promises, setting.ended, ignored),
+        `WHY SHE WRITES: ${BEAT_LINES[beat](name, words.backIn)}`,
+        ''
+      ]
+    })
+  ].join('\n')
+
+  return {
+    system: TEXTING_PERSONA,
+    user: `${preamble}\n${rest}`,
+    schema: objectSchema('break_reach', ['characters'], {
+      characters: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['key', 'messages'],
+          properties: {
+            key: { type: 'string', enum: keys },
+            messages: { type: 'array', items: { type: 'string' } }
+          }
+        }
+      }
+    }),
+    kind: 'texting',
+    cacheKey: 'venus-university-break-reach',
+    logFrom: preamble.length + 1
+  }
+}
+
+/** What the reach-out reply is worth, keyed by charId: at most two texts each, blanks dropped. */
+export function normalizeBreakReach(
+  reply: BreakReachReply,
+  writing: readonly BreakReachGirl[]
+): Record<string, string[]> {
+  const idByKey = new Map(
+    writing.map(({ girl }) => [
+      charKeyOf(girl.character.firstName, girl.character.lastName),
+      girl.character.charId
+    ])
+  )
+  const list: unknown = reply?.characters
+  const texts: Record<string, string[]> = {}
+  for (const raw of Array.isArray(list) ? list : []) {
+    if (typeof raw !== 'object' || raw === null) continue
+    const entry = raw as Record<string, unknown>
+    const charId = typeof entry.key === 'string' ? idByKey.get(entry.key.trim()) : undefined
+    if (!charId || texts[charId] || !Array.isArray(entry.messages)) continue
+    const said = entry.messages
+      .filter((text): text is string => typeof text === 'string' && text.trim() !== '')
+      .map((text) => text.trim())
+      .slice(0, 2)
+    if (said.length > 0) texts[charId] = said
+  }
+  return texts
+}
+
 /** Everything one turn of a conversation reads. */
 export interface BreakTalkInput {
   girl: BreakGirl
@@ -244,6 +374,8 @@ export interface BreakTalkInput {
   earlier: readonly BreakTalk[]
   /** Everything he has promised her this break. */
   promises: readonly BreakPromise[]
+  /** How many times she wrote this break and had nothing back. */
+  ignored?: number
   setting: BreakSetting
 }
 
@@ -277,7 +409,7 @@ export function buildBreakTalkPrompt(input: BreakTalkInput): StructuredRequest {
     'This is hers alone. She never recites it; it is what her mood, her news and her reactions come out of.',
     ...cardLines(name, card),
     '',
-    ...historyLines(name, earlier, promises, setting.ended),
+    ...historyLines(name, earlier, promises, setting.ended, input.ignored),
     'THIS CONVERSATION',
     "'''",
     ...transcriptLines(talk.lines, name),
@@ -332,6 +464,8 @@ export interface BreakJudgeInput {
   promises: readonly BreakPromise[]
   /** Whether a memory of this one may be `loved` or `hated`. */
   strong: Record<Exclude<BreakVerdict, 'neutral'>, boolean>
+  /** How many times she wrote this break and had nothing back. */
+  ignored?: number
   setting: BreakSetting
 }
 
@@ -366,7 +500,7 @@ export function buildBreakJudgePrompt(input: BreakJudgeInput): StructuredRequest
     `${name.toUpperCase()}'S BREAK`,
     ...cardLines(name, card),
     '',
-    ...historyLines(name, earlier, promises, setting.ended),
+    ...historyLines(name, earlier, promises, setting.ended, input.ignored),
     'THE CONVERSATION',
     "'''",
     ...transcriptLines(talk.lines, name),

@@ -204,6 +204,12 @@
   right: -6px;
 }
 
+/* That she has written and not been answered, on the card's other corner. */
+.vu-break-wrote {
+  left: -6px;
+  rotate: 3deg;
+}
+
 /* ---- the conversation ------------------------------------------------------ */
 
 /* The form modals' frame around one thread: the head clears the tab hung on its corner, and the
