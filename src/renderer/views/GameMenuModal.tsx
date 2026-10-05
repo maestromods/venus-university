@@ -30,8 +30,11 @@ export interface GameMenuModalProps {
   onLoadGame: () => void
   onFeedback: () => void
   onSettings: () => void
-  /** Opens the list of the keys the app answers, in the menu's place. */
-  onControls: () => void
+  /**
+   * Opens the list of the keys the app answers, in the menu's place. Absent on a screen those
+   * keys do not reach, which drops the entry.
+   */
+  onControls?: () => void
   onLeave: () => void
   /** Absent where the app has no window of its own to close, which drops the entry. */
   onQuit?: () => void
@@ -116,16 +119,18 @@ export function GameMenuModal({
           >
             Settings
           </motion.button>
-          <motion.button
-            id="game-menu-controls"
-            className="vu-btn vu-btn--outline vu-paper"
-            type="button"
-            variants={dealtItem}
-            {...gestures(false, lift, press)}
-            onClick={onControls}
-          >
-            Controls
-          </motion.button>
+          {onControls && (
+            <motion.button
+              id="game-menu-controls"
+              className="vu-btn vu-btn--outline vu-paper"
+              type="button"
+              variants={dealtItem}
+              {...gestures(false, lift, press)}
+              onClick={onControls}
+            >
+              Controls
+            </motion.button>
+          )}
           <motion.button
             id="game-menu-feedback"
             className="vu-btn vu-btn--outline vu-paper"

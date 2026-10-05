@@ -44,6 +44,12 @@
   flex: none;
 }
 
+/* The way into the menu, at the far end of the row from the way back. */
+.vu-break-menu {
+  flex: none;
+  margin-left: auto;
+}
+
 /* ---- the reader ------------------------------------------------------------ */
 
 /* How much of the break is gone, over what it has left of him. The margin clears the title's

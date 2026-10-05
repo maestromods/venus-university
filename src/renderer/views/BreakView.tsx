@@ -38,6 +38,7 @@ import type { AppError, Character } from '@shared/types'
 import { CardCaption } from '../components/CardCaption'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { LlmFailureModal } from '../components/LlmFailureModal'
+import { useWindowKeydown } from '../components/useWindowKeydown'
 import { spriteUrl } from '../stores/characterStore'
 import {
   clearStagedContinuation,
@@ -55,9 +56,11 @@ import {
   writeBreakMemories
 } from '../stores/termBreak'
 import { useUiStore } from '../stores/uiStore'
+import { isWebBuild } from '../platform'
 import { BreakMemoriesModal } from './BreakMemoriesModal'
 import { BreakTalkModal, type TalkPhase } from './BreakTalkModal'
 import { heldScreenTheme } from './clockTheme'
+import { GameMenuModal } from './GameMenuModal'
 import {
   cardLift,
   dealt,
@@ -96,6 +99,8 @@ interface Failure {
 export function BreakView(): JSX.Element | null {
   const setView = useUiStore((s) => s.setView)
   const showError = useUiStore((s) => s.showError)
+  const openModal = useUiStore((s) => s.openModal)
+  const appModals = useUiStore((s) => s.modals.length)
   const [theme] = useState(heldScreenTheme)
 
   // The finished semester this break follows, taken once at mount and dropped by the effect
@@ -117,6 +122,15 @@ export function BreakView(): JSX.Element | null {
   const [phase, setPhase] = useState<TalkPhase>('idle')
   // The conversation the panel goes on showing once it has been judged, until it is closed.
   const [shown, setShown] = useState<BreakTalk | null>(null)
+  const [menu, setMenu] = useState(false)
+
+  // Escape opens the menu where nothing else is up to answer it; a panel in front has already
+  // taken the key for itself.
+  useWindowKeydown((event) => {
+    if (event.key !== 'Escape') return
+    if (menu || talking || editing || confirmingSkip || failure || appModals > 0) return
+    setMenu(true)
+  })
 
   // What a resumed break owes its open conversation, picked up once after the read.
   const resumed = useRef(false)
@@ -384,6 +398,15 @@ export function BreakView(): JSX.Element | null {
           <h1 className="vu-title-text">{titled(words.endBreak)}</h1>
         </div>
 
+        <motion.button
+          id="break-menu"
+          className="vu-pill vu-break-menu"
+          {...gestures(false, quietLift, quietPress)}
+          onClick={() => setMenu(true)}
+        >
+          Menu
+        </motion.button>
+
       </motion.header>
 
       <motion.section
@@ -489,6 +512,35 @@ export function BreakView(): JSX.Element | null {
           )}
         </div>
       </motion.footer>
+
+      <AnimatePresence>
+        {menu && (
+          <GameMenuModal
+            key="menu"
+            theme={theme}
+            onClose={() => setMenu(false)}
+            // The break keeps itself: it is written after everything done in it, and has no
+            // slots of its own to save into.
+            saveOffer="none"
+            onSaveGame={() => setMenu(false)}
+            onLoadGame={() => {
+              setMenu(false)
+              openModal('loadGame')
+            }}
+            onFeedback={() => {
+              setMenu(false)
+              openModal('feedback')
+            }}
+            onSettings={() => {
+              setMenu(false)
+              openModal('settings')
+            }}
+            onLeave={() => setView('mainMenu')}
+            // The browser has no window of its own to close, so it is offered no way out.
+            onQuit={isWebBuild() ? undefined : () => void window.api.app.quit()}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {confirmingSkip && (
