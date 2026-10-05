@@ -19,6 +19,7 @@ import { TitleTab } from '../components/TitleTab'
 import { useModalShell } from '../components/useModalShell'
 import { breakStatAction } from '../prompts/breakStatActions'
 import { useAudioStore } from '../stores/audioStore'
+import { markStatusLine } from '../stores/loop/statusSteps'
 import type { ScreenTheme } from './clockTheme'
 import {
   dealt,
@@ -66,6 +67,24 @@ const LINE_BEAT = 18
 
 /** What has a sound as it is typed: a letter or a digit, and nothing a space or a mark says. */
 const VOICED = /[\p{L}\p{N}]/u
+
+/** A status line with each stat word and the figure it moved by drawn in that stat's hue. */
+function StatusWords({ text }: { text: string }): JSX.Element {
+  const marks = markStatusLine(text).status?.marks ?? []
+  const runs: JSX.Element[] = []
+  let at = 0
+  for (const mark of marks) {
+    if (mark.start > at) runs.push(<span key={at}>{text.slice(at, mark.start)}</span>)
+    runs.push(
+      <span key={mark.start} className="vu-breaktalk-mark" data-tone={mark.tone}>
+        {text.slice(mark.start, mark.end)}
+      </span>
+    )
+    at = mark.end
+  }
+  if (at < text.length) runs.push(<span key={at}>{text.slice(at)}</span>)
+  return <>{runs}</>
+}
 
 /** A suggestion with the stat it exercises drawn in that stat's own hue. */
 function IdeaWords({ text }: { text: string }): JSX.Element {
@@ -203,7 +222,7 @@ export function BreakAloneModal({
               <ul className="vu-breaktalk-came">
                 {gains.map((gain, index) => (
                   <li key={index} className="vu-note-text">
-                    {gain.text}
+                    <StatusWords text={gain.text} />
                   </li>
                 ))}
                 {gains.length === 0 && (

@@ -281,13 +281,27 @@
   text-align: center;
 }
 
-/* The verb she remembers it by, in the colour of which way it went. Ink and nothing else. */
+/* A run of such a line in a colour of its own, the scene box's: the verb she remembers it by in
+   the colour of which way it went, a stat and the figure it moved by in that stat's hue. Ink and
+   nothing else. */
 .vu-breaktalk-mark[data-tone='gain'] {
-  color: var(--vu-accent);
+  color: var(--vu-good);
 }
 
 .vu-breaktalk-mark[data-tone='loss'] {
   color: var(--vu-danger);
+}
+
+.vu-breaktalk-mark[data-tone='brain'] {
+  color: var(--vu-stat-brain);
+}
+
+.vu-breaktalk-mark[data-tone='body'] {
+  color: var(--vu-stat-body);
+}
+
+.vu-breaktalk-mark[data-tone='heart'] {
+  color: var(--vu-stat-heart);
 }
 
 /* ---- a slot to himself ------------------------------------------------------ */
