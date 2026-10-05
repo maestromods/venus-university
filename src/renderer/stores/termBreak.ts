@@ -110,6 +110,25 @@ export type BreakOutcome<T> =
   | { status: 'failed'; error: AppError }
   | { status: 'cancelled' }
 
+/** What a connection dropped while the reply was still arriving says of itself. */
+const DROPPED = /terminated|ECONNRESET|socket hang up|fetch failed/i
+
+/**
+ * `error` named as the lost connection it is, where the transport reported a reply cut off
+ * part-way under no code of its own: such a call is worth re-sending, and is said to the player
+ * as a connection problem rather than by the transport's one word.
+ */
+function asNetworkError(error: AppError): AppError {
+  if (error.code !== 'UNKNOWN' || !DROPPED.test(`${error.message} ${error.detail ?? ''}`)) {
+    return error
+  }
+  return {
+    ...error,
+    code: 'LLM_NETWORK',
+    message: 'The connection dropped before the reply arrived.'
+  }
+}
+
 /**
  * Sends one structured call, re-sending under the silent backoff until it lands or the budget
  * runs out. One call is in flight at a time: a second one abandons the first.
@@ -125,12 +144,13 @@ async function send<T>(call: string, request: StructuredRequest): Promise<BreakO
     if (run !== mine) return { status: 'cancelled' }
     if (generated.ok) return { status: 'done', data: generated.data }
 
-    console.warn(`[break] ${call} failed:`, generated.error)
-    const retried = await retrySilently(`break:${call}`, generated.error, spent, {
+    const error = asNetworkError(generated.error)
+    console.warn(`[break] ${call} failed:`, error)
+    const retried = await retrySilently(`break:${call}`, error, spent, {
       onSleep: (cancel) => sleepers.push(cancel)
     })
     if (run !== mine) return { status: 'cancelled' }
-    if (!retried) return { status: 'failed', error: generated.error }
+    if (!retried) return { status: 'failed', error }
     spent += 1
   }
 }
