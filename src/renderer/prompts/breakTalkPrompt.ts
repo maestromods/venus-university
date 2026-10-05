@@ -1,5 +1,5 @@
 import { FINAL_DATE } from '@shared/classes'
-import type { PlayerStats } from '@shared/playerStats'
+import type { LedgerStats, PlayerStats } from '@shared/playerStats'
 import { storedMemoryDesc } from '@shared/readerVoice'
 import { affectionFor, dedupedMemoriesFor } from '@shared/relationship'
 import { daysToNextTerm, seasonWords, type Season } from '@shared/term'
@@ -8,6 +8,7 @@ import {
   breakWeeks,
   TALK_TURNS,
   talkTurns,
+  type BreakAlone,
   type BreakCard,
   type BreakLine,
   type BreakPromise,
@@ -27,12 +28,13 @@ import {
 } from '@shared/types'
 import { relationshipLines } from './relationship'
 import { objectSchema } from './schema'
-import { memoryLines, profileLines } from './scenePrompt'
+import { memoryLines, personaFor, profileLines } from './scenePrompt'
 import { TEXTING_PERSONA } from './textingPrompt'
 
 /**
- * The three requests a played break sends: the card every returning girl carries through it,
- * her side of one conversation, and the judgement of that conversation once it is over. Pure,
+ * The requests a played break sends: the card every returning girl carries through it, her
+ * side of one conversation, the judgement of that conversation once it is over, and a slot he
+ * spends on himself. Pure,
  * no IO. Every one of them reads a girl's moving half as it is carried over the break, so the
  * term being enrolled for is already the active one.
  */
@@ -467,5 +469,100 @@ export function normalizeBreakJudgement(reply: BreakJudgeReply): TalkJudgement {
       .filter((promise) => promise !== ''),
     promisesKept: numbers(reply?.promisesKept),
     promisesBroken: numbers(reply?.promisesBroken)
+  }
+}
+
+/** A slot spent alone as the model returns it. */
+export interface BreakAloneReply {
+  lines?: string[]
+  stats?: { brain?: boolean; body?: boolean; heart?: boolean }
+}
+
+/** Everything a slot spent alone reads. */
+export interface BreakAloneInput {
+  /** What he said he would do, in his own words. */
+  action: string
+  /** The slot it is being spent on. */
+  slot: number
+  /** The slots he has already spent on himself this break, oldest first. */
+  earlier: readonly BreakAlone[]
+  /** Whether the playthrough is on the toned-down writer. */
+  lessNsfwText: boolean
+  setting: BreakSetting
+}
+
+/** Builds the request for a slot he spends on himself: how it went, and what it exercised. */
+export function buildBreakAlonePrompt(input: BreakAloneInput): StructuredRequest {
+  const { action, slot, earlier, lessNsfwText, setting } = input
+  const words = seasonWords(setting.ended)
+  const { week } = breakClock(slot, setting.ended)
+
+  const user = [
+    'READER',
+    setting.reader,
+    '',
+    'NOW',
+    `It is week ${week} of ${breakWeeks(setting.ended)} of ${words.endBreak}. The reader is home until ${words.backIn}, a long way from Venus University and from everybody he knows there.`,
+    '',
+    ...(earlier.length > 0
+      ? [
+          'WHAT HE HAS ALREADY DONE WITH HIS TIME THIS BREAK',
+          ...earlier.map((spent) => `- Week ${breakClock(spent.slot, setting.ended).week}: ${spent.action}`),
+          ''
+        ]
+      : []),
+    'YOUR TURN',
+    'Solo mission, RITA! The reader has a few days to himself, so write how they go, start to finish.',
+    'Open by rewording what the reader decided to do in a fun narration, then play it out to the end. Nobody from the university shows up, and nobody else needs a name.',
+    'Write it to him, as "you", the way a scene is narrated. Three to five short lines in the "lines" array, each a sentence or two.',
+    'Keep it tight. This is a slice of his break, not an epic.',
+    "DON'T leave a decision point, a cliffhanger, or a question for the reader.",
+    '',
+    'STATS',
+    "Say which of the reader's stats this actually exercised.",
+    'Set Brain to true if he worked on his smarts, Body to true if he worked on his fitness, and Heart to true if he worked on his charisma or social skills.',
+    'Set a stat to false if it did not exercise it. All three false is a perfectly good answer — a few days spent lazing around exercised nothing.',
+    '',
+    `Reader's action: ${action}`
+  ].join('\n')
+
+  const flag = { type: 'boolean' }
+  return {
+    system: [
+      personaFor(lessNsfwText),
+      '',
+      'You always return a single, fully-formed JSON object matching the provided schema exactly.'
+    ].join('\n'),
+    user,
+    schema: objectSchema('break_alone', ['lines', 'stats'], {
+      lines: { type: 'array', items: { type: 'string' } },
+      stats: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['brain', 'body', 'heart'],
+        properties: { brain: flag, body: flag, heart: flag }
+      }
+    }),
+    cacheKey: 'break-alone',
+    // Routable, as a scene alone is during a semester.
+    kind: 'solo'
+  }
+}
+
+/** What the reply is worth: its lines with the blank ones dropped, and each stat only where it said true. */
+export function normalizeBreakAlone(reply: BreakAloneReply): {
+  lines: string[]
+  exercised: LedgerStats
+} {
+  return {
+    lines: (Array.isArray(reply?.lines) ? reply.lines : [])
+      .filter((line): line is string => typeof line === 'string')
+      .map((line) => line.trim())
+      .filter((line) => line !== ''),
+    exercised: {
+      brain: reply?.stats?.brain === true,
+      body: reply?.stats?.body === true,
+      heart: reply?.stats?.heart === true
+    }
   }
 }

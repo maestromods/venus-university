@@ -13,11 +13,14 @@ import { returningChars, type BreakMemory } from '@shared/termCarry'
 import type { AppError, Character, Result, StructuredRequest } from '@shared/types'
 import { normalizeBreakReply, type BreakGenReply } from '../prompts/breakPrompt'
 import {
+  buildBreakAlonePrompt,
   buildBreakCardsPrompt,
   buildBreakJudgePrompt,
   buildBreakTalkPrompt,
+  normalizeBreakAlone,
   normalizeBreakCards,
   normalizeBreakJudgement,
+  type BreakAloneReply,
   type BreakCardsReply,
   type BreakGirl,
   type BreakJudgeReply,
@@ -25,6 +28,7 @@ import {
   type BreakTalkReply
 } from '../prompts/breakTalkPrompt'
 import { breakAskOf, breakReaderOf, keptFrom, type Continuation } from './newGame'
+import { useSettingsStore } from './settingsStore'
 import { retrySilently } from './silentRetry'
 
 /**
@@ -244,6 +248,38 @@ export async function judgeTalk(
     await send<BreakJudgeReply>('judgement', buildBreakJudgePrompt({ ...input, strong })),
     normalizeBreakJudgement
   )
+}
+
+/**
+ * Asks how a slot he spends on himself goes, and which of his stats it exercised. A reply with
+ * nothing narrated in it is a failure: there would be nothing to show for the slot.
+ */
+export async function spendTimeAlone(
+  from: Continuation,
+  draft: BreakDraft,
+  action: string
+): Promise<BreakOutcome<ReturnType<typeof normalizeBreakAlone>>> {
+  const { setting } = castFor(from)
+  const outcome = mapped(
+    await send<BreakAloneReply>(
+      'alone',
+      buildBreakAlonePrompt({
+        action,
+        slot: draft.spent.length,
+        earlier: draft.alone ?? [],
+        lessNsfwText: useSettingsStore.getState().settings?.lessNsfwText === true,
+        setting
+      })
+    ),
+    normalizeBreakAlone
+  )
+  if (outcome.status === 'done' && outcome.data.lines.length === 0) {
+    return {
+      status: 'failed',
+      error: { code: 'LLM_EMPTY', message: 'The reply came back with nothing in it.' }
+    }
+  }
+  return outcome
 }
 
 /** Abandons the call in flight: the player left the screen, or answered its failure with no. */

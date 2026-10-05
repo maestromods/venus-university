@@ -14,6 +14,7 @@ import { seasonOf, seasonWords, termIndexOf, type Season } from '@shared/term'
 import {
   breakClock,
   breakOver,
+  breakPlayed,
   breakSlotDate,
   breakSpent,
   breakWeeks,
@@ -26,9 +27,11 @@ import {
   withPlayerLine,
   withReply,
   withSlotSpent,
+  withTimeAlone,
   withTalkJudged,
   withTalkLeft,
   withTalkStarted,
+  type BreakAlone,
   type BreakDraft,
   type BreakEntry,
   type BreakTalk
@@ -52,11 +55,13 @@ import {
   canText,
   judgeTalk,
   replyToTalk,
+  spendTimeAlone,
   writeBreakCards,
   writeBreakMemories
 } from '../stores/termBreak'
 import { useUiStore } from '../stores/uiStore'
 import { isWebBuild } from '../platform'
+import { BreakAloneModal } from './BreakAloneModal'
 import { BreakMemoriesModal } from './BreakMemoriesModal'
 import { BreakTalkModal, type TalkPhase } from './BreakTalkModal'
 import { heldScreenTheme } from './clockTheme'
@@ -123,12 +128,17 @@ export function BreakView(): JSX.Element | null {
   // The conversation the panel goes on showing once it has been judged, until it is closed.
   const [shown, setShown] = useState<BreakTalk | null>(null)
   const [menu, setMenu] = useState(false)
+  // The panel for a slot spent on himself: whether it is up, whether its call is out, and the
+  // slot it goes on showing once it has been written, until it is closed.
+  const [alone, setAlone] = useState(false)
+  const [aloneWriting, setAloneWriting] = useState(false)
+  const [aloneSpent, setAloneSpent] = useState<BreakAlone | null>(null)
 
   // Escape opens the menu where nothing else is up to answer it; a panel in front has already
   // taken the key for itself.
   useWindowKeydown((event) => {
     if (event.key !== 'Escape') return
-    if (menu || talking || editing || confirmingSkip || failure || appModals > 0) return
+    if (menu || talking || alone || editing || confirmingSkip || failure || appModals > 0) return
     setMenu(true)
   })
 
@@ -190,7 +200,7 @@ export function BreakView(): JSX.Element | null {
   const spent = draft !== null && breakSpent(draft, ended)
   const underWay = draft !== null && openTalk(draft) !== null
   const dead = draft === null || writing || underWay
-  const played = draft !== null && draft.talks.length > 0
+  const played = draft !== null && breakPlayed(draft)
 
   /** Puts the break as it stands on screen and on disk; a refused write is reported and play goes on. */
   async function keep(next: BreakDraft): Promise<void> {
@@ -235,7 +245,7 @@ export function BreakView(): JSX.Element | null {
 
   /** Ends the break where it stands: by what happened in it, or written for him where nothing did. */
   function finish(base: BreakDraft): void {
-    if (base.talks.length > 0 || breakSpent(base, ended)) void closePlayed(base)
+    if (breakPlayed(base) || breakSpent(base, ended)) void closePlayed(base)
     else void writeUnplayed(base)
   }
 
@@ -347,6 +357,36 @@ export function BreakView(): JSX.Element | null {
     if (draft && !breakOver(draft) && !openTalk(draft) && breakSpent(draft, ended)) {
       void closePlayed(draft)
     }
+  }
+
+  /**
+   * Spends the slot on himself. Nothing is spent until what he did has been written: the slot,
+   * the telling of it and what it did for his stats are filed in one go.
+   */
+  async function spendAlone(action: string): Promise<void> {
+    if (!from || !draft) return
+    setAloneWriting(true)
+    const outcome = await spendTimeAlone(from, draft, action)
+    setAloneWriting(false)
+    if (outcome.status === 'cancelled') return
+    if (outcome.status === 'failed') {
+      setFailure({
+        error: outcome.error,
+        title: "Couldn't write it",
+        retry: () => void spendAlone(action)
+      })
+      return
+    }
+    const next = withTimeAlone(draft, action, outcome.data.lines, outcome.data.exercised, ended)
+    setAloneSpent(next.alone?.[next.alone.length - 1] ?? null)
+    await keep(next)
+  }
+
+  /** Puts that panel away, and closes the break where that was its last slot. */
+  function closeAlone(): void {
+    setAlone(false)
+    setAloneSpent(null)
+    if (draft && !breakOver(draft) && breakSpent(draft, ended)) void closePlayed(draft)
   }
 
   /** The reworded memories, kept. */
@@ -500,6 +540,15 @@ export function BreakView(): JSX.Element | null {
                 {played ? 'End the break here' : 'Skip the break'}
               </motion.button>
               <motion.button
+                id="break-alone-open"
+                className="vu-btn vu-btn--outline vu-btn--panel vu-paper"
+                {...gestures(dead, lift, press)}
+                disabled={dead}
+                onClick={() => setAlone(true)}
+              >
+                Time to yourself
+              </motion.button>
+              <motion.button
                 id="break-rest"
                 className="vu-btn vu-btn--primary vu-btn--panel vu-paper"
                 {...gestures(dead, lift, press)}
@@ -582,6 +631,20 @@ export function BreakView(): JSX.Element | null {
       </AnimatePresence>
 
       <AnimatePresence>
+        {alone && draft && !failure && (
+          <BreakAloneModal
+            key="alone"
+            theme={theme}
+            week={breakClock(aloneSpent?.slot ?? draft.spent.length, ended).week}
+            spent={aloneSpent}
+            writing={aloneWriting}
+            onStart={(action) => void spendAlone(action)}
+            onClose={closeAlone}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {failure && (
           <LlmFailureModal
             key="failure"
@@ -659,14 +722,16 @@ function BreakCalendar({
                   aria-label={
                     state === 'text'
                       ? 'Spent texting'
-                      : state === 'rest'
+                      : state === 'alone'
+                        ? 'Spent on himself'
+                        : state === 'rest'
                         ? 'Let go by'
                         : state === 'next'
                           ? 'The slot being spent'
                           : 'Not yet spent'
                   }
                 >
-                  {state === 'text' ? <CheckIcon /> : null}
+                  {state === 'text' || state === 'alone' ? <CheckIcon /> : null}
                 </span>
               )
             })}

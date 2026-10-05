@@ -113,6 +113,14 @@
   background: var(--vu-accent);
 }
 
+/* Spent on himself: ticked too, on the tint rather than the accent, so the two ways of using a
+   slot read apart. */
+.vu-break-box--alone {
+  border-color: var(--vu-accent);
+  background: var(--vu-highlight);
+  color: var(--vu-accent);
+}
+
 /* Let go by: filled in the border's own tone and struck through, so it reads as gone. */
 .vu-break-box--rest {
   background: var(--vu-border);
@@ -280,4 +288,22 @@
 
 .vu-breaktalk-mark[data-tone='loss'] {
   color: var(--vu-danger);
+}
+
+/* ---- a slot to himself ------------------------------------------------------ */
+
+/* The conversation's own frame, as tall as what it holds rather than a thread's fixed height. */
+.vu-breakalone {
+  height: auto;
+  max-height: calc(100% - 100px);
+}
+
+/* How it went, a paragraph a line, over what it did for him; it scrolls where a long telling
+   would push the foot off the panel. */
+.vu-breakalone-told {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  overflow: hidden auto;
 }

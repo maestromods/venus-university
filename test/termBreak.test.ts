@@ -5,6 +5,7 @@ import {
   BREAK_READ,
   breakClock,
   breakOver,
+  breakPlayed,
   breakSlotDate,
   breakSlots,
   breakSpent,
@@ -18,6 +19,7 @@ import {
   withPlayerLine,
   withReply,
   withSlotSpent,
+  withTimeAlone,
   withTalkJudged,
   withTalkLeft,
   withTalkStarted,
@@ -137,6 +139,49 @@ describe('spending a slot', () => {
   it('spends nothing on a blank first text', () => {
     const draft = fresh()
     expect(withTalkStarted(draft, 'a', '   ', 'spring')).toBe(draft)
+  })
+})
+
+describe('a slot spent alone', () => {
+  it('pays every stat it exercised twice over, as an hour alone does in a semester', () => {
+    const draft = withTimeAlone(
+      fresh(),
+      ' ran every morning ',
+      ['You run.', '  ', 'You read on the porch.'],
+      { body: true, brain: true },
+      'spring'
+    )
+    expect(draft.stats).toEqual({ brain: 2, body: 2, heart: 0 })
+    expect(draft.spent).toEqual([{ kind: 'alone' }])
+    expect(draft.alone).toEqual([
+      {
+        slot: 0,
+        action: 'ran every morning',
+        lines: ['You run.', 'You read on the porch.'],
+        exercised: { brain: true, body: true, heart: false }
+      }
+    ])
+  })
+
+  it('spends the slot and pays nothing where it exercised nothing', () => {
+    const draft = withTimeAlone(fresh(), 'slept in', ['You sleep in.'], {}, 'spring')
+    expect(draft.stats).toEqual({ brain: 0, body: 0, heart: 0 })
+    expect(draft.spent).toHaveLength(1)
+  })
+
+  it('is refused with nothing said, with a conversation open, and with no slot left', () => {
+    const draft = fresh()
+    expect(withTimeAlone(draft, '  ', ['x'], { body: true }, 'spring')).toBe(draft)
+    const talking = withTalkStarted(draft, 'a', 'hey', 'spring')
+    expect(withTimeAlone(talking, 'ran', ['x'], { body: true }, 'spring')).toBe(talking)
+    const full = rested(24)
+    expect(withTimeAlone(full, 'ran', ['x'], { body: true }, 'spring')).toBe(full)
+  })
+
+  it('makes the break one that was played, as a conversation does and a slot let go does not', () => {
+    expect(breakPlayed(rested(3))).toBe(false)
+    expect(breakPlayed(withTimeAlone(fresh(), 'ran', ['x'], {}, 'spring'))).toBe(true)
+    expect(breakPlayed(talked(fresh(), 'a'))).toBe(true)
   })
 })
 

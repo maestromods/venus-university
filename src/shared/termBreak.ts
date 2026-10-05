@@ -1,5 +1,11 @@
 import type { ValidateRecordOptions } from './jsonValidate'
-import { rustedStats, type PlayerStats } from './playerStats'
+import {
+  applyStatDeltas,
+  resolveStatDeltas,
+  rustedStats,
+  type LedgerStats,
+  type PlayerStats
+} from './playerStats'
 import type { Disposition } from './relationship'
 import type { Season } from './term'
 import type { BreakMemory } from './termCarry'
@@ -31,8 +37,20 @@ const TALK_MEMORIES = 2
 /** The most one girl comes back remembering of a break. */
 const GIRL_MEMORIES = 5
 
-/** One slot of a break as it was spent: let go by, or on a conversation with somebody. */
-export type BreakEntry = { kind: 'rest' } | { kind: 'text'; charId: string }
+/** One slot of a break as it was spent: let go by, on a conversation with somebody, or on himself. */
+export type BreakEntry = { kind: 'rest' } | { kind: 'text'; charId: string } | { kind: 'alone' }
+
+/** One slot he spent on himself: what he set out to do, how it went, and what it exercised. */
+export interface BreakAlone {
+  /** The index of the slot it was spent on. */
+  slot: number
+  /** What he said he would do, in his own words. */
+  action: string
+  /** How it went, a narrated line at a time. */
+  lines: string[]
+  /** Which of his stats it exercised, as the call that wrote it reported them. */
+  exercised: LedgerStats
+}
 
 /** One text of a break conversation. */
 export interface BreakLine {
@@ -105,6 +123,8 @@ export interface TermBreak {
   promises: Record<string, BreakPromise[]>
   /** Each returning girl's card, by charId; absent until the first conversation asks for them. */
   cards?: Record<string, BreakCard>
+  /** Every slot he spent on himself, in order; absent until the first one. */
+  alone?: BreakAlone[]
   /**
    * What each returning girl remembers of the break, by charId. Present once the break is over,
    * played out or skipped, and the player's to reword until the next semester is generated.
@@ -192,6 +212,57 @@ export function withTalkStarted(
       { slot: draft.spent.length, charId, lines: [{ sender: 'player', text: said }] }
     ]
   }
+}
+
+/** What a slot spent alone is to the stat rules: an hour with nobody else in it, and no class or shift. */
+const ALONE = { solo: true, classScene: false, classOutcome: null, jobOutcome: null } as const
+
+/**
+ * What a slot spent alone pays, by the rule a scene alone pays under during a semester: every
+ * stat it exercised, twice over, and the lines that say so.
+ */
+export function aloneGains(exercised: LedgerStats): ReturnType<typeof resolveStatDeltas> {
+  return resolveStatDeltas(exercised, ALONE)
+}
+
+/**
+ * The break with a slot spent on himself: what he did filed, and his stats moved by what it
+ * exercised. Where no slot can be spent, or he said nothing of what he would do, it is left as
+ * it is.
+ */
+export function withTimeAlone(
+  draft: BreakDraft,
+  action: string,
+  lines: readonly string[],
+  exercised: LedgerStats,
+  ended: Season
+): BreakDraft {
+  const did = action.trim()
+  if (!slotFree(draft, ended) || did === '') return draft
+  const spent: BreakAlone = {
+    slot: draft.spent.length,
+    action: did,
+    lines: lines.map((line) => line.trim()).filter((line) => line !== ''),
+    exercised: {
+      brain: exercised.brain === true,
+      body: exercised.body === true,
+      heart: exercised.heart === true
+    }
+  }
+  return {
+    ...draft,
+    stats: applyStatDeltas(draft.stats, aloneGains(spent.exercised).deltas),
+    spent: [...draft.spent, { kind: 'alone' }],
+    alone: [...(draft.alone ?? []), spent]
+  }
+}
+
+/**
+ * Whether anything was done in the break but let it go by, which is what makes it one that is
+ * closed from what happened in it rather than written for him.
+ */
+export function breakPlayed(draft: Pick<BreakDraft, 'talks' | 'alone'>): boolean {
+  return draft.talks.length > 0 || (draft.alone?.length ?? 0) > 0
 }
 
 /** How many texts of his own a conversation holds. */
@@ -472,7 +543,7 @@ export function stampBreak(draft: BreakDraft, savedAt: number): TermBreak {
   return { ...draft, schemaVersion: BREAK_SCHEMA_VERSION, savedAt }
 }
 
-const BREAK_REQUIRED: Record<keyof Omit<TermBreak, 'memories' | 'cards'>, true> = {
+const BREAK_REQUIRED: Record<keyof Omit<TermBreak, 'memories' | 'cards' | 'alone'>, true> = {
   schemaVersion: true,
   savedAt: true,
   stats: true,
