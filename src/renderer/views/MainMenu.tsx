@@ -5,7 +5,7 @@ import { modLine } from '@shared/modInfo'
 import { writerReady } from '@shared/settingsRules'
 import { shuffle } from '@shared/shuffle'
 import { seasonOf, seasonWords, type Season } from '@shared/term'
-import type { Result } from '@shared/types'
+import type { PlaythroughSummary, Result } from '@shared/types'
 import logoUrl from '../../../assets/vu_logo.png'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { PhotoFailedModal } from '../components/PhotoFailedModal'
@@ -253,42 +253,38 @@ export function MainMenu(): JSX.Element {
   const newest = newestPlaythrough(playthroughs)
   const playDead = !writerOk
 
-  // Whether the newest playthrough is a finished semester with its break under way, which is
-  // then where he left off: read whenever that playthrough changes, and again on the click.
-  const newestId = newest && !newest.enrolling ? newest.playthroughId : null
-  const [onBreak, setOnBreak] = useState(false)
+  // The playthrough whose break is where he left off, if a break is: one under way after any
+  // finished semester and written more recently than every save there is — a semester played
+  // since outranks it. Read whenever the listing changes, and again on the click.
+  const [breakOf, setBreakOf] = useState<PlaythroughSummary | null>(null)
   useEffect(() => {
-    setOnBreak(false)
-    if (!newestId) return
     let live = true
-    void window.api.saves.break(newestId).then((held) => {
-      if (live) setOnBreak(held.ok && held.data !== null)
+    void newestBreak(playthroughs).then((held) => {
+      if (live) setBreakOf(held)
     })
     return () => {
       live = false
     }
-  }, [newestId])
+  }, [playthroughs])
 
   /**
-   * The top slot's answer: back onto the break where one is under way after the newest
-   * semester, under the plain cut the registrar takes, and onto the newest save otherwise. A
-   * break that can no longer be continued has said why, and the save is opened instead.
+   * The top slot's answer: back onto the break where one is where he left off, under the plain
+   * cut the registrar takes, and onto the newest save otherwise. A break that can no longer be
+   * continued has said why, and the save is opened instead.
    */
   async function continueGame(): Promise<void> {
-    if (newestId) {
-      const held = await window.api.saves.break(newestId)
-      const next = held.ok && held.data ? await resolveContinuation(newestId) : null
-      if (next) {
-        beginCrossing(
-          () => {
-            stageContinuation(next)
-            setView('break')
-          },
-          { from: theme }
-        )
-        endCrossing()
-        return
-      }
+    const held = await newestBreak(playthroughs)
+    const next = held ? await resolveContinuation(held.playthroughId) : null
+    if (next) {
+      beginCrossing(
+        () => {
+          stageContinuation(next)
+          setView('break')
+        },
+        { from: theme }
+      )
+      endCrossing()
+      return
     }
     setResuming(continueNewest())
   }
@@ -407,8 +403,8 @@ export function MainMenu(): JSX.Element {
               <span className="vu-btn-sub">
                 {newest.enrolling
                   ? 'class registration'
-                  : onBreak
-                    ? seasonWords(seasonOf(newest.term ?? 0)).endBreak
+                  : breakOf
+                    ? seasonWords(seasonOf(breakOf.term ?? 0)).endBreak
                     : whereYouLeftOff(newest.date, seasonOf(newest.term ?? 0))}
               </span>
             </motion.button>
@@ -594,6 +590,29 @@ export function MainMenu(): JSX.Element {
 }
 
 /** Where the newest playthrough stands, in the bookkeeping voice: `wk2 · tue jan 27`. */
+/**
+ * The playthrough whose break is the newest thing on disk: the break written last among those
+ * under way, where it was written after every playthrough's newest save. `null` with no break
+ * under way, or where something has been played since.
+ */
+async function newestBreak(
+  playthroughs: readonly PlaythroughSummary[]
+): Promise<PlaythroughSummary | null> {
+  let held: { of: PlaythroughSummary; savedAt: number } | null = null
+  for (const playthrough of playthroughs) {
+    // A break follows a semester that was played; a registrar has none.
+    if (playthrough.enrolling) continue
+    const read = await window.api.saves.break(playthrough.playthroughId)
+    if (!read.ok || !read.data) continue
+    if (!held || read.data.savedAt > held.savedAt) {
+      held = { of: playthrough, savedAt: read.data.savedAt }
+    }
+  }
+  if (!held) return null
+  const at = held.savedAt
+  return playthroughs.every((playthrough) => playthrough.savedAt <= at) ? held.of : null
+}
+
 function whereYouLeftOff(date: number, season: Season): string {
   const week = Math.floor(date / 7) + 1
   return `wk${week} · ${formatWeekday(date).slice(0, 3)} ${formatShortGameDate(date, season)}`.toLowerCase()
