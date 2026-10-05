@@ -10,11 +10,11 @@ import { AnimatePresence, motion } from 'motion/react'
 
 import { appError } from '@shared/errors'
 import { STAT_KEYS, STAT_LABELS, tierName } from '@shared/playerStats'
-import { seasonOf, seasonWords, termIndexOf } from '@shared/term'
+import { seasonOf, seasonWords, termIndexOf, type Season } from '@shared/term'
 import {
   breakClock,
   breakOver,
-  breakSlots,
+  breakSlotDate,
   breakSpent,
   breakWeeks,
   BREAK_SLOTS_PER_WEEK,
@@ -30,6 +30,7 @@ import {
   withTalkLeft,
   withTalkStarted,
   type BreakDraft,
+  type BreakEntry,
   type BreakTalk
 } from '@shared/termBreak'
 import type { BreakMemory } from '@shared/termCarry'
@@ -63,7 +64,6 @@ import {
   dealtItem,
   decorIn,
   fadeIn,
-  FILL,
   gestures,
   hovered,
   lift,
@@ -72,7 +72,8 @@ import {
   quietPress,
   spin
 } from './motion'
-import { BackIcon, ChevronIcon } from './screenIcons'
+import { formatShortGameDate } from '../prompts/gameDate'
+import { BackIcon, CheckIcon, ChevronIcon } from './screenIcons'
 import '../vu_styles/Break.css'
 
 const HEADER_IN = fadeIn(0.1)
@@ -173,8 +174,6 @@ export function BreakView(): JSX.Element | null {
 
   const over = draft !== null && breakOver(draft)
   const spent = draft !== null && breakSpent(draft, ended)
-  const clock = draft ? breakClock(draft.spent.length, ended) : null
-  const share = draft ? Math.round((draft.spent.length / breakSlots(ended)) * 100) : 0
   const underWay = draft !== null && openTalk(draft) !== null
   const dead = draft === null || writing || underWay
   const played = draft !== null && draft.talks.length > 0
@@ -385,13 +384,6 @@ export function BreakView(): JSX.Element | null {
           <h1 className="vu-title-text">{titled(words.endBreak)}</h1>
         </div>
 
-        {clock && (
-          <span className="vu-break-clock">
-            {over
-              ? 'Over'
-              : `Week ${clock.week} of ${breakWeeks(ended)} · slot ${clock.slot} of ${BREAK_SLOTS_PER_WEEK}`}
-          </span>
-        )}
       </motion.header>
 
       <motion.section
@@ -400,14 +392,7 @@ export function BreakView(): JSX.Element | null {
         initial="hidden"
         animate="shown"
       >
-        <span className="vu-track vu-break-track" aria-hidden="true">
-          <motion.span
-            className="vu-bar"
-            initial={false}
-            animate={{ width: `${over ? 100 : share}%` }}
-            transition={FILL}
-          />
-        </span>
+        {draft && <BreakCalendar spent={draft.spent} ended={ended} over={over} />}
         {draft && (
           <ul className="vu-break-stats">
             {STAT_KEYS.map((key) => (
@@ -577,6 +562,66 @@ export function BreakView(): JSX.Element | null {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/**
+ * The break as a row of its weeks, each under the date it starts on with its two slots as
+ * boxes: ticked where the slot went on a conversation, struck where it was let go by, and the
+ * week being played picked out.
+ */
+function BreakCalendar({
+  spent,
+  ended,
+  over
+}: {
+  spent: readonly BreakEntry[]
+  ended: Season
+  over: boolean
+}): JSX.Element {
+  const weeks = breakWeeks(ended)
+  const current = over ? -1 : breakClock(spent.length, ended).week - 1
+  // The weeks are dated against the semester they lead up to.
+  const coming: Season = ended === 'spring' ? 'fall' : 'spring'
+
+  return (
+    <ol className="vu-break-weeks" aria-label="The weeks of the break">
+      {Array.from({ length: weeks }, (_, week) => (
+        <li
+          key={week}
+          className={`vu-slot vu-break-week${week === current ? ' vu-slot--on' : ''}`}
+          aria-current={week === current ? 'step' : undefined}
+        >
+          <span className="vu-slot-half">
+            {formatShortGameDate(breakSlotDate(week * BREAK_SLOTS_PER_WEEK, ended).date - 1, coming)}
+          </span>
+          <span className="vu-break-boxes">
+            {Array.from({ length: BREAK_SLOTS_PER_WEEK }, (_, half) => {
+              const slot = week * BREAK_SLOTS_PER_WEEK + half
+              const entry = spent[slot]
+              const state = entry ? entry.kind : !over && slot === spent.length ? 'next' : 'open'
+              return (
+                <span
+                  key={half}
+                  className={`vu-break-box vu-break-box--${state}`}
+                  aria-label={
+                    state === 'text'
+                      ? 'Spent texting'
+                      : state === 'rest'
+                        ? 'Let go by'
+                        : state === 'next'
+                          ? 'The slot being spent'
+                          : 'Not yet spent'
+                  }
+                >
+                  {state === 'text' ? <CheckIcon /> : null}
+                </span>
+              )
+            })}
+          </span>
+        </li>
+      ))}
+    </ol>
   )
 }
 

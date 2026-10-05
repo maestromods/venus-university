@@ -44,21 +44,6 @@
   flex: none;
 }
 
-/* Where the break stands, in the bookkeeping voice: flat, since a reading is not an answer,
-   and on the tint the title sits on. */
-.vu-break-clock {
-  flex: none;
-  margin-left: auto;
-  padding: 10px 20px;
-  border-radius: 999px 0 0 999px;
-  background: var(--vu-highlight);
-  color: var(--vu-accent);
-  font: 700 16px var(--font-mono);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 /* ---- the reader ------------------------------------------------------------ */
 
 /* How much of the break is gone, over what it has left of him. The margin clears the title's
@@ -71,8 +56,68 @@
   margin-top: 14px;
 }
 
-.vu-break-track {
-  height: 12px;
+/* The break's weeks in one row, a tile each: the calendar the clock is read off. */
+.vu-break-weeks {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vu-break-week {
+  gap: 8px;
+  min-height: 0;
+  padding: 10px 6px 12px;
+}
+
+/* A week's two slots, side by side under its date. */
+.vu-break-boxes {
+  display: flex;
+  gap: 8px;
+}
+
+/* One slot as the checkbox's own box, read and never pressed: empty until it is spent. */
+.vu-break-box {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--vu-border);
+  border-radius: 9px;
+  background: var(--vu-ground);
+  color: var(--vu-accent-ink);
+}
+
+.vu-break-box svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* The slot the next action is spent on. */
+.vu-break-box--next {
+  border-color: var(--vu-accent);
+}
+
+/* Spent on a conversation: the checkbox's ticked state. */
+.vu-break-box--text {
+  border-color: var(--vu-accent);
+  background: var(--vu-accent);
+}
+
+/* Let go by: filled in the border's own tone and struck through, so it reads as gone. */
+.vu-break-box--rest {
+  background: var(--vu-border);
+}
+
+.vu-break-box--rest::after {
+  content: '';
+  width: 12px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--vu-ground);
 }
 
 /* A small cluster, so one shallow lean rather than a fan; the padding is the room the chips'
