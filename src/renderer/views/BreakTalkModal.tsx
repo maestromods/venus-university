@@ -66,11 +66,16 @@ export function BreakTalkModal({
   const next = talk?.lines[landed]
   useEffect(() => {
     if (!next) return
+    // Each text lands with the phone's own sound for it, going out or coming in.
     if (next.sender === 'player') {
       setLanded((count) => count + 1)
+      useAudioStore.getState().play('text_out')
       return
     }
-    const timer = setTimeout(() => setLanded((count) => count + 1), typingDelayFor(next.text))
+    const timer = setTimeout(() => {
+      setLanded((count) => count + 1)
+      useAudioStore.getState().play('text_in')
+    }, typingDelayFor(next.text))
     return () => clearTimeout(timer)
   }, [next])
   const typing = phase === 'replying' || next?.sender === 'contact'
