@@ -12,6 +12,7 @@ import { TALK_TURNS, talkTurns, type BreakTalk } from '@shared/termBreak'
 import type { Character } from '@shared/types'
 import { TitleTab } from '../components/TitleTab'
 import { useModalShell } from '../components/useModalShell'
+import { typingDelayFor } from '../stores/textingPace'
 import type { ScreenTheme } from './clockTheme'
 import { gestures, lift, panelUnderTab, press, spin, typingDot, veilIn } from './motion'
 import '../vu_styles/Bunnyboard.css'
@@ -55,18 +56,38 @@ export function BreakTalkModal({
     if (!locked && phase === 'idle') onClose()
   })
 
+  // How many of the thread's lines are on screen. Whatever was already said when the panel
+  // opened is; a text of hers that arrives after that lands one at a time, each after the time
+  // it would have taken her to type, as her texts do on the phone.
+  const lines = talk?.lines.length ?? 0
+  const [landed, setLanded] = useState(lines)
+  const next = talk?.lines[landed]
+  useEffect(() => {
+    if (!next) return
+    if (next.sender === 'player') {
+      setLanded((count) => count + 1)
+      return
+    }
+    const timer = setTimeout(() => setLanded((count) => count + 1), typingDelayFor(next.text))
+    return () => clearTimeout(timer)
+  }, [next])
+  const typing = phase === 'replying' || next?.sender === 'contact'
+  // The judgement may be back before her last text has landed; it waits its turn.
+  const settled = landed >= lines
+  // Over as far as the player has been shown.
+  const done = judged && settled
+
   const turns = talk ? talkTurns(talk) : 0
-  const waiting = phase !== 'idle'
+  const waiting = phase !== 'idle' || !settled
   const canWrite = !judged && !waiting && talk?.ended === undefined && turns < TALK_TURNS
   const canSend = canWrite && text.trim() !== ''
 
   // The thread follows its newest line, and the wait under it.
   const thread = useRef<HTMLDivElement>(null)
-  const lines = talk?.lines.length ?? 0
   useEffect(() => {
     const node = thread.current
     if (node) node.scrollTop = node.scrollHeight
-  }, [lines, phase, judged])
+  }, [landed, typing, phase, judged])
 
   /** Sends what the well holds and empties it. */
   function send(): void {
@@ -117,7 +138,7 @@ export function BreakTalkModal({
                 The first text spends this slot on {character.firstName}.
               </p>
             )}
-            {talk?.lines.map((line, index) => (
+            {talk?.lines.slice(0, landed).map((line, index) => (
               <div
                 key={index}
                 className={`vu-bb-bubble vu-bb-bubble--${line.sender === 'player' ? 'mine' : 'theirs'}`}
@@ -125,7 +146,7 @@ export function BreakTalkModal({
                 {line.text}
               </div>
             ))}
-            {phase === 'replying' && (
+            {typing && (
               <div
                 className="vu-bb-bubble vu-bb-bubble--theirs vu-bb-bubble--typing"
                 aria-label="typing"
@@ -135,18 +156,20 @@ export function BreakTalkModal({
                 ))}
               </div>
             )}
-            {phase === 'judging' && (
+            {phase === 'judging' && settled && (
               <span className="vu-breaktalk-wait">
                 <motion.span className="vu-ring" animate={spin} />
                 The conversation is over
               </span>
             )}
-            {judged && talk?.reason && <p className="vu-note-text vu-breaktalk-reason">{talk.reason}</p>}
+            {done && talk?.reason && (
+              <p className="vu-note-text vu-breaktalk-reason">{talk.reason}</p>
+            )}
           </div>
           <div className="vu-scroll-fade" />
         </div>
 
-        {!judged && (
+        {!done && (
           <label className="vu-field">
             <input
               id="break-talk-text"
@@ -162,16 +185,16 @@ export function BreakTalkModal({
         )}
 
         <div className="vu-foot">
-          {judged || talk === null ? (
+          {done || talk === null ? (
             <motion.button
               id="break-talk-close"
               type="button"
-              className={`vu-btn ${judged ? 'vu-btn--primary' : 'vu-btn--outline'} vu-btn--panel vu-paper`}
+              className={`vu-btn ${done ? 'vu-btn--primary' : 'vu-btn--outline'} vu-btn--panel vu-paper`}
               {...gestures(waiting, lift, press)}
               disabled={waiting}
               onClick={onClose}
             >
-              {judged ? 'Close' : 'Cancel'}
+              {done ? 'Close' : 'Cancel'}
             </motion.button>
           ) : (
             <motion.button
@@ -185,7 +208,7 @@ export function BreakTalkModal({
               End the conversation
             </motion.button>
           )}
-          {!judged && (
+          {!done && (
             <motion.button
               id="break-talk-send"
               type="submit"
