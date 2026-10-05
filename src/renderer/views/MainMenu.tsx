@@ -4,7 +4,7 @@ import { toAppError } from '@shared/errors'
 import { modLine } from '@shared/modInfo'
 import { writerReady } from '@shared/settingsRules'
 import { shuffle } from '@shared/shuffle'
-import { seasonOf, type Season } from '@shared/term'
+import { seasonOf, seasonWords, type Season } from '@shared/term'
 import type { Result } from '@shared/types'
 import logoUrl from '../../../assets/vu_logo.png'
 import { ConfirmModal } from '../components/ConfirmModal'
@@ -17,7 +17,7 @@ import { beginCrossing, coverSwap, endCrossing, useCrossingStore } from '../stor
 import { entryCrossing } from '../stores/slotCrossing'
 import { firstPhotoFailure, usePhotoStore } from '../stores/photoStore'
 import { useAssetStore } from '../stores/assetStore'
-import { stageEnrollment } from '../stores/newGame'
+import { resolveContinuation, stageContinuation, stageEnrollment } from '../stores/newGame'
 import {
   isEnrollment,
   newestPlaythrough,
@@ -253,6 +253,46 @@ export function MainMenu(): JSX.Element {
   const newest = newestPlaythrough(playthroughs)
   const playDead = !writerOk
 
+  // Whether the newest playthrough is a finished semester with its break under way, which is
+  // then where he left off: read whenever that playthrough changes, and again on the click.
+  const newestId = newest && !newest.enrolling ? newest.playthroughId : null
+  const [onBreak, setOnBreak] = useState(false)
+  useEffect(() => {
+    setOnBreak(false)
+    if (!newestId) return
+    let live = true
+    void window.api.saves.break(newestId).then((held) => {
+      if (live) setOnBreak(held.ok && held.data !== null)
+    })
+    return () => {
+      live = false
+    }
+  }, [newestId])
+
+  /**
+   * The top slot's answer: back onto the break where one is under way after the newest
+   * semester, under the plain cut the registrar takes, and onto the newest save otherwise. A
+   * break that can no longer be continued has said why, and the save is opened instead.
+   */
+  async function continueGame(): Promise<void> {
+    if (newestId) {
+      const held = await window.api.saves.break(newestId)
+      const next = held.ok && held.data ? await resolveContinuation(newestId) : null
+      if (next) {
+        beginCrossing(
+          () => {
+            stageContinuation(next)
+            setView('break')
+          },
+          { from: theme }
+        )
+        endCrossing()
+        return
+      }
+    }
+    setResuming(continueNewest())
+  }
+
   /* Each button's deadness is named once and read three times: the deal it lands on, the
      gestures it is not handed, and the attribute. A dealt button carries motion's own inline
      `opacity`, which beats the CSS dim, so a dead one is dealt to the dim instead. The writer
@@ -361,13 +401,15 @@ export function MainMenu(): JSX.Element {
               variants={continueDead ? dealtItemDead : dealtItem}
               {...gestures(continueDead, lift, press)}
               disabled={continueDead}
-              onClick={() => setResuming(continueNewest())}
+              onClick={() => void continueGame()}
             >
               Continue
               <span className="vu-btn-sub">
                 {newest.enrolling
                   ? 'class registration'
-                  : whereYouLeftOff(newest.date, seasonOf(newest.term ?? 0))}
+                  : onBreak
+                    ? seasonWords(seasonOf(newest.term ?? 0)).endBreak
+                    : whereYouLeftOff(newest.date, seasonOf(newest.term ?? 0))}
               </span>
             </motion.button>
           ) : (
