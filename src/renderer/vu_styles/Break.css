@@ -339,3 +339,8 @@
   color: var(--stat);
   font-weight: 700;
 }
+
+/* The words of a line not yet typed: there, so the line keeps its room, and unseen. */
+.vu-breakalone-untyped {
+  visibility: hidden;
+}

@@ -58,6 +58,15 @@ export interface BreakAloneModalProps {
 
 const SUGGESTIONS_IN = dealt(0.1, 0.05)
 
+/** Milliseconds per character of the typewriter, the scene box's own pace. */
+const REVEAL_MS = 18
+
+/** How many of those ticks pass between one line and the next. */
+const LINE_BEAT = 18
+
+/** What has a sound as it is typed: a letter or a digit, and nothing a space or a mark says. */
+const VOICED = /[\p{L}\p{N}]/u
+
 /** A suggestion with the stat it exercises drawn in that stat's own hue. */
 function IdeaWords({ text }: { text: string }): JSX.Element {
   const key = STAT_KEYS.find((stat) => text.includes(STAT_LABELS[stat]))
@@ -92,14 +101,49 @@ export function BreakAloneModal({
   // What it did for him, in the lines a scene's ending gives the same thing.
   const gains = spent ? aloneGains(spent.exercised).lines : []
 
-  // Those lines arrive with the sting they have there, once.
+  // How it went is typed out as a scene's narration is: a letter at a time under the narrator's
+  // blip, a beat between lines, and a click to have the rest at once. A slot that was already
+  // written when the panel opened is shown whole.
+  const lines = spent?.lines ?? []
+  const starts: number[] = []
+  let total = 0
+  for (const line of lines) {
+    starts.push(total)
+    total += line.length + LINE_BEAT
+  }
+  const [typed, setTyped] = useState(spent ? total : 0)
+  const typing = spent !== null && typed < total
+  useEffect(() => {
+    if (!typing) return
+    const timer = setInterval(() => setTyped((count) => count + 1), REVEAL_MS)
+    return () => clearInterval(timer)
+  }, [typing])
+
+  // The voice under the typewriter: a blip on every third letter or digit, as the box gives.
+  const typedBefore = useRef(typed)
+  useEffect(() => {
+    const before = typedBefore.current
+    typedBefore.current = typed
+    if (typed !== before + 1) return
+    const at = starts.findLastIndex((start) => start < typed)
+    const line = lines[at]
+    const within = typed - (starts[at] ?? 0)
+    if (!line || within > line.length || !VOICED.test(line[within - 1] ?? '')) return
+    let voiced = 0
+    for (const character of line.slice(0, within)) if (VOICED.test(character)) voiced += 1
+    if (voiced % 3 === 0) useAudioStore.getState().play('narrator')
+    // The lines and their starts are the slot's own and do not change under a count.
+  }, [typed])
+
+  // What it did for him arrives once the telling is over, with the sting it has in a scene.
+  const told = spent !== null && !typing
   const stung = useRef(spent !== null)
   const gained = gains.length > 0
   useEffect(() => {
-    if (!spent || stung.current) return
+    if (!told || stung.current) return
     stung.current = true
     if (gained) useAudioStore.getState().play('positive')
-  }, [spent, gained])
+  }, [told, gained])
 
   /** Spends the slot on what the well holds. */
   function start(): void {
@@ -143,22 +187,30 @@ export function BreakAloneModal({
         <span className="vu-breaktalk-count">Week {week}</span>
 
         {spent ? (
-          <div className="vu-breakalone-told">
-            {spent.lines.map((line, index) => (
-              <p key={index} className="vu-note-text">
-                {line}
-              </p>
-            ))}
-            <ul className="vu-breaktalk-came">
-              {gains.map((gain, index) => (
-                <li key={index} className="vu-note-text">
-                  {gain.text}
-                </li>
-              ))}
-              {gains.length === 0 && (
-                <li className="vu-note-text">None of it did much for your stats.</li>
-              )}
-            </ul>
+          // A click anywhere on the telling lands the rest of it, as one does on the box.
+          <div className="vu-breakalone-told" onClick={() => setTyped(total)}>
+            {spent.lines.map((line, index) => {
+              const shown = Math.max(0, Math.min(line.length, typed - (starts[index] ?? 0)))
+              return (
+                <p key={index} className="vu-note-text">
+                  {line.slice(0, shown)}
+                  {/* The words not yet typed hold their room, so nothing below them moves. */}
+                  <span className="vu-breakalone-untyped">{line.slice(shown)}</span>
+                </p>
+              )
+            })}
+            {told && (
+              <ul className="vu-breaktalk-came">
+                {gains.map((gain, index) => (
+                  <li key={index} className="vu-note-text">
+                    {gain.text}
+                  </li>
+                ))}
+                {gains.length === 0 && (
+                  <li className="vu-note-text">None of it did much for your stats.</li>
+                )}
+              </ul>
+            )}
           </div>
         ) : (
           <>
