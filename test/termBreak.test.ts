@@ -513,10 +513,27 @@ describe('a trip to see somebody', () => {
     ])
     expect(home.invites?.[0]?.state).toBe('done')
     expect(tripStep(home)).toBeNull()
+    // Each on the day of its own slot.
     expect(playedMemories(home, { a: lover }, 'spring').a).toEqual([
-      { type: 'liked', desc: 'the reader came to see her' },
-      { type: 'liked', desc: 'the reader came to see her' }
+      { type: 'liked', desc: 'the reader came to see her', date: breakSlotDate(2, 'spring').date },
+      { type: 'liked', desc: 'the reader came to see her', date: breakSlotDate(3, 'spring').date }
     ])
+
+    // And never crowded out by what conversations left, however many of those there are.
+    const chatty = {
+      ...home,
+      talks: Array.from({ length: 7 }, (_, index) => ({
+        slot: 6 + index,
+        charId: 'a',
+        lines: [],
+        ended: 'player' as const,
+        verdict: 'warmer' as const,
+        memories: [{ type: 'liked' as const, desc: `text ${index}` }]
+      }))
+    }
+    const kept = playedMemories(chatty, { a: lover }, 'spring').a ?? []
+    expect(kept.filter((memory) => memory.desc.startsWith('text'))).toHaveLength(5)
+    expect(kept.filter((memory) => memory.desc === 'the reader came to see her')).toHaveLength(2)
   })
 
 it('carries what a visit reached into the next semester, dated on the slot it happened in', () => {

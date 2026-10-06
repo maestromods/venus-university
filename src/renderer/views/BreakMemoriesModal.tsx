@@ -43,7 +43,7 @@ function rowsOf(
   return cast.flatMap(({ charId }) => {
     const written = memories[charId] ?? []
     return written.length > 0
-      ? written.map((memory) => ({ charId, type: memory.type, desc: memory.desc }))
+      ? written.map((memory) => ({ ...memory, charId }))
       : [{ charId, type: 'liked' as const, desc: '' }]
   })
 }
@@ -58,7 +58,8 @@ function memoriesOf(
       charId,
       rows
         .filter((row) => row.charId === charId)
-        .map((row) => ({ type: row.type, desc: row.desc }))
+        // The day a memory happened on is kept through a rewording.
+        .map(({ charId: _charId, ...memory }) => memory)
     ])
   )
 }

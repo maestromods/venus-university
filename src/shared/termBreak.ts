@@ -856,9 +856,11 @@ function breakSpan(ended: Season): string {
 
 /**
  * What each girl in `standings` remembers of a break that was played, off what happened in it
- * and nothing else: what her conversations left her with, a promise he never kept, and — for
- * somebody who would mind — never having heard from him at all. The newest
- * {@link GIRL_MEMORIES} are kept. A conversation left open counts for nothing.
+ * and nothing else: the newest {@link GIRL_MEMORIES} of what her conversations left her with,
+ * everything a day spent with her did, each on the day it happened, and then — undated, so they
+ * fall in the break's last days — a promise he never kept, an invitation turned down, and for
+ * somebody who would mind, never having heard from him at all. A conversation left open counts
+ * for nothing.
  */
 export function playedMemories(
   draft: Pick<BreakDraft, 'talks' | 'promises' | 'visits' | 'invites'>,
@@ -869,13 +871,16 @@ export function playedMemories(
     Object.entries(standings).map(([charId, standing]) => {
       const talks = draft.talks.filter((talk) => talk.charId === charId)
       const visits = (draft.visits ?? []).filter((visit) => visit.charId === charId)
-      // Conversations and days spent with her, in the order they happened.
+      // What her conversations left, the newest {@link GIRL_MEMORIES} of it, and everything a
+      // day spent with her did — a trip is never crowded out by texts — each on the day of its
+      // slot, in the order it happened.
+      const on = (slot: number, left: readonly BreakMemory[]): BreakMemory[] =>
+        left.map((memory) => ({ ...memory, date: breakSlotDate(slot, ended).date }))
+      const texted = talks.flatMap((talk) => on(talk.slot, talk.memories ?? []))
       const memories: BreakMemory[] = [
-        ...talks.map((talk) => ({ slot: talk.slot, left: talk.memories ?? [] })),
-        ...visits.map((visit) => ({ slot: visit.slot, left: visit.memories }))
-      ]
-        .sort((a, b) => a.slot - b.slot)
-        .flatMap((entry) => entry.left)
+        ...texted.slice(-GIRL_MEMORIES),
+        ...visits.flatMap((visit) => on(visit.slot, visit.memories))
+      ].sort((a, b) => (a.date ?? 0) - (b.date ?? 0))
       // A promise still open when the break ends is one he never kept. One is remembered,
       // the first: the conversation a promise was gone back on in has already said the rest.
       const unkept = (draft.promises[charId] ?? []).find((promise) => promise.state !== 'kept')
@@ -901,7 +906,7 @@ export function playedMemories(
           desc: `the reader did not write to her once ${breakSpan(ended)}`
         })
       }
-      return [charId, memories.slice(-GIRL_MEMORIES)]
+      return [charId, memories]
     })
   )
 }
@@ -920,7 +925,7 @@ export function withBreakClosed(
       Object.entries(memories).map(([charId, list]) => [
         charId,
         list
-          .map((memory) => ({ type: memory.type, desc: memory.desc.trim() }))
+          .map((memory) => ({ ...memory, desc: memory.desc.trim() }))
           .filter((memory) => memory.desc !== '')
       ])
     )
