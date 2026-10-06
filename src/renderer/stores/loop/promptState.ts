@@ -360,7 +360,7 @@ export function promptState(): PromptState {
     // Only ever set inside the epilogue.
     ...(farewell ? { farewell } : {}),
     // Only ever set for a scene a break is running.
-    ...(loopState.trip ? { trip: { now: loopState.trip.now } } : {}),
+    ...(loopState.trip ? { trip: { now: loopState.trip.now, day: loopState.trip.day } } : {}),
     playerJob: game.job,
     occasions: game.occasions,
     weather: game.weather,

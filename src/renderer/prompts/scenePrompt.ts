@@ -195,7 +195,11 @@ export interface PromptState {
    * Set only for a scene a break is running, down the goodbye's path: what stands in the NOW
    * block where a goodbye's own two lines would.
    */
-  trip?: { now: readonly string[] }
+  trip?: {
+    now: readonly string[]
+    /** The day the scene really falls on, which is what her mood cycle is read at. */
+    day: number
+  }
   /**
    * Classes he added at add/drop and has not yet walked into — every unspent add;
    * `classCode` decides which applies.
@@ -561,9 +565,12 @@ function castBlock(cast: readonly Character[], state: PromptState): string[] {
     lines.push(...profileLines(character, flags, cast.length))
 
     // What kind of day she is having.
+    // A break's scene stands on the epilogue's slot whatever day it falls on, so her mood is read
+    // at the day it really is: otherwise she would have the same kind of day on every visit.
+    const moodDay = state.trip?.day ?? state.date
     const mood = moodLine(
       character.firstName,
-      state.date,
+      moodDay,
       info?.moodCycleOffset ?? 0,
       hasTrait(character, 'Mood-swings')
     )
@@ -580,7 +587,7 @@ function castBlock(cast: readonly Character[], state: PromptState): string[] {
         // In the room, so this only says whether they have met on the phone first.
         { texting: false, texted: state.textedWith?.includes(character.charId) ?? false },
         // Where she is in her cycle, for a Promiscuous girl's DTF days.
-        { date: state.date, offset: info?.moodCycleOffset ?? 0 }
+        { date: moodDay, offset: info?.moodCycleOffset ?? 0 }
       )
     )
 
