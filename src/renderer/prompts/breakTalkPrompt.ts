@@ -740,7 +740,11 @@ export interface BreakVisitReply {
   memories?: Array<{ type?: string; desc?: string }>
   stats?: { brain?: boolean; body?: boolean; heart?: boolean }
   events?: string[]
+  promisesKept?: number[]
 }
+
+/** Everything the visit's judgement answers with. */
+const VISIT_FIELDS = ['verdict', 'summary', 'memories', 'stats', 'events', 'promisesKept']
 
 /** Builds the request that judges one slot spent with her, once its scene is over. */
 export function buildBreakVisitPrompt(input: BreakVisitInput): StructuredRequest {
@@ -789,6 +793,11 @@ export function buildBreakVisitPrompt(input: BreakVisitInput): StructuredRequest
     'Set Brain to true if he worked on his smarts, Body to true if he worked on his fitness, and Heart to true if he worked on his charisma or social skills.',
     'Set a stat to false if it did not exercise it.',
     '',
+    'PROMISES',
+    promises.some((promise) => promise.state === 'open')
+      ? '"promisesKept" lists the numbers of the promises above that this time together made good on: coming to see her keeps a promise to come, and doing here what he said he would keeps that. Empty when it kept none.'
+      : '"promisesKept" is empty: he owed her nothing going in.',
+    '',
     'MILESTONES',
     '"events" lists what the two of them actually reached in this scene, and nothing they only talked about or nearly did. Empty when nothing below happened.',
     ...VISIT_EVENTS.map((event) => `- ${event}: ${EVENT_ASKED[event]}`)
@@ -798,7 +807,8 @@ export function buildBreakVisitPrompt(input: BreakVisitInput): StructuredRequest
   return {
     system,
     user,
-    schema: objectSchema('break_visit', ['verdict', 'summary', 'memories', 'stats', 'events'], {
+    schema: objectSchema('break_visit', VISIT_FIELDS, {
+      promisesKept: { type: 'array', items: { type: 'integer' } },
       events: { type: 'array', items: { type: 'string', enum: [...VISIT_EVENTS] } },
       verdict: { type: 'string', enum: [...VERDICTS] },
       summary: { type: 'string' },
@@ -833,7 +843,9 @@ export function buildBreakVisitPrompt(input: BreakVisitInput): StructuredRequest
  */
 export function normalizeBreakVisit(
   reply: BreakVisitReply
-): Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised' | 'events'> {
+): Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised' | 'events'> & {
+  promisesKept: number[]
+} {
   const verdict = VERDICTS.find((value) => value === reply?.verdict) ?? 'neutral'
   const memories: BreakMemory[] = []
   for (const item of Array.isArray(reply?.memories) ? reply.memories : []) {
@@ -853,6 +865,9 @@ export function normalizeBreakVisit(
       body: reply?.stats?.body === true,
       heart: reply?.stats?.heart === true
     },
+    promisesKept: (Array.isArray(reply?.promisesKept) ? reply.promisesKept : []).filter(
+      (item): item is number => Number.isInteger(item) && item >= 0
+    ),
     events: [
       ...new Set(
         (Array.isArray(reply?.events) ? reply.events : []).filter(

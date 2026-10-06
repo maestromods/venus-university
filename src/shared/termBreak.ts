@@ -586,6 +586,9 @@ export function withTravel(draft: BreakDraft, ended: Season): BreakDraft {
   }
 }
 
+/** A promise that a visit is the keeping of: to come, to drive or fly out, to visit, to see her. */
+const VISIT_PROMISE = /\b(visit|come (out|up|over|down|and|to|see|stay)|drive|fly|travel|see her|stay with)\b/i
+
 /** What a slot with her is to the stat rules: a scene with company, and no class or shift. */
 const VISIT = { solo: false, classScene: false, classOutcome: null, jobOutcome: null } as const
 
@@ -601,7 +604,10 @@ export function visitGains(exercised: LedgerStats): ReturnType<typeof resolveSta
  */
 export function withVisit(
   draft: BreakDraft,
-  judged: Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised' | 'events'>,
+  judged: Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised' | 'events'> & {
+    /** Indices into her promises still open that this time together made good on. */
+    promisesKept?: readonly number[]
+  },
   ended: Season
 ): BreakDraft {
   const step = tripStep(draft)
@@ -611,8 +617,19 @@ export function withVisit(
     .filter((memory) => memory.desc !== '')
     .slice(0, TALK_MEMORIES)
   const events = (judged.events ?? []).filter((event) => VISIT_EVENTS.includes(event))
+  // Coming to see her is what keeps a promise to come and see her, whatever the judgement says
+  // of it; anything else he owed her is kept where the judgement says this made good on it.
+  const before = draft.promises[step.charId] ?? []
+  const open = before.flatMap((promise, index) => (promise.state === 'open' ? [index] : []))
+  const kept = new Set((judged.promisesKept ?? []).map((at) => open[at]))
+  const promises = before.map((promise, index): BreakPromise =>
+    promise.state === 'open' && (kept.has(index) || VISIT_PROMISE.test(promise.text))
+      ? { ...promise, state: 'kept' }
+      : promise
+  )
   return {
     ...draft,
+    ...(before.length > 0 ? { promises: { ...draft.promises, [step.charId]: promises } } : {}),
     stats: applyStatDeltas(draft.stats, visitGains(judged.exercised).deltas),
     spent: [...draft.spent, { kind: 'visit', charId: step.charId }],
     visits: [

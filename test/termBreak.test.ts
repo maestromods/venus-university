@@ -579,6 +579,24 @@ it('carries what a visit reached into the next semester, dated on the slot it ha
     expect(mayInvite(home, 'b', friend, 'spring')).toBe(true)
   })
 
+  it('keeps a promise to come and see her by going', () => {
+    const owed: BreakDraft = {
+      ...withInviteAnswered(withInvite(fresh, 'a', 'spring'), 'a', true, 'spring'),
+      promises: {
+        a: [
+          { text: 'drive out to Connecticut on Friday to visit her for the weekend', state: 'open' },
+          { text: 'send her the playlist', state: 'open' }
+        ]
+      }
+    }
+    const there = withTravel(withSlotSpent(owed, 'spring'), 'spring')
+    const visited = withVisit(there, judged, 'spring')
+    expect(visited.promises.a?.map((promise) => promise.state)).toEqual(['kept', 'open'])
+    // And anything else the judgement says the visit made good on.
+    const both = withVisit(there, { ...judged, promisesKept: [1] }, 'spring')
+    expect(both.promises.a?.map((promise) => promise.state)).toEqual(['kept', 'kept'])
+  })
+
     it('cannot be booked over another trip or past the end of the break', () => {
     const two = withInvite(withInvite(fresh, 'a', 'spring'), 'b', 'spring')
     const booked = withInviteAnswered(two, 'a', true, 'spring')
