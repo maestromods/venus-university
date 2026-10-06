@@ -706,7 +706,15 @@ export function BreakView(): JSX.Element | null {
         {(writing || checking) && (
           <span className="vu-break-writing">
             <motion.span className="vu-ring" animate={spin} />
-            {writing ? 'Writing the break' : 'Checking your phone'}
+            {/* The week's own texts are asked for whatever he is doing; on a trip the wait is
+                said as the trip's own. */}
+            {writing
+              ? 'Writing the break'
+              : step?.kind === 'visit'
+                ? `On the way to ${tripName}'s`
+                : step?.kind === 'back'
+                  ? 'Packing for the way home'
+                  : 'Checking your phone'}
           </span>
         )}
 
