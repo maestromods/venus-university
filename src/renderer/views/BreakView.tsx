@@ -54,6 +54,7 @@ import {
 import {
   breakCast,
   breakStandings,
+  breakTags,
   cancelBreakCall,
   canText,
   judgeTalk,
@@ -89,6 +90,7 @@ import {
 } from './motion'
 import { formatShortGameDate } from '../prompts/gameDate'
 import { BackIcon, CheckIcon, ChevronIcon } from './screenIcons'
+import '../vu_styles/Bunnyboard.css'
 import '../vu_styles/Break.css'
 
 const HEADER_IN = fadeIn(0.1)
@@ -220,6 +222,8 @@ export function BreakView(): JSX.Element | null {
   const nameKnown = Object.fromEntries(
     cast.map((c) => [c.charId, from.save.charInfo[c.charId]?.nameKnown === true])
   )
+  // What he calls each of them, which does not move over the break.
+  const tags = breakTags(from)
   // A face is drawn only for somebody whose name he has learned.
   const faces = cast.filter((c) => nameKnown[c.charId])
 
@@ -548,6 +552,7 @@ export function BreakView(): JSX.Element | null {
                 // A girl he cannot reach, and anybody once the slots are gone, is only a face.
                 opens={!over && !spent && !dead && canText(from, character.charId)}
                 wrote={wroteOf(character.charId)}
+                tag={tags[character.charId]}
                 onOpen={() => openTalkPanel(character.charId)}
               />
             ))}
@@ -835,9 +840,12 @@ function BreakFace({
   character,
   texted,
   wrote,
+  tag,
   opens,
   onOpen
 }: {
+  /** What the reader calls her, as her contact page says it. */
+  tag: string | undefined
   character: Character
   texted: number
   /** Whether she has sent something he has not answered, and whether he has opened it. */
@@ -864,6 +872,11 @@ function BreakFace({
         </motion.button>
       ) : (
         <div className="vu-card-face">{face}</div>
+      )}
+      {tag && (
+        <span className="vu-bb-tag vu-break-tag" data-tag={tag.toLowerCase().replace(/\s+/g, '-')}>
+          {tag}
+        </span>
       )}
       {wrote && (
         <span

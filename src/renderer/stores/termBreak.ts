@@ -1,5 +1,5 @@
 import { FINAL_DATE } from '@shared/classes'
-import { affectionFor, dispositionOf } from '@shared/relationship'
+import { affectionFor, dispositionOf, relationshipTagOf } from '@shared/relationship'
 import { daysToNextTerm, seasonOf, setActiveTerm, termIndexOf, type Season } from '@shared/term'
 import {
   openTalk,
@@ -111,6 +111,18 @@ export function breakStandings(from: Continuation): Record<string, BreakStanding
         disposition: dispositionOf(affectionFor(state, then, character)),
         lover: state.flags.isLover
       }
+    ])
+  )
+}
+
+/** What the reader calls each of them, as her contact page said it when the semester ended. */
+export function breakTags(from: Continuation): Record<string, string> {
+  const { girls, setting } = castFor(from)
+  const then = FINAL_DATE - daysToNextTerm(setting.ended)
+  return Object.fromEntries(
+    girls.map(({ character, state }) => [
+      character.charId,
+      relationshipTagOf(state.flags, affectionFor(state, then, character))
     ])
   )
 }

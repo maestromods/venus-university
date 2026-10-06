@@ -216,6 +216,13 @@
   right: -6px;
 }
 
+/* What he calls her, the phone's own tag, stuck over the foot of her arch. */
+.vu-break-tag {
+  position: absolute;
+  top: 212px;
+  right: 4px;
+}
+
 /* That she has written and not been answered, on the card's other corner. */
 .vu-break-wrote {
   left: -6px;
