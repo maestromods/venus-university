@@ -375,6 +375,24 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
   async function beginNextTerm(playthroughId: string, entry: ResolvedSave): Promise<void> {
     const next = await resolveContinuation(playthroughId, entry.saveId)
     if (!next) return
+
+    // From the Game menu the running game says its last word and is torn down first, under the
+    // one curtain, as reopening the registrar from there does.
+    if (onClose) {
+      if (!beginCrossing(undefined, menuCrossing(theme))) return
+      coverSwap(() => {
+        void (async () => {
+          await leaveToMenu({ keepCrossing: true })
+          setMenuTheme(theme)
+          stageContinuation(next)
+          setView('break')
+          onClose()
+          endCrossing()
+        })()
+      })
+      return
+    }
+
     const cut = beginCrossing(
       () => {
         stageContinuation(next)
@@ -519,16 +537,17 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
                   const entry = saves.find((candidate) => candidate.saveId === card.saveId)
                   // Neither half loads without the other.
                   if (!entry?.summary || !entry.record) return
-                  // Loading over a running game asks first; from the Main Menu the click loads,
-                  // unless the save closed a semester another one follows, which asks which.
-                  if (onClose) setConfirmingLoad(entry)
-                  else if (
+                  // A save that closed a semester another one follows asks which, wherever it is
+                  // picked from; otherwise loading over a running game asks first, and from the
+                  // Main Menu the click loads.
+                  if (
                     entry.summary.graduationSeen &&
                     !entry.unloadable &&
                     hasNextTerm(termIndexOf(entry.record))
                   ) {
                     setChoosingFinished(entry)
-                  } else void load(selected.playthroughId, entry)
+                  } else if (onClose) setConfirmingLoad(entry)
+                  else void load(selected.playthroughId, entry)
                 }}
                 onDelete={(card) => {
                   const entry = saves.find((candidate) => candidate.saveId === card.saveId)
@@ -694,7 +713,13 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
             id="finished-save"
             theme={theme}
             title="The semester is over"
-            message={`You can load this save to say your goodbyes, or carry it on through ${seasonWords(seasonOf(termIndexOf(choosingFinished.record))).endBreak} into the ${termLabel(termIndexOf(choosingFinished.record) + 1)}.`}
+            message={`You can load this save to say your goodbyes, or carry it on through ${seasonWords(seasonOf(termIndexOf(choosingFinished.record))).endBreak} into the ${termLabel(termIndexOf(choosingFinished.record) + 1)}.${
+              onClose
+                ? hasDecisionPoint()
+                  ? ' Either way, progress since the last action in the game you are in will be lost.'
+                  : ' Either way, progress since the last autosave in the game you are in will be lost.'
+                : ''
+            }`}
             confirmText="Load"
             extraText={`Start ${seasonWords(seasonOf(termIndexOf(choosingFinished.record))).endBreak}`}
             onExtra={() => {
