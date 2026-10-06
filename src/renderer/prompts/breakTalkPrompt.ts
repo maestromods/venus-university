@@ -620,7 +620,7 @@ export function buildBreakJudgePrompt(input: BreakJudgeInput): StructuredRequest
     `A warmer conversation leaves "liked"${strong.warmer ? ', or "loved" for something that truly moved her' : ''}; a cooler one leaves "disliked"${strong.cooler ? ', or "hated" for something that truly wounded her' : ''}.`,
     '',
     'PROMISES',
-    '"promisesMade" lists anything the reader said in this conversation that he would do for her or with her later — call, write again, send something, visit — each as a phrase completing "the reader promised to ...", e.g. "call her once she is back from the lake". A vague nicety is not a promise. Empty when he promised nothing.',
+    '"promisesMade" lists anything the reader said in this conversation that he would do for her or with her later — call, write again, send something, visit — each as a phrase completing "the reader promised to ...", e.g. "call her once she is back from the lake". A vague nicety is not a promise. Only what he could do before the break is over counts: something promised for when they are back at the university — a meal, a date, a gift once they reunite — cannot be kept or broken yet and is left out. Empty when he promised nothing.',
     open.length > 0
       ? '"promisesKept" lists the numbers of the promises above that this conversation made good on, and "promisesBroken" the numbers of those he went back on or showed he had forgotten. A promise nothing here touched is in neither.'
       : '"promisesKept" and "promisesBroken" are empty: he owed her nothing going in.',
