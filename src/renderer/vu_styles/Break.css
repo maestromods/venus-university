@@ -126,10 +126,11 @@
   background: var(--vu-accent);
 }
 
-/* Spent on the road: filled like a slot on himself, and unticked. */
+/* Spent on the road: filled like a slot on himself, under a plane. */
 .vu-break-box--travel {
   border-color: var(--vu-accent);
   background: var(--vu-highlight);
+  color: var(--vu-accent);
 }
 
 /* Taken by a trip he has said yes to and not yet left on. */
@@ -188,6 +189,40 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+/* Away on a trip the screen is hers alone: her card, and beside it the four slots of the trip. */
+.vu-break-grid--away {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 5fr);
+  align-items: center;
+}
+
+.vu-break-trip {
+  padding-left: 40px;
+}
+
+.vu-break-legs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One slot of the trip: muted until it is reached, struck once it is behind him. */
+.vu-break-leg {
+  color: var(--vu-text-muted);
+  font: 500 22px var(--font-body);
+}
+
+.vu-break-leg--done {
+  text-decoration: line-through;
+}
+
+.vu-break-leg--now {
+  color: var(--vu-text);
+  font-weight: 700;
 }
 
 .vu-break-arch {

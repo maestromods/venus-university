@@ -646,8 +646,16 @@ export function BreakView(): JSX.Element | null {
                       : 'Click somebody to text her.'}
             </p>
           )}
-          <motion.ul className="vu-break-grid" variants={GRID_IN} initial="hidden" animate="shown">
-            {faces.map((character) => (
+          <motion.ul
+            // Dealt again when a trip takes the screen or gives it back.
+            key={step ? 'away' : 'home'}
+            className={`vu-break-grid${step ? ' vu-break-grid--away' : ''}`}
+            variants={GRID_IN}
+            initial="hidden"
+            animate="shown"
+          >
+            {/* Away, the screen is hers alone: nobody else is there to be written to. */}
+            {(step ? faces.filter((c) => c.charId === step.charId) : faces).map((character) => (
               <BreakFace
                 key={character.charId}
                 character={character}
@@ -660,6 +668,26 @@ export function BreakView(): JSX.Element | null {
                 onOpen={() => openTalkPanel(character.charId)}
               />
             ))}
+            {step && (
+              <motion.li className="vu-break-trip" variants={dealtItem}>
+                <ol className="vu-break-legs">
+                  {TRIP_LEGS.map((leg, index) => {
+                    const at = TRIP_LEGS.findIndex(
+                      (other) => other.kind === step.kind && (other.day ?? 1) === (step.day ?? 1)
+                    )
+                    return (
+                      <li
+                        key={index}
+                        className={`vu-break-leg${index < at ? ' vu-break-leg--done' : index === at ? ' vu-break-leg--now' : ''}`}
+                        aria-current={index === at ? 'step' : undefined}
+                      >
+                        {leg.words(tripName)}
+                      </li>
+                    )
+                  })}
+                </ol>
+              </motion.li>
+            )}
           </motion.ul>
         </>
       ) : (
@@ -906,6 +934,31 @@ export function BreakView(): JSX.Element | null {
  * boxes: ticked where the slot went on a conversation, struck where it was let go by, and the
  * week being played picked out.
  */
+/** The four slots of a trip in order, as the screen lists them while he is away. */
+const TRIP_LEGS: readonly { kind: 'out' | 'visit' | 'back'; day?: 1 | 2; words: (name: string) => string }[] = [
+  { kind: 'out', words: (name) => `Travel out to ${name}` },
+  { kind: 'visit', day: 1, words: (name) => `The first days with ${name}` },
+  { kind: 'visit', day: 2, words: (name) => `The last days with ${name}` },
+  { kind: 'back', words: () => 'Travel home' }
+]
+
+/** A plane, for a slot spent on the road. */
+function PlaneIcon(): JSX.Element {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.25"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z" />
+    </svg>
+  )
+}
+
 /** What each state of a slot's box is called. */
 const SLOT_WORDS: Record<BreakEntry['kind'] | 'next' | 'booked' | 'open', string> = {
   text: 'Spent texting',
@@ -967,6 +1020,8 @@ function BreakCalendar({
                 >
                   {state === 'text' || state === 'alone' || state === 'visit' ? (
                     <CheckIcon />
+                  ) : state === 'travel' ? (
+                    <PlaneIcon />
                   ) : null}
                 </span>
               )
