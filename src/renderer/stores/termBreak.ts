@@ -571,6 +571,8 @@ export function startVisit(from: Continuation, draft: BreakDraft): boolean {
     charId: step.charId,
     action,
     now,
+    // Half a week to a slot, on from the day the semester ended.
+    day: from.save.date + 4 + Math.floor(slot * 3.5),
     half: day === 1 ? 'day' : 'night',
     stamp: {
       week,

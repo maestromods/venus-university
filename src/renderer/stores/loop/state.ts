@@ -71,6 +71,8 @@ export interface TripRun {
   action: string
   /** What the prompt's NOW block says in place of a date and a semester. */
   now: string[]
+  /** The day the scene really falls on, counted on from the finished semester's last. */
+  day: number
   /** Which half of the day the stage is drawn in. */
   half: 'day' | 'night'
   /** What the scene's date card reads in place of a day of the semester. */
