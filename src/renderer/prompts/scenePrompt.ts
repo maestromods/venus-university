@@ -604,15 +604,18 @@ function castBlock(cast: readonly Character[], state: PromptState): string[] {
     // Who she is closest to among the girls who are *not* here.
     lines.push(...bestFriendLines(character, state.roster, state.npcRelationships))
 
-    lines.push(
-      ...scheduleLines(
-        `${character.firstName}'s Schedule:`,
-        info?.schedule ?? {},
-        classes,
-        info?.job,
-        state.date
+    // A break's scene is far from any class or shift, and is told so by the break itself.
+    if (!state.trip) {
+      lines.push(
+        ...scheduleLines(
+          `${character.firstName}'s Schedule:`,
+          info?.schedule ?? {},
+          classes,
+          info?.job,
+          state.date
+        )
       )
-    )
+    }
     // Where she is spending the break, from the notice through to the week after.
     lines.push(
       ...springBreakLines(
@@ -972,13 +975,16 @@ function whoBlock(cast: readonly Character[], state: PromptState, reader: string
   return [
     'READER',
     reader,
-    ...scheduleLines(
-      "The reader's Schedule:",
-      state.playerSchedule,
-      state.classes,
-      state.playerJob,
-      state.date
-    ),
+    // Left out of a break's scene, as hers is.
+    ...(state.trip
+      ? []
+      : scheduleLines(
+          "The reader's Schedule:",
+          state.playerSchedule,
+          state.classes,
+          state.playerJob,
+          state.date
+        )),
     '',
     ...castBlock(cast, state),
     ''
