@@ -74,6 +74,7 @@ import {
   type BreakVisitReply
 } from '../prompts/breakTalkPrompt'
 import { formatNumericGameDate } from '../prompts/gameDate'
+import { coverSwap } from './crossingStore'
 import { enterTrip, leaveToMenu } from './gameLoop'
 import { markStatusLine } from './loop/statusSteps'
 import type { TripRun } from './loop/state'
@@ -86,6 +87,7 @@ import {
 } from './newGame'
 import { useUiStore } from './uiStore'
 import { useSettingsStore } from './settingsStore'
+import { coverSceneOpening } from './slotCrossing'
 import { retrySilently } from './silentRetry'
 
 /**
@@ -630,13 +632,13 @@ export function startVisit(from: Continuation, draft: BreakDraft): boolean {
     }
   }
 
-  enterTrip(
-    save,
-    from.record,
-    from.characters,
-    trip
-  )
-  useUiStore.getState().setView('game')
+  // The scene's own opening curtain, raised here over the break screen and taken down by the
+  // scene's first line, so the game is never seen before the scene is on it.
+  coverSceneOpening()
+  coverSwap(() => {
+    enterTrip(save, from.record, from.characters, trip)
+    useUiStore.getState().setView('game')
+  })
   return true
 }
 
