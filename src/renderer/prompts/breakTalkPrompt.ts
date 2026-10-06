@@ -50,6 +50,11 @@ const SHOWN_MEMORIES = 10
 export interface BreakGirl {
   character: Character
   state: CharState
+  /**
+   * The job she holds during a semester, which her carried half leaves behind: named to every
+   * call, or what she does for money over the break is taken for the only work she has had.
+   */
+  job?: { title: string; employer: string }
 }
 
 /** What every call is told about the break itself. */
@@ -68,10 +73,15 @@ function lastDayOf(ended: Season): number {
 }
 
 /** One girl as a call reads her: who she is, where the two of them stand, what she remembers. */
-function girlLines({ character, state }: BreakGirl, setting: BreakSetting): string[] {
+function girlLines({ character, state, job }: BreakGirl, setting: BreakSetting): string[] {
   const affection = affectionFor(state, lastDayOf(setting.ended), character)
   return [
     ...profileLines(character, state.flags),
+    ...(job
+      ? [
+          `During the semester ${character.firstName} works as ${job.title} at ${job.employer}, by the university, and the reader knows it. She is away from that job for the break, and anything she does for money meanwhile is something else, somewhere else.`
+        ]
+      : []),
     ...relationshipLines(character, state.flags, state.nameKnown, affection, setting.stats, {
       texting: true,
       texted: true

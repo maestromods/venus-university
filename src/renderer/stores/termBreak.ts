@@ -1,4 +1,5 @@
 import { FINAL_DATE } from '@shared/classes'
+import { jobDefOf } from '@shared/jobs'
 import {
   affectionFor,
   dispositionOf,
@@ -142,7 +143,16 @@ function castFor(from: Continuation): { girls: BreakGirl[]; setting: BreakSettin
   const { kept, carried } = keptFrom(returningCast(from), from)
   const girls: BreakGirl[] = kept
     .filter((c) => carried.carry.charInfo[c.charId]?.flags.hasMet)
-    .map((character) => ({ character, state: carried.carry.charInfo[character.charId] }))
+    .map((character) => {
+      // Her job is left behind by the carry, its shifts belonging to the old timetable.
+      const held = from.save.charInfo[character.charId]?.job
+      const def = held ? jobDefOf(held.jobId) : undefined
+      return {
+        character,
+        state: carried.carry.charInfo[character.charId],
+        ...(def ? { job: { title: def.title, employer: def.employer } } : {})
+      }
+    })
   return {
     girls,
     setting: {
