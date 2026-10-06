@@ -45,7 +45,7 @@ the official one and puts in the whole files. It is built with four `out` folder
 
 ```
 node build.mjs --base <official out> --mod <out of semester-0.3>
-               --game-version 0.3.0 --mod-version 0.1.1
+               --game-version 0.3.0 --mod-version 0.2.0
                --over photo-feature --over-version 1.1.3
                --over-base <out of a game with Photo Feature installed>
                --over-mod <out of semester-0.3-photo>

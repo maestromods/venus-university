@@ -10,9 +10,9 @@ export interface ModInfo {
   version: string
 }
 
-export const MODS: readonly ModInfo[] = [{ name: 'Continuing Semesters', version: '0.1.1' }]
+export const MODS: readonly ModInfo[] = [{ name: 'Continuing Semesters', version: '0.2.0' }]
 
-/** `"Continuing Semesters 0.1.1"`, or several joined with commas. */
+/** `"Continuing Semesters 0.2.0"`, or several joined with commas. */
 export function modNames(mods: readonly ModInfo[] = MODS): string {
   return mods.map((mod) => `${mod.name} ${mod.version}`).join(', ')
 }
