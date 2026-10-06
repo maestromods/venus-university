@@ -501,7 +501,7 @@ export function buildBreakTalkPrompt(input: BreakTalkInput): StructuredRequest {
     'Stay in her voice and keep it text-length: this is a phone thread, not prose. Let her have a break of her own to talk about.',
     'React to what he actually wrote. Praise with nothing in it, or the same sweet line again, lands flat on her. What would hurt her hurts, and she does not smooth it over for him.',
     input.mayInvite
-      ? `Nobody can meet up on a whim: everybody is hours away. But ${name} may invite the reader to come and stay with her for a few days, if this conversation is going well enough that she would want him there, or if he hints at it and she likes the idea. Only she can offer it, she does not have to, and she never assumes he has said yes. A hint from somebody she is not that close to is pushy, and puts her off.`
+      ? `Nobody can meet up on a whim: everybody is hours away. But ${name} may invite the reader to come and stay with her for a few days, if this conversation is going well enough that she would want him there, or if he hints at it and she likes the idea. Only she can offer it, and she never assumes he has said yes. It is a big thing to ask and most conversations end without it: flirting, a compliment or a good chat is not reason enough, and a joke about him coming over is not an invitation. A hint from somebody she is not that close to is pushy, and puts her off.`
       : 'Nobody can meet up: if he suggests it, she answers as somebody who is hours away, and nobody invites anybody anywhere.',
     '',
     'ENDING IT',

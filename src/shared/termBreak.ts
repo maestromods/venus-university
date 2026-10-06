@@ -400,6 +400,9 @@ export function withReachRead(draft: BreakDraft, charId: string): BreakDraft {
   }
 }
 
+/** How many weeks pass after an invitation before anybody may make another. */
+const INVITE_GAP_WEEKS = 4
+
 /** Her invitation still waiting on his answer; `null` with none. */
 export function openInvite(draft: Pick<BreakDraft, 'invites'>, charId: string): BreakInvite | null {
   return (
@@ -425,7 +428,8 @@ export function tripDeparture(draft: Pick<BreakDraft, 'spent'>, ended: Season): 
 
 /**
  * Whether she may ask him to come and stay: somebody close to him — a lover only, over a winter
- * — with no invitation of hers waiting or under way, and a break with room left for the trip.
+ * — with no invitation from anybody waiting, booked or made in the last few weeks, one of her
+ * own still to make, and a break with room left for the trip.
  */
 export function mayInvite(
   draft: BreakDraft,
@@ -440,9 +444,15 @@ export function mayInvite(
         standing.disposition === 'trusted' ||
         standing.disposition === 'devoted'))
   if (!close || tripDeparture(draft, ended) === null) return false
-  return !(draft.invites ?? []).some(
-    (invite) => invite.charId === charId && (invite.state === 'open' || invite.state === 'accepted')
-  )
+  const invites = draft.invites ?? []
+  // One invitation at a time, whoever it is from.
+  if (invites.some((invite) => invite.state === 'open' || invite.state === 'accepted')) return false
+  // And nobody asks again for a while after the last one, whoever it was from.
+  const { week } = breakClock(draft.spent.length, ended)
+  if (invites.some((invite) => week - invite.week < INVITE_GAP_WEEKS)) return false
+  // She asks once a break; somebody he is with may ask a second time.
+  const hers = invites.filter((invite) => invite.charId === charId).length
+  return hers < (standing.lover ? 2 : 1)
 }
 
 /** The break with her invitation filed, waiting on his answer; one already waiting is not doubled. */

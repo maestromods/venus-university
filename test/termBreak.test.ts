@@ -532,6 +532,16 @@ it('carries what a visit reached into the next semester, dated on the slot it ha
     expect(withInviteAnswered(booked, 'b', true, 'spring')).toBe(booked)
     expect(mayInvite(booked, 'a', lover, 'spring')).toBe(false)
 
+    // Nobody asks again for a few weeks after an invitation, and she asks once a break.
+    const friend: BreakStanding = { disposition: 'trusted', lover: false }
+    const turned = withInviteAnswered(withInvite(fresh, 'a', 'spring'), 'a', false, 'spring')
+    expect(mayInvite(turned, 'b', friend, 'spring')).toBe(false)
+    let later = turned
+    for (let slot = 0; slot < 8; slot += 1) later = withSlotSpent(later, 'spring')
+    expect(mayInvite(later, 'b', friend, 'spring')).toBe(true)
+    expect(mayInvite(later, 'a', friend, 'spring')).toBe(false)
+    expect(mayInvite(later, 'a', lover, 'spring')).toBe(true)
+
     // A winter of eight slots with five gone has not four left from the next second slot.
     let late = fresh
     for (let slot = 0; slot < 5; slot += 1) late = withSlotSpent(late, 'fall')
