@@ -9,7 +9,6 @@ import { useEffect, useRef, useState, type JSX } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 
 import { appError } from '@shared/errors'
-import { STAT_KEYS, STAT_LABELS, tierName } from '@shared/playerStats'
 import { seasonOf, seasonWords, termIndexOf, type Season } from '@shared/term'
 import {
   breakClock,
@@ -67,6 +66,7 @@ import {
 import { useAudioStore } from '../stores/audioStore'
 import { useUiStore } from '../stores/uiStore'
 import { isWebBuild } from '../platform'
+import { StatRadar } from '../components/StatRadar'
 import { BreakAloneModal } from './BreakAloneModal'
 import { BreakNarration } from './BreakNarration'
 import { BreakMemoriesModal } from './BreakMemoriesModal'
@@ -524,13 +524,9 @@ export function BreakView(): JSX.Element | null {
       >
         {draft && <BreakCalendar spent={draft.spent} ended={ended} over={over} />}
         {draft && (
-          <ul className="vu-break-stats">
-            {STAT_KEYS.map((key) => (
-              <li key={key} className="vu-chip vu-paper">
-                {STAT_LABELS[key]} · {tierName(draft.stats[key])}
-              </li>
-            ))}
-          </ul>
+          <div className="vu-break-statpanel vu-paper">
+            <StatRadar className="vu-break-radar" stats={draft.stats} arrival={{}} />
+          </div>
         )}
       </motion.section>
 

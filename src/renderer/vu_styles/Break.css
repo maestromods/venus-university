@@ -52,14 +52,14 @@
 
 /* ---- the reader ------------------------------------------------------------ */
 
-/* How much of the break is gone, over what it has left of him. The margin clears the title's
-   blob, which dips below the header under its own lean. */
+/* How much of the break is gone, beside what it has left of him: the calendar keeps the left
+   and the stat panel hangs on the right, the section as tall as that panel. The margin clears
+   the title's blob, which dips below the header under its own lean. */
 .vu-break-reader {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+  min-height: 150px;
   margin-top: 14px;
+  padding-right: 400px;
 }
 
 /* The break's weeks in one row, a tile each: the calendar the clock is read off. */
@@ -134,16 +134,28 @@
   background: var(--vu-ground);
 }
 
-/* A small cluster, so one shallow lean rather than a fan; the padding is the room the chips'
-   own shadows paint into. */
-.vu-break-stats {
-  display: flex;
-  gap: 18px;
-  margin: 0;
-  padding: 0 0 6px;
-  list-style: none;
-  rotate: -0.8deg;
-  transform-origin: 0 50%;
+/* His three stats as the semester's own landing shows them: the same half-pill panel and the
+   same shape on it, drawn smaller. A paper element that may not clip, the badges riding its
+   edges. */
+.vu-break-statpanel {
+  --paper-face: var(--vu-surface);
+  --paper-shadow: var(--vu-shadow);
+  --paper-offset: 10px 9px;
+  --paper-tilt: -1.2deg;
+  position: absolute;
+  top: -64px;
+  right: 0;
+  width: 550px;
+  height: 360px;
+  border-radius: 90px 0 0 90px;
+  rotate: 2.4deg;
+  zoom: 0.66;
+}
+
+/* The shape fills the panel, so its own badge offsets land where they do on the landing. */
+.vu-break-radar {
+  position: absolute;
+  inset: 0;
 }
 
 /* ---- the grid -------------------------------------------------------------- */
