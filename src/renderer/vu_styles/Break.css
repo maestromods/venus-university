@@ -278,15 +278,15 @@
   text-transform: uppercase;
 }
 
-/* Her invitation over the thread: what it would cost, and the two answers under it. */
+/* Her invitation, said in the thread under whatever came before it: what it would cost, and
+   the two answers. No frame of its own: it is a line of the conversation, not a panel on it. */
 .vu-breaktalk-invite {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 12px;
-  padding: 14px 18px;
-  border: 2.5px solid var(--vu-accent);
-  border-radius: 18px;
-  background: var(--vu-highlight);
+  padding: 14px 24px 0;
+  text-align: center;
 }
 
 .vu-breaktalk-invite p {
@@ -295,8 +295,7 @@
 
 .vu-breaktalk-answers {
   display: flex;
-  justify-content: flex-end;
-  gap: 14px;
+  gap: 12px;
 }
 
 /* The scroll box takes whatever height the panel has left, so the well and the foot keep
@@ -407,4 +406,11 @@
 .vu-breakalone-idea b {
   color: var(--stat);
   font-weight: 700;
+}
+
+/* The yes, filled as the answer the invitation is asking for. */
+.vu-breaktalk-answers .vu-pill--on {
+  border-color: var(--vu-accent);
+  background: var(--vu-accent);
+  color: var(--vu-accent-ink);
 }

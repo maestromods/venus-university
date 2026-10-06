@@ -16,7 +16,17 @@ import { useModalShell } from '../components/useModalShell'
 import { useAudioStore } from '../stores/audioStore'
 import { typingDelayFor } from '../stores/textingPace'
 import type { ScreenTheme } from './clockTheme'
-import { gestures, lift, panelUnderTab, press, spin, typingDot, veilIn } from './motion'
+import {
+  gestures,
+  lift,
+  panelUnderTab,
+  press,
+  quietLift,
+  quietPress,
+  spin,
+  typingDot,
+  veilIn
+} from './motion'
 import '../vu_styles/Bunnyboard.css'
 import '../vu_styles/Break.css'
 
@@ -127,7 +137,7 @@ export function BreakTalkModal({
   useEffect(() => {
     const node = thread.current
     if (node) node.scrollTop = node.scrollHeight
-  }, [landed, typing, phase, judged])
+  }, [landed, typing, phase, judged, invite !== null])
 
   /** Sends what the well holds and empties it. */
   function send(): void {
@@ -170,41 +180,6 @@ export function BreakTalkModal({
         <span className="vu-breaktalk-count">
           Week {week} · text {Math.min(turns + (canWrite ? 1 : 0), TALK_TURNS)} of {TALK_TURNS}
         </span>
-
-        {/* Her invitation, answered here and nowhere else; never over a conversation under way. */}
-        {invite && (talk === null || done) && (
-          <div className="vu-breaktalk-invite">
-            <p className="vu-note-text">
-              {character.firstName} invited you to come and stay.{' '}
-              {invite.bookable
-                ? `The trip takes four slots: you would leave at the end of week ${invite.leaves}, spend the next week with her, and travel home after.`
-                : invite.busy
-                  ? 'You already have a trip booked, so this one has to wait or be turned down.'
-                  : 'There is not enough of the break left to make the trip.'}
-            </p>
-            <div className="vu-breaktalk-answers">
-              <motion.button
-                id="break-invite-decline"
-                type="button"
-                className="vu-btn vu-btn--outline vu-btn--panel vu-paper"
-                {...gestures(false, lift, press)}
-                onClick={() => onInvite(false)}
-              >
-                Turn it down
-              </motion.button>
-              <motion.button
-                id="break-invite-accept"
-                type="button"
-                className="vu-btn vu-btn--primary vu-btn--panel vu-paper"
-                {...gestures(!invite.bookable, lift, press)}
-                disabled={!invite.bookable}
-                onClick={() => onInvite(true)}
-              >
-                Say yes
-              </motion.button>
-            </div>
-          </div>
-        )}
 
         <div className="vu-scroll-box vu-breaktalk-box">
           <div className="vu-breaktalk-thread" ref={thread}>
@@ -274,6 +249,41 @@ export function BreakTalkModal({
                   </li>
                 )}
               </ul>
+            )}
+            {/* Her invitation, part of the thread it came out of: said under the last thing in
+                it, and answered there. Never over a conversation under way. */}
+            {invite && (talk === null || done) && (
+              <div className="vu-breaktalk-invite">
+                <p className="vu-note-text">
+                  {character.firstName} invited you to come and stay.{' '}
+                  {invite.bookable
+                    ? `The trip takes four slots: you would leave at the end of week ${invite.leaves}, spend the next week with her, and travel home after.`
+                    : invite.busy
+                      ? 'You already have a trip booked, so this one has to wait or be turned down.'
+                      : 'There is not enough of the break left to make the trip.'}
+                </p>
+                <div className="vu-breaktalk-answers">
+                  <motion.button
+                    id="break-invite-decline"
+                    type="button"
+                    className="vu-pill"
+                    {...gestures(false, quietLift, quietPress)}
+                    onClick={() => onInvite(false)}
+                  >
+                    Turn it down
+                  </motion.button>
+                  <motion.button
+                    id="break-invite-accept"
+                    type="button"
+                    className="vu-pill vu-pill--on"
+                    {...gestures(!invite.bookable, quietLift, quietPress)}
+                    disabled={!invite.bookable}
+                    onClick={() => onInvite(true)}
+                  >
+                    Say yes
+                  </motion.button>
+                </div>
+              </div>
             )}
           </div>
           <div className="vu-scroll-fade" />
