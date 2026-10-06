@@ -236,13 +236,15 @@
 
 /* ---- the foot -------------------------------------------------------------- */
 
-/* The answers, and over them the one line said while the break is being written. */
+/* The answers, and beside them the one line said while something is being written. A row and
+   not a column: the screen has no height to spare under the faces, and a line over the buttons
+   pushed them off its foot. */
 .vu-break-foot {
   position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 14px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 28px;
   margin-top: auto;
 }
 
