@@ -12,7 +12,16 @@
 >   in. Seniors who graduated are gone and everybody else moves up a year; you drop and add
 >   until the roster is twelve. The reader keeps his money, inventory, phone and reputation,
 >   loses his job, and his stats slip a tier. Returning characters keep their memories,
->   milestones, gifts, feed and your notes on them, and each gets new memories of the break.
+>   milestones, gifts, feed and your notes on them.
+> - **New in 0.2.0: the break is played.** Between two semesters there is now a short game of its
+>   own: two slots a week, twelve weeks after a spring and four after a fall. A slot goes on a
+>   text conversation with one of the girls coming back, on yourself to work on a stat, or is let
+>   go by. Conversations are typed freely and judged, so you can make things better or worse;
+>   the girls write first now and then, and will wait for an answer. Somebody close may invite
+>   you to come and stay: a trip takes four slots, and the days with her are real scenes. What
+>   each of them remembers of the break is what happened in it, and you can reword it before the
+>   next semester starts. The break can also be skipped, which writes those memories for you as
+>   before.
 > - **This branch is the build with naudh1r's Photo Feature in it.** It is
 >   [`semester-0.3`](https://github.com/morrowkiln/venus-university/tree/semester-0.3) merged
 >   with [naudh1r](https://github.com/naudh1r/venus-university)'s Photo Feature 1.1.3 (their

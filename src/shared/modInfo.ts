@@ -11,12 +11,12 @@ export interface ModInfo {
 }
 
 export const MODS: readonly ModInfo[] = [
-  { name: 'Continuing Semesters', version: '0.1.1' },
+  { name: 'Continuing Semesters', version: '0.2.0' },
   // naudh1r's mod, merged into this branch from their release tag of that version.
   { name: 'Photo Feature', version: '1.1.3' }
 ]
 
-/** `"Continuing Semesters 0.1.1"`, or several joined with commas. */
+/** `"Continuing Semesters 0.2.0"`, or several joined with commas. */
 export function modNames(mods: readonly ModInfo[] = MODS): string {
   return mods.map((mod) => `${mod.name} ${mod.version}`).join(', ')
 }
