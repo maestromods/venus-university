@@ -555,7 +555,7 @@ it('carries what a visit reached into the next semester, dated on the slot it ha
     const turned = withInviteAnswered(withInvite(fresh, 'a', 'spring'), 'a', false, 'spring')
     expect(mayInvite(turned, 'b', friend, 'spring')).toBe(false)
     let later = turned
-    for (let slot = 0; slot < 8; slot += 1) later = withSlotSpent(later, 'spring')
+    for (let slot = 0; slot < 4; slot += 1) later = withSlotSpent(later, 'spring')
     expect(mayInvite(later, 'b', friend, 'spring')).toBe(true)
     expect(mayInvite(later, 'a', friend, 'spring')).toBe(false)
     expect(mayInvite(later, 'a', lover, 'spring')).toBe(true)

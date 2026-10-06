@@ -433,7 +433,7 @@ export function withReachRead(draft: BreakDraft, charId: string): BreakDraft {
 }
 
 /** How many weeks pass after an invitation before anybody may make another. */
-const INVITE_GAP_WEEKS = 4
+const INVITE_GAP_WEEKS = 2
 
 /** Her invitation still waiting on his answer; `null` with none. */
 export function openInvite(draft: Pick<BreakDraft, 'invites'>, charId: string): BreakInvite | null {
