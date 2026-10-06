@@ -351,6 +351,38 @@ export function reachOutDue(
   return week === 2 + (seed % 9) ? 'plain' : null
 }
 
+/**
+ * How many of them may write in one week: one in an ordinary week, since he has two slots to
+ * answer with and other things to spend them on, and two in the weeks everybody close writes.
+ */
+function reachCap(week: number, ended: Season): number {
+  const busy = week === breakWeeks(ended) || (ended === 'spring' && week === MID_SUMMER_WEEK)
+  return busy ? 2 : 1
+}
+
+/**
+ * Who of those due to write in `week` does: no more than the week's cap, somebody he is with
+ * ahead of anybody else, then whoever has written least so far this break, the order among
+ * equals turning with the week so it is not always the same one left out.
+ */
+export function reachOutsKept<T extends { charId: string; lover: boolean }>(
+  due: readonly T[],
+  draft: Pick<BreakDraft, 'reaches'>,
+  week: number,
+  ended: Season
+): T[] {
+  const written = (charId: string): number =>
+    (draft.reaches ?? []).filter((reach) => reach.charId === charId).length
+  return [...due]
+    .sort(
+      (a, b) =>
+        Number(b.lover) - Number(a.lover) ||
+        written(a.charId) - written(b.charId) ||
+        ((seedOf(a.charId) + week) % 97) - ((seedOf(b.charId) + week) % 97)
+    )
+    .slice(0, reachCap(week, ended))
+}
+
 /** The week whose own texts have not been asked for yet; `null` where there is none to ask for. */
 export function pendingReachWeek(draft: BreakDraft, ended: Season): number | null {
   if (breakOver(draft) || breakSpent(draft, ended) || openTalk(draft) !== null) return null

@@ -15,6 +15,7 @@ import {
   pendingReachWeek,
   playedMemories,
   reachOutDue,
+  reachOutsKept,
   stampBreak,
   TALK_TURNS,
   withBreakClosed,
@@ -437,6 +438,23 @@ describe('what the girls send on their own', () => {
       'hi!'
     ])
     expect(filed.bunnyboard.conversations.b?.messages.map((m) => m.text)).toEqual(['you alive?'])
+  })
+
+  it('lets one of them write in an ordinary week and two in a busy one, a lover first', () => {
+    const due = [
+      { charId: 'a', lover: false },
+      { charId: 'b', lover: true },
+      { charId: 'c', lover: false }
+    ]
+    const none = { reaches: [] }
+    expect(reachOutsKept(due, none, 3, 'spring').map((entry) => entry.charId)).toEqual(['b'])
+    expect(reachOutsKept(due, none, 6, 'spring')).toHaveLength(2)
+    expect(reachOutsKept(due, none, 12, 'spring')[0]?.charId).toBe('b')
+    // Whoever has written least goes ahead of whoever has written already.
+    const heard = { reaches: [{ week: 2, charId: 'a', lines: ['hi'] }] }
+    expect(
+      reachOutsKept([due[0], due[2]], heard, 3, 'spring').map((entry) => entry.charId)
+    ).toEqual(['c'])
   })
 
   it('has nobody who soured on him write, and everybody close write in the last week', () => {

@@ -29,6 +29,7 @@ import {
   withVisit,
   reachesIgnored,
   reachOutDue,
+  reachOutsKept,
   strongAllowed,
   unansweredReach,
   type BreakCard,
@@ -290,7 +291,7 @@ export async function writeReachOuts(
 ): Promise<BreakOutcome<ReachOuts>> {
   const { girls, setting } = castFor(from)
   const standings = breakStandings(from)
-  const due = girls.flatMap((girl) => {
+  const asked = girls.flatMap((girl) => {
     const charId = girl.character.charId
     const standing = standings[charId]
     const beat =
@@ -299,8 +300,10 @@ export async function writeReachOuts(
     if (beat !== 'last' && unansweredReach(draft, charId)) return []
     // Nor does somebody he is about to see, or is staying with: she has him there to tell.
     if (activeTrip(draft)?.charId === charId) return []
-    return beat ? [{ girl, beat }] : []
+    return beat ? [{ girl, beat, charId, lover: standing?.lover === true }] : []
   })
+  // Only so many of them write in one week, however many were due to.
+  const due = reachOutsKept(asked, draft, week, setting.ended)
   if (due.length === 0) return { status: 'done', data: { arrived: [] } }
 
   let cards = draft.cards
