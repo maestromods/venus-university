@@ -13,7 +13,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { AUDIO_FILES, pitchSemitonesOf, VOICE_PITCH_DEFAULT } from '@shared/audio'
 import { isPermanent } from '@shared/errors'
 import { gameOverSceneOf } from '@shared/gameOver'
-import { hasNextTerm, readerGraduatesNow, termLabel } from '@shared/term'
+import { hasNextTerm, readerGraduatesNow, seasonWords, termLabel } from '@shared/term'
 import { isPosition } from '@shared/positions'
 import { hashString } from '@shared/hash'
 import { isGameOver } from '@shared/money'
@@ -111,6 +111,7 @@ import {
   submitQuizAnswer,
   submitGift
 } from '../stores/gameLoop'
+import { loopState } from '../stores/loop/state'
 import {
   abandonHangoutClassify,
   blockedThreadHidden,
@@ -746,8 +747,8 @@ export function GameView(): JSX.Element {
   }
 
   /**
-   * The winning ending's way on: the same crossing out as {@link toMenu}, landing on the roster
-   * of the semester after this one rather than on the menu. A playthrough that cannot be
+   * The winning ending's way on: the same crossing out as {@link toMenu}, landing on the break
+   * before the semester after this one rather than on the menu. A playthrough that cannot be
    * carried on says why over the menu.
    */
   function toNextTerm(): void {
@@ -761,7 +762,7 @@ export function GameView(): JSX.Element {
         setMenuTheme(leftIn)
         const next = playthroughId ? await resolveContinuation(playthroughId) : null
         if (next) stageContinuation(next)
-        setView(next ? 'newGame' : 'mainMenu')
+        setView(next ? 'break' : 'mainMenu')
         endCrossing()
       })()
     })
@@ -826,7 +827,9 @@ export function GameView(): JSX.Element {
   // The same cache-buster for the speaker's portrait: the player can reframe one mid-playthrough.
   const spriteVersions = useCharacterStore((s) => s.spriteVersion)
   // Which half of the day the layer resolves; the epilogue is always night.
-  const half = isEpilogueNight(date, time, graduationSeen) ? 'night' : slotHalf(time)
+  // A scene a break is running names its own half.
+  const half =
+    loopState.trip?.half ?? (isEpilogueNight(date, time, graduationSeen) ? 'night' : slotHalf(time))
   // The sky over this slot, which picks the background's render and the mark the chromes wear.
   const slotSky = slotWeather(weather, date, time, graduationSeen)
   const wet = isWet(slotSky)
@@ -1821,6 +1824,7 @@ export function GameView(): JSX.Element {
         <SceneChrome
           theme={half}
           date={date}
+          stamp={loopState.trip?.stamp}
           night={half === 'night'}
           weather={slotSky}
           covered={covered}
@@ -2360,7 +2364,7 @@ export function GameView(): JSX.Element {
               void exportEndingArt().finally(() => setSavingArt(false))
             }}
             // A semester with another after it offers that first, and the menu beside it.
-            confirmText={nextTerm ? `Continue to the ${nextTerm}` : 'Return to the main menu'}
+            confirmText={nextTerm ? `Continue to ${seasonWords().endBreak}` : 'Return to the main menu'}
             onConfirm={() => (nextTerm ? toNextTerm() : toMenu())}
             cancelText="Return to the main menu"
             onCancel={nextTerm ? () => toMenu() : undefined}

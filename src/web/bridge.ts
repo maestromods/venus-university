@@ -61,6 +61,7 @@ import {
 } from './backgrounds'
 import * as chars from './chars'
 import * as photos from './db/photos'
+import * as breaks from './db/break'
 import * as saves from './db/saves'
 import { readGrabBags, writeGrabBags } from './db/grabbags'
 import { getPoseManifest, getQuickstart, readAudio } from './assets'
@@ -313,6 +314,11 @@ export function buildApi(): VenusUniversityApi {
       enroll: (draft) => result('save the class registration', () => saves.writeEnrollment(draft)),
       enrollment: (playthroughId) =>
         result('read the class registration', () => saves.readEnrollment(playthroughId)),
+      break: (playthroughId) => result('read the break', () => breaks.readBreak(playthroughId)),
+      writeBreak: (playthroughId, draft) =>
+        result('save the break', () => breaks.writeBreak(playthroughId, draft)),
+      removeBreak: (playthroughId) =>
+        result('remove the break', () => breaks.removeBreak(playthroughId)),
       create: (playthrough, draft, playthroughId) =>
         result('start the playthrough', () =>
           saves.createPlaythrough(playthrough, draft, playthroughId)

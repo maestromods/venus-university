@@ -265,10 +265,13 @@ export function NewGameView(): JSX.Element {
         ? { first: continued.record.playerFirstName, last: continued.record.playerLastName }
         : { first: DEFAULT_PLAYER_FIRST_NAME, last: DEFAULT_PLAYER_LAST_NAME }
   )
-  // A reader who is carried over comes back a tier rustier in everything, and is not asked.
+  // A reader who is carried over comes back as the break left him — a tier rustier in
+  // everything, where it was not played — and is not asked.
   const [playerStats, setPlayerStats] = useState<PlayerStats>(
     resumed?.enrollment.stats ??
-      (continued ? rustedStats(continued.save.stats) : DEFAULT_PLAYER_STATS)
+      (continued
+        ? (continued.played?.stats ?? rustedStats(continued.save.stats))
+        : DEFAULT_PLAYER_STATS)
   )
   // What the reader says about himself, as the same modal took it down; blank is an answer.
   const [playerBio, setPlayerBio] = useState(resumed?.enrollment.bio ?? continued?.save.bio ?? '')
@@ -539,6 +542,12 @@ export function NewGameView(): JSX.Element {
       return
     }
     setPlaythroughId(written.data.playthroughId)
+    // The break this semester was generated from has been spent; a refusal leaves a file the
+    // next continuation of that save would only resume.
+    if (term?.continuedFrom) {
+      const removed = await window.api.saves.removeBreak(term.continuedFrom)
+      if (!removed.ok) console.warn('[newGame] the break could not be removed', removed.error)
+    }
   }
 
   /**

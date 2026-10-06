@@ -336,6 +336,11 @@ void _CHAR_FIELDS
 export interface BreakMemory {
   type: MemoryType
   desc: string
+  /**
+   * The day it happened on, counted back from day 0 of the semester the break leads up to, where
+   * the break was played and the day is known; absent, it is dated into the break's last days.
+   */
+  date?: number
 }
 
 /** How many days before day 0 the break's last memory is dated; the others step back from it. */
@@ -344,8 +349,9 @@ const BREAK_MEMORY_STEP = 1
 
 /**
  * `carry` with what each returning girl remembers of the break filed after everything she
- * already remembered: dated into the last days before the semester, oldest first, so they are
- * what she feels most on day 0 and fade like any other memory after it. Everything older has
+ * already remembered: each on the day it happened where the break was played and that is known,
+ * and otherwise dated into the last days before the semester, oldest first, so they are what she
+ * feels most on day 0. They fade like any other memory after it. Everything older has
  * already faded to its least over the break, so these are what decide how she comes back.
  */
 export function withBreakMemories(
@@ -356,11 +362,19 @@ export function withBreakMemories(
     Object.entries(carry.charInfo).map(([charId, state]) => {
       const written = memories[charId] ?? []
       if (written.length === 0) return [charId, state]
-      const dated: CharMemory[] = written.map((memory, index) => ({
-        date: BREAK_MEMORY_LAST_DAY - (written.length - 1 - index) * BREAK_MEMORY_STEP,
-        type: memory.type,
-        desc: memory.desc
-      }))
+      // What has no day of its own is stepped back from the last day, oldest first; what has one
+      // keeps it, and the whole is filed in the order it happened.
+      const loose = written.filter((memory) => memory.date === undefined)
+      const dated: CharMemory[] = written
+        .map((memory) => ({
+          date:
+            memory.date ??
+            BREAK_MEMORY_LAST_DAY -
+              (loose.length - 1 - loose.indexOf(memory)) * BREAK_MEMORY_STEP,
+          type: memory.type,
+          desc: memory.desc
+        }))
+        .sort((a, b) => a.date - b.date)
       return [charId, { ...state, memories: [...state.memories, ...dated] }]
     })
   )

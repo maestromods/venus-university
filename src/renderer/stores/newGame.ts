@@ -3,6 +3,14 @@ import { appError, toAppError } from '@shared/errors'
 import { readerStandingOf } from '@shared/relationship'
 import { emptyTallies } from '@shared/tallies'
 import { isGameOver } from '@shared/money'
+import type { PlayerStats } from '@shared/playerStats'
+import {
+  withBreakEvents,
+  withBreakThreads,
+  type BreakReach,
+  type BreakTalk,
+  type BreakVisit
+} from '@shared/termBreak'
 import { hasNextTerm, seasonOf, termIndexOf, yearAfter } from '@shared/term'
 import {
   carryTerm,
@@ -78,6 +86,21 @@ export interface Continuation {
   record: PlaythroughRecord
   /** The finished roster resolved, by charId; a character deleted since is absent. */
   characters: Record<string, Character>
+  /**
+   * How the break after it went, once the break screen has closed it: the reader's stats as it
+   * left them and what each returning girl remembers of it, by charId. Absent, the start asks
+   * for the memories itself.
+   */
+  played?: {
+    stats: PlayerStats
+    memories: Record<string, BreakMemory[]>
+    /** The conversations had over it, which are filed on the phone. */
+    talks: BreakTalk[]
+    /** What the girls sent on their own, of which the unanswered are filed there too. */
+    reaches?: BreakReach[]
+    /** The slots spent with somebody he travelled to see, whose milestones are carried. */
+    visits?: BreakVisit[]
+  }
 }
 
 /** Everything the one-shot New Game calls produce, settled together. */
@@ -412,24 +435,100 @@ async function runAttempt(current: StartAttempt, mine: object): Promise<StartOut
   }
 }
 
+/** Who the break call is asked about, and the call itself. */
+export interface BreakAsk {
+  breakInput: BreakCharInput[]
+  breakRequest: StructuredRequest
+}
+
+/**
+ * The break call for a finished semester and whoever of `kept` is coming back from it, about
+ * those of them who have met the reader; `null` when none has, there being no break with him in
+ * it to remember. The term being enrolled for is already the active one.
+ */
+export function breakAskOf(
+  from: Continuation,
+  kept: readonly Character[],
+  carried: CarriedTerm
+): BreakAsk | null {
+  const { save } = from
+  const breakInput: BreakCharInput[] = kept
+    .filter((c) => carried.carry.charInfo[c.charId]?.flags.hasMet)
+    .map((character) => ({ character, state: carried.carry.charInfo[character.charId] }))
+  if (breakInput.length === 0) return null
+
+  return {
+    breakInput,
+    breakRequest: buildBreakPrompt({
+      returning: breakInput,
+      reader: breakReaderOf(from, kept, carried),
+      stats: save.stats
+    })
+  }
+}
+
+/** The reader's own block as a call about the break carries it: who he was when the semester ended. */
+export function breakReaderOf(
+  from: Continuation,
+  kept: readonly Character[],
+  carried: CarriedTerm
+): string {
+  const { save, record } = from
+  const firstNames = Object.fromEntries(kept.map((c) => [c.charId, c.firstName]))
+  return readerText(record.playerFirstName, record.playerLastName, save.stats, {
+    ...(save.bio ? { bio: save.bio } : {}),
+    ...readerStandingOf(
+      kept.map((c) => c.charId),
+      carried.carry.charInfo,
+      firstNames
+    )
+  })
+}
+
+/** Whoever of `roster` is coming back from the finished semester, and what it hands over for them. */
+export function keptFrom(
+  roster: readonly Character[],
+  from: Continuation
+): { kept: Character[]; carried: CarriedTerm } {
+  const { save, record } = from
+  const back = new Set(returningChars(record))
+  const kept = roster.filter((c) => back.has(c.charId) && save.charInfo[c.charId])
+  return {
+    kept,
+    carried: carryTerm(
+      save,
+      record,
+      kept.map((c) => c.charId)
+    )
+  }
+}
+
 /**
  * What a continued start settles before any call goes out: who of the new roster is returning
- * and what is already known of each, what the finished semester hands over, and the break call
- * about whoever of them has met the reader.
+ * and what is already known of each, what the finished semester hands over, and the break —
+ * as the break screen closed it, or else the call about whoever of them has met the reader.
  */
 function continuedAttempt(
   roster: readonly Character[],
   from: Continuation
-): Pick<StartAttempt, 'returning' | 'carried' | 'breakInput' | 'breakRequest'> {
-  const { save, record } = from
+): Pick<
+  StartAttempt,
+  'returning' | 'carried' | 'breakInput' | 'breakRequest' | 'breakMemories'
+> {
+  const { record, played, save } = from
   const ended = seasonOf(termIndexOf(record))
-  const back = new Set(returningChars(record))
-  const kept = roster.filter((c) => back.has(c.charId) && save.charInfo[c.charId])
-  const carried = carryTerm(
-    save,
-    record,
-    kept.map((c) => c.charId)
-  )
+  const { kept, carried: handed } = keptFrom(roster, from)
+  const carried = played
+    ? {
+        ...handed,
+        stats: played.stats,
+        carry: withBreakEvents(
+          withBreakThreads(handed.carry, played.talks, ended, played.reaches),
+          played.visits ?? [],
+          ended
+        )
+      }
+    : handed
 
   const returning: Record<string, ReturningStudents[string]> = {}
   for (const character of kept) {
@@ -449,27 +548,9 @@ function continuedAttempt(
     }
   }
 
-  // Only somebody who has met him has a break with him in it to remember.
-  const breakInput: BreakCharInput[] = kept
-    .filter((c) => carried.carry.charInfo[c.charId]?.flags.hasMet)
-    .map((character) => ({ character, state: carried.carry.charInfo[character.charId] }))
-  if (breakInput.length === 0) return { returning, carried }
-
-  const firstNames = Object.fromEntries(kept.map((c) => [c.charId, c.firstName]))
-  const reader = readerText(record.playerFirstName, record.playerLastName, save.stats, {
-    ...(save.bio ? { bio: save.bio } : {}),
-    ...readerStandingOf(
-      kept.map((c) => c.charId),
-      carried.carry.charInfo,
-      firstNames
-    )
-  })
-  return {
-    returning,
-    carried,
-    breakInput,
-    breakRequest: buildBreakPrompt({ returning: breakInput, reader, stats: save.stats })
-  }
+  if (played) return { returning, carried, breakMemories: played.memories }
+  const ask = breakAskOf(from, kept, carried)
+  return ask ? { returning, carried, ...ask } : { returning, carried }
 }
 
 /**

@@ -68,6 +68,8 @@ import {
   writeManualSave,
   writeSlotSave
 } from './services/saveService'
+import { readBreak, removeBreak, writeBreak } from './services/breakService'
+import type { BreakDraft } from '@shared/termBreak'
 import {
   applyWardrobeFix,
   decodePng,
@@ -366,6 +368,11 @@ export function registerIpcHandlers(): void {
   handle('saves:list', (_event, playthroughId: string) => listSaves(playthroughId))
   handle('saves:enroll', (_event, draft: EnrollmentDraft) => writeEnrollment(draft))
   handle('saves:enrollment', (_event, playthroughId: string) => readEnrollment(playthroughId))
+  handle('saves:break', (_event, playthroughId: string) => readBreak(playthroughId))
+  handle('saves:writeBreak', (_event, playthroughId: string, draft: BreakDraft) =>
+    writeBreak(playthroughId, draft)
+  )
+  handle('saves:removeBreak', (_event, playthroughId: string) => removeBreak(playthroughId))
   handle(
     'saves:create',
     (_event, playthrough: PlaythroughDraft, draft: SaveDraft, playthroughId?: string) =>

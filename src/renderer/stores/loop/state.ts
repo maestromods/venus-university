@@ -59,9 +59,36 @@ export interface ProjectWork {
   exam: ExamPeriod
 }
 
+/**
+ * A scene the engine is running on a break's behalf: one stretch of a trip to see somebody,
+ * played down the goodbye's path — no clock, no bookkeeping of the engine's own, nothing written
+ * to disk — and handed back to the break once its last line has been read.
+ */
+export interface TripRun {
+  /** Who he has travelled to see. */
+  charId: string
+  /** The premise the scene is written from, about the reader, as a goodbye's is. */
+  action: string
+  /** What the prompt's NOW block says in place of a date and a semester. */
+  now: string[]
+  /** Which half of the day the stage is drawn in. */
+  half: 'day' | 'night'
+  /** What the scene's date card reads in place of a day of the semester. */
+  stamp: { week: number; figure: string; weekday: string }
+  /** What the scene came to, asked once it has closed: the lines read out before it is left. */
+  judge: (log: readonly SceneLine[]) => Promise<SceneLine[]>
+  /** Those lines, once the judgement is in. */
+  lines: SceneLine[] | null
+  /** The scene has been read to its end: the break takes the screen back. */
+  done: () => void
+}
+
 export const loopState = {
   /** One stay inside a playthrough; continuations bail when it goes stale. */
   runToken: {} as object,
+
+  /** The break's own scene, while the engine is running one; null in every ordinary game. */
+  trip: null as TripRun | null,
 
   /** The next slot's opening, paid for and waiting for the boundary. */
   bankedOpening: null as BankedOpening | null,
@@ -259,6 +286,7 @@ export function resetLoopState(): void {
   // Re-minted here, so no leave path can forget to fence what it abandoned.
   loopState.runToken = {}
   loopState.endingToken = {}
+  loopState.trip = null
   loopState.sceneCall = null
   loopState.pendingLedgerResult = null
   loopState.lastLedgerPrompt = null
