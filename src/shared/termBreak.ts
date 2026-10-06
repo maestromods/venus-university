@@ -481,7 +481,13 @@ export function mayInvite(
   if (invites.some((invite) => invite.state === 'open' || invite.state === 'accepted')) return false
   // And nobody asks again for a while after the last one, whoever it was from.
   const { week } = breakClock(draft.spent.length, ended)
-  if (invites.some((invite) => week - invite.week < INVITE_GAP_WEEKS)) return false
+  // A trip counts from the week he came home in, not the week she asked: otherwise the gap is
+  // spent on the road and the next invitation is waiting for him at the door.
+  const settled = (invite: BreakInvite): number =>
+    invite.departs === undefined
+      ? invite.week
+      : breakClock(invite.departs + TRIP_SLOTS - 1, ended).week
+  if (invites.some((invite) => week - settled(invite) < INVITE_GAP_WEEKS)) return false
   // She asks once a break; somebody he is with may ask a second time.
   const hers = invites.filter((invite) => invite.charId === charId).length
   return hers < (standing.lover ? 2 : 1)

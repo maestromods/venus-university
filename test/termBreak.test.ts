@@ -561,6 +561,24 @@ it('carries what a visit reached into the next semester, dated on the slot it ha
     ])
   })
 
+  it('counts the wait before another invitation from the week he came home', () => {
+    const friend: BreakStanding = { disposition: 'trusted', lover: false }
+    // Asked in week 1, away until the first slot of week 3.
+    let home = withSlotSpent(
+      withInviteAnswered(withInvite(fresh, 'a', 'spring'), 'a', true, 'spring'),
+      'spring'
+    )
+    home = withTravel(home, 'spring')
+    home = withVisit(withVisit(home, judged, 'spring'), judged, 'spring')
+    home = withTravel(home, 'spring')
+    expect(mayInvite(home, 'b', friend, 'spring')).toBe(false)
+    // Still too soon a week on; allowed two weeks after he got back.
+    for (let slot = 0; slot < 2; slot += 1) home = withSlotSpent(home, 'spring')
+    expect(mayInvite(home, 'b', friend, 'spring')).toBe(false)
+    for (let slot = 0; slot < 2; slot += 1) home = withSlotSpent(home, 'spring')
+    expect(mayInvite(home, 'b', friend, 'spring')).toBe(true)
+  })
+
     it('cannot be booked over another trip or past the end of the break', () => {
     const two = withInvite(withInvite(fresh, 'a', 'spring'), 'b', 'spring')
     const booked = withInviteAnswered(two, 'a', true, 'spring')
