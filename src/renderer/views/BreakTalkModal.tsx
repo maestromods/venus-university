@@ -173,7 +173,7 @@ export function BreakTalkModal({
             {talk === null && (
               <p className="vu-empty vu-empty--flush">
                 {waitingTexts.length > 0
-                  ? `Writing back spends this slot on ${character.firstName}.`
+                  ? `Writing back spends this slot on ${character.firstName}. She will wait if you would rather answer another week.`
                   : `The first text spends this slot on ${character.firstName}.`}
               </p>
             )}

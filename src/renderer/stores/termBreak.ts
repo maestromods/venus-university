@@ -6,6 +6,7 @@ import {
   reachesIgnored,
   reachOutDue,
   strongAllowed,
+  unansweredReach,
   type BreakCard,
   type BreakDraft,
   type BreakReach,
@@ -234,6 +235,8 @@ export async function writeReachOuts(
     const standing = standings[charId]
     const beat =
       standing && canText(from, charId) ? reachOutDue(charId, standing, week, setting.ended) : null
+    // Somebody still waiting on an answer does not write again, but for the last week's goodbye.
+    if (beat !== 'last' && unansweredReach(draft, charId)) return []
     return beat ? [{ girl, beat }] : []
   })
   if (due.length === 0) return { status: 'done', data: { arrived: [] } }

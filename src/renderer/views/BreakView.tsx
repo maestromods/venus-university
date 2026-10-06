@@ -539,7 +539,7 @@ export function BreakView(): JSX.Element | null {
           {!over && (
             <p className="vu-hint vu-break-hint">
               {unread.length > 0
-                ? `${listed(unread)} wrote to you. Reading is free; writing back spends a slot.`
+                ? `${listed(unread)} wrote to you. Reading is free and there is no rush: she will wait for an answer, this week or a later one.`
                 : 'Click somebody to text her.'}
             </p>
           )}

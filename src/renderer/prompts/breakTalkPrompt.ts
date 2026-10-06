@@ -108,7 +108,7 @@ function historyLines(
   const lines: string[] = []
   if (ignored > 0) {
     lines.push(
-      `${name} has texted the reader ${ignored === 1 ? 'once' : `${ignored} times`} this break and had nothing back. She has not forgotten it.`,
+      `${name} has texted the reader ${ignored === 1 ? 'once' : `${ignored} times`} this break that he has not answered yet. Everybody is busy over a break and she knows it: a late answer is still an answer, and she does not hold the wait against him.`,
       ''
     )
   }
@@ -287,9 +287,9 @@ export function buildBreakReachPrompt(
     '',
     'YOUR TURN',
     'Each character below texts the reader first this week, on her own, in a private DM. Write what each of them sends as her "messages" array: one or two text bubbles, never more.',
-    'Stay in each one\'s voice and keep it text-length. It comes out of her own break and of how things stand between the two of them now, including anything said, promised or ignored earlier this break.',
+    'Stay in each one\'s voice and keep it text-length. It comes out of her own break and of how things stand between the two of them now, including anything said or promised earlier this break.',
     'She writes about her own side of things and may ask him something. She NEVER states what the reader did, is doing or will do, and nobody suggests meeting up.',
-    'Somebody he has ignored writes shorter and cooler than somebody he has been good to.',
+    'Nobody chases him or makes him feel guilty over a text he has not answered yet: everybody is busy over a break, and a late answer is fine.',
     '---',
     ''
   ].join('\n')
