@@ -831,7 +831,8 @@ export function GameView(): JSX.Element {
   const half =
     loopState.trip?.half ?? (isEpilogueNight(date, time, graduationSeen) ? 'night' : slotHalf(time))
   // The sky over this slot, which picks the background's render and the mark the chromes wear.
-  const slotSky = slotWeather(weather, date, time, graduationSeen)
+  // A break's scene is not under the university's sky on the day the semester ended.
+  const slotSky = loopState.trip ? 'clear' : slotWeather(weather, date, time, graduationSeen)
   const wet = isWet(slotSky)
 
   /**

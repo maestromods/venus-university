@@ -560,7 +560,9 @@ export function startVisit(from: Continuation, draft: BreakDraft): boolean {
 
   const now = [
     `It is week ${week} of ${breakWeeks(ended)} of ${words.endBreak}, and the reader is far from Venus University, staying with ${name} where she is spending the break.`,
-    `Nobody has classes or shifts: whatever is said below about schedules is for ${words.backIn}, not now.`
+    girl.job
+      ? `Nobody has classes or shifts now. During the semester ${name} works as ${girl.job.title} at ${girl.job.employer}, by the university, which she is away from until ${words.backIn}.`
+      : 'Nobody has classes or shifts now.'
     ,
     day === 1 ? 'It is the middle of the day.' : 'It is the evening.'
   ]
