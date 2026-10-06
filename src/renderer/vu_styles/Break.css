@@ -57,16 +57,15 @@
    the title's blob, which dips below the header under its own lean. */
 .vu-break-reader {
   position: relative;
-  min-height: 150px;
+  min-height: 162px;
   margin-top: 14px;
   padding-right: 400px;
 }
 
-/* The break's weeks in one row, a tile each: the calendar the clock is read off. */
+/* The break's weeks six to a row, a tile each: the calendar the clock is read off. */
 .vu-break-weeks {
   display: grid;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-auto-flow: column;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
   margin: 0;
   padding: 0;
@@ -143,13 +142,14 @@
   --paper-offset: 10px 9px;
   --paper-tilt: -1.2deg;
   position: absolute;
-  top: -64px;
+  top: -42px;
   right: 0;
   width: 550px;
   height: 360px;
   border-radius: 90px 0 0 90px;
   rotate: 2.4deg;
-  zoom: 0.66;
+  scale: 0.66;
+  transform-origin: 100% 0;
 }
 
 /* The shape fills the panel, so its own badge offsets land where they do on the landing. */
