@@ -58,7 +58,7 @@ import {
   graduationScrollLines,
   isGraduationSlot
 } from '../prompts/graduation'
-import { occasionLeadUpLines, occasionsAt } from '../prompts/occasions'
+import { GRADUATION_DATE, occasionLeadUpLines, occasionsAt } from '../prompts/occasions'
 import { examOn, projectPeriodOf, workedOn } from '../prompts/classProgress'
 import {
   buildSlotIntroPrompt,
@@ -243,6 +243,7 @@ import {
   LOOP_LLM_GROUP,
   SCENE_LLM_GROUP,
   type EndingAnswer,
+  type TripRun,
   type TurnSnapshot
 } from './loop/state'
 import { buildStatusSteps, markStatusLine } from './loop/statusSteps'
@@ -556,7 +557,8 @@ export async function startFarewellScene(charId: string): Promise<void> {
   const character = game.characters[charId]
   if (!character) return
 
-  const action = farewellAction(character.firstName)
+  // A stretch of a break's trip is written from the break's own premise, down the same path.
+  const action = loopState.trip?.action ?? farewellAction(character.firstName)
   const snapshot: TurnSnapshot = { scene: game.captureScene(), action, farewell: charId }
   loopState.lastTurn = snapshot
 
@@ -592,6 +594,15 @@ export async function startFarewellScene(charId: string): Promise<void> {
 /** The end of one goodbye: the scene is cleared, the button spent, and the menu back. */
 function finishFarewell(charId: string | null): void {
   const game = useGameStore.getState()
+  // A break's scene leaves nothing behind in this game: the break has what it came to.
+  const trip = loopState.trip
+  if (trip) {
+    game.setSceneEnding(false)
+    game.setStatusShown(false)
+    game.setBusy(true)
+    trip.done()
+    return
+  }
   // The two the boundary clears, so the next thing on screen does not inherit the ending.
   game.setSceneEnding(false)
   game.setStatusShown(false)
@@ -1532,6 +1543,13 @@ async function runEnding(solo: boolean): Promise<void> {
   if (isGraduationSlot(game.date, game.time)) {
     const closed = await runClosing(dropped)
     if (runStale(run) || dropped()) return
+    // A break's scene is judged by the break before its last lines are read out.
+    const trip = loopState.trip
+    if (closed && trip) {
+      const lines = await trip.judge(sceneSoFar())
+      if (runStale(run) || dropped()) return
+      trip.lines = lines
+    }
     useGameStore.getState().setBusy(false)
     if (!closed) return
     useGameStore.getState().setEndingInFlight(false)
@@ -2040,12 +2058,14 @@ export function advance(): void {
       // What a save taken on the status line records: the goodbye's last line, unturned.
       loopState.statusBase = endingSave()
       game.setStatusShown(true)
-      game.appendPendingLines([
-        farewellStatusLine(
-          game.characters[farewell]?.firstName ?? '',
-          farewellDisposition(farewell)
-        )
-      ])
+      game.appendPendingLines(
+        loopState.trip?.lines ?? [
+          farewellStatusLine(
+            game.characters[farewell]?.firstName ?? '',
+            farewellDisposition(farewell)
+          )
+        ]
+      )
       advance()
       return
     }
@@ -2660,6 +2680,32 @@ export function enterGame(
       prefetchTextLedger()
     }
   }
+}
+
+/**
+ * Opens a game on one stretch of a break's trip: the finished semester's save as the break has
+ * made it, with no playthrough behind it — so nothing the scene does is written anywhere — and
+ * the scene started at once, down the goodbye's path.
+ */
+export function enterTrip(
+  save: GameSave,
+  record: PlaythroughRecord,
+  characters: Record<string, Character>,
+  trip: TripRun
+): void {
+  resetLoop()
+  loopState.trip = trip
+  // The goodbye's path is keyed on the epilogue's own slot, so the scene is stood on it whatever
+  // slot the save was taken in.
+  useGameStore
+    .getState()
+    .loadSave(
+      { ...save, date: GRADUATION_DATE, time: 0, graduationSeen: true, scene: null },
+      record,
+      characters
+    )
+  useGameStore.setState({ playthroughId: null })
+  void startFarewellScene(trip.charId)
 }
 
 /**

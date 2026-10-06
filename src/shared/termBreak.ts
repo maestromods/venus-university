@@ -38,7 +38,12 @@ const TALK_MEMORIES = 2
 const GIRL_MEMORIES = 5
 
 /** One slot of a break as it was spent: let go by, on a conversation with somebody, or on himself. */
-export type BreakEntry = { kind: 'rest' } | { kind: 'text'; charId: string } | { kind: 'alone' }
+export type BreakEntry =
+  | { kind: 'rest' }
+  | { kind: 'text'; charId: string }
+  | { kind: 'alone' }
+  | { kind: 'travel'; charId: string }
+  | { kind: 'visit'; charId: string }
 
 /** One slot he spent on himself: what he set out to do, how it went, and what it exercised. */
 export interface BreakAlone {
@@ -115,6 +120,36 @@ export interface BreakReach {
   answered?: boolean
 }
 
+/** How many slots a trip to see somebody takes: the way out, two with her, the way back. */
+export const TRIP_SLOTS = 4
+
+/**
+ * Her asking him to come and stay: open until he answers, which costs nothing; accepted, it
+ * takes {@link TRIP_SLOTS} slots from the one it leaves on; done once he is home again.
+ */
+export interface BreakInvite {
+  charId: string
+  /** The week of the break she asked in, counted from 1. */
+  week: number
+  state: 'open' | 'accepted' | 'declined' | 'done'
+  /** The index of the slot he leaves on, once he has said yes. */
+  departs?: number
+}
+
+/** One of the two slots of a trip spent with her, as it was judged. */
+export interface BreakVisit {
+  /** The index of the slot it was spent on. */
+  slot: number
+  charId: string
+  verdict: BreakVerdict
+  /** What happened, in a sentence or two, for whatever with her follows. */
+  summary: string
+  /** What it left her remembering. */
+  memories: BreakMemory[]
+  /** Which of his stats the scene exercised. */
+  exercised: LedgerStats
+}
+
 /** Something he told her he would do, each completing "the reader promised to ___". */
 export interface BreakPromise {
   text: string
@@ -141,6 +176,10 @@ export interface TermBreak {
   cards?: Record<string, BreakCard>
   /** Every slot he spent on himself, in order; absent until the first one. */
   alone?: BreakAlone[]
+  /** Every time one of them asked him to come and stay, in order; absent until the first. */
+  invites?: BreakInvite[]
+  /** Every slot spent with somebody he travelled to see, in order; absent until the first. */
+  visits?: BreakVisit[]
   /** Everything the girls sent on their own, in order; absent until the first of it. */
   reaches?: BreakReach[]
   /** The last week whose own texts have been asked for; absent before the first. */
@@ -201,9 +240,14 @@ export function openTalk(draft: Pick<BreakDraft, 'talks'>): BreakTalk | null {
   return last && last.verdict === undefined ? last : null
 }
 
-/** Whether a slot can be spent: the break is not over, has one left, and no conversation is open. */
-function slotFree(draft: BreakDraft, ended: Season): boolean {
+/** Whether a slot can be spent at all: the break is not over, has one left, and no conversation is open. */
+function slotOpen(draft: BreakDraft, ended: Season): boolean {
   return !breakOver(draft) && !breakSpent(draft, ended) && openTalk(draft) === null
+}
+
+/** Whether the slot is his to spend as he likes: open, and not one a trip under way has claimed. */
+function slotFree(draft: BreakDraft, ended: Season): boolean {
+  return slotOpen(draft, ended) && tripStep(draft) === null
 }
 
 /** The break with one more slot let go by; where none can be spent it is left as it is. */
@@ -337,6 +381,176 @@ export function withReachRead(draft: BreakDraft, charId: string): BreakDraft {
   }
 }
 
+/** Her invitation still waiting on his answer; `null` with none. */
+export function openInvite(draft: Pick<BreakDraft, 'invites'>, charId: string): BreakInvite | null {
+  return (
+    (draft.invites ?? []).find((invite) => invite.charId === charId && invite.state === 'open') ??
+    null
+  )
+}
+
+/** The trip he has said yes to and is not home from yet; `null` with none. */
+export function activeTrip(draft: Pick<BreakDraft, 'invites'>): BreakInvite | null {
+  return (draft.invites ?? []).find((invite) => invite.state === 'accepted') ?? null
+}
+
+/**
+ * The slot a trip accepted now would leave on — the next second slot of a week — or `null` where
+ * the break has not the {@link TRIP_SLOTS} slots left from there to fit it.
+ */
+export function tripDeparture(draft: Pick<BreakDraft, 'spent'>, ended: Season): number | null {
+  const at = draft.spent.length
+  const departs = at % BREAK_SLOTS_PER_WEEK === 1 ? at : at + 1
+  return departs + TRIP_SLOTS <= breakSlots(ended) ? departs : null
+}
+
+/**
+ * Whether she may ask him to come and stay: somebody close to him — a lover only, over a winter
+ * — with no invitation of hers waiting or under way, and a break with room left for the trip.
+ */
+export function mayInvite(
+  draft: BreakDraft,
+  charId: string,
+  standing: BreakStanding,
+  ended: Season
+): boolean {
+  const close =
+    standing.lover ||
+    (ended === 'spring' &&
+      (standing.disposition === 'friendly' ||
+        standing.disposition === 'trusted' ||
+        standing.disposition === 'devoted'))
+  if (!close || tripDeparture(draft, ended) === null) return false
+  return !(draft.invites ?? []).some(
+    (invite) => invite.charId === charId && (invite.state === 'open' || invite.state === 'accepted')
+  )
+}
+
+/** The break with her invitation filed, waiting on his answer; one already waiting is not doubled. */
+export function withInvite(draft: BreakDraft, charId: string, ended: Season): BreakDraft {
+  if (breakOver(draft) || openInvite(draft, charId)) return draft
+  const { week } = breakClock(draft.spent.length, ended)
+  return { ...draft, invites: [...(draft.invites ?? []), { charId, week, state: 'open' }] }
+}
+
+/**
+ * The break with his answer to her invitation. A yes books the trip from the next second slot of
+ * a week, and is refused — the break is left as it is — while another trip is booked or under
+ * way, or where the break has not the room left; a no is always taken.
+ */
+export function withInviteAnswered(
+  draft: BreakDraft,
+  charId: string,
+  accept: boolean,
+  ended: Season
+): BreakDraft {
+  const invite = openInvite(draft, charId)
+  if (!invite || breakOver(draft)) return draft
+  const departs = tripDeparture(draft, ended)
+  if (accept && (activeTrip(draft) !== null || departs === null)) return draft
+  const answered: BreakInvite = accept
+    ? { ...invite, state: 'accepted', departs: departs ?? undefined }
+    : { ...invite, state: 'declined' }
+  return {
+    ...draft,
+    invites: draft.invites?.map((other) => (other === invite ? answered : other))
+  }
+}
+
+/** What a trip under way asks of the slot being played. */
+export interface TripStep {
+  charId: string
+  /** The way out, the first or second slot with her, or the way back. */
+  kind: 'out' | 'visit' | 'back'
+  /** Which of the two slots with her, for a visit. */
+  day?: 1 | 2
+}
+
+/** What the booked trip claims the next slot for; `null` before it leaves and with no trip. */
+export function tripStep(draft: Pick<BreakDraft, 'spent' | 'invites'>): TripStep | null {
+  const trip = activeTrip(draft)
+  if (!trip || trip.departs === undefined) return null
+  const into = draft.spent.length - trip.departs
+  if (into < 0 || into >= TRIP_SLOTS) return null
+  if (into === 0) return { charId: trip.charId, kind: 'out' }
+  if (into === TRIP_SLOTS - 1) return { charId: trip.charId, kind: 'back' }
+  return { charId: trip.charId, kind: 'visit', day: into === 1 ? 1 : 2 }
+}
+
+/** The slots a booked trip has still to take, by index: what the calendar marks ahead. */
+export function tripSlotsAhead(draft: Pick<BreakDraft, 'spent' | 'invites'>): number[] {
+  const trip = activeTrip(draft)
+  if (!trip || trip.departs === undefined) return []
+  const slots: number[] = []
+  for (let slot = trip.departs; slot < trip.departs + TRIP_SLOTS; slot += 1) {
+    if (slot >= draft.spent.length) slots.push(slot)
+  }
+  return slots
+}
+
+/**
+ * The break with the slot a trip claims for travelling spent on it; the way back is what ends
+ * the trip. Where the trip asks for no travel now, the break is left as it is.
+ */
+export function withTravel(draft: BreakDraft, ended: Season): BreakDraft {
+  const step = tripStep(draft)
+  if (!step || step.kind === 'visit' || !slotOpen(draft, ended)) return draft
+  const trip = activeTrip(draft)
+  return {
+    ...draft,
+    spent: [...draft.spent, { kind: 'travel', charId: step.charId }],
+    ...(step.kind === 'back'
+      ? {
+          invites: draft.invites?.map((invite) =>
+            invite === trip ? { ...invite, state: 'done' as const } : invite
+          )
+        }
+      : {})
+  }
+}
+
+/** What a slot with her is to the stat rules: a scene with company, and no class or shift. */
+const VISIT = { solo: false, classScene: false, classOutcome: null, jobOutcome: null } as const
+
+/** What a slot spent with her pays, by the rule a scene with company pays under in a semester. */
+export function visitGains(exercised: LedgerStats): ReturnType<typeof resolveStatDeltas> {
+  return resolveStatDeltas(exercised, VISIT)
+}
+
+/**
+ * The break with the slot a trip claims for her spent with her: what it came to filed, and his
+ * stats paid as a scene with company pays. Where the trip asks for no visit now, it is left as
+ * it is.
+ */
+export function withVisit(
+  draft: BreakDraft,
+  judged: Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised'>,
+  ended: Season
+): BreakDraft {
+  const step = tripStep(draft)
+  if (!step || step.kind !== 'visit' || !slotOpen(draft, ended)) return draft
+  const memories = judged.memories
+    .map((memory) => ({ type: memory.type, desc: memory.desc.trim() }))
+    .filter((memory) => memory.desc !== '')
+    .slice(0, TALK_MEMORIES)
+  return {
+    ...draft,
+    stats: applyStatDeltas(draft.stats, visitGains(judged.exercised).deltas),
+    spent: [...draft.spent, { kind: 'visit', charId: step.charId }],
+    visits: [
+      ...(draft.visits ?? []),
+      {
+        slot: draft.spent.length,
+        charId: step.charId,
+        verdict: judged.verdict,
+        summary: judged.summary.trim(),
+        memories,
+        exercised: judged.exercised
+      }
+    ]
+  }
+}
+
 /** What a slot spent alone is to the stat rules: an hour with nobody else in it, and no class or shift. */
 const ALONE = { solo: true, classScene: false, classOutcome: null, jobOutcome: null } as const
 
@@ -384,8 +598,10 @@ export function withTimeAlone(
  * Whether anything was done in the break but let it go by, which is what makes it one that is
  * closed from what happened in it rather than written for him.
  */
-export function breakPlayed(draft: Pick<BreakDraft, 'talks' | 'alone'>): boolean {
-  return draft.talks.length > 0 || (draft.alone?.length ?? 0) > 0
+export function breakPlayed(draft: Pick<BreakDraft, 'talks' | 'alone' | 'visits'>): boolean {
+  return (
+    draft.talks.length > 0 || (draft.alone?.length ?? 0) > 0 || (draft.visits?.length ?? 0) > 0
+  )
 }
 
 /** How many texts of his own a conversation holds. */
@@ -457,6 +673,8 @@ export interface TalkJudgement {
   promisesKept: readonly number[]
   /** Indices into her promises still open that this conversation went back on. */
   promisesBroken: readonly number[]
+  /** She asked him, in this conversation, to come and stay with her. */
+  invited?: boolean
 }
 
 /** Which way a memory leans. */
@@ -570,14 +788,21 @@ function breakSpan(ended: Season): string {
  * {@link GIRL_MEMORIES} are kept. A conversation left open counts for nothing.
  */
 export function playedMemories(
-  draft: Pick<BreakDraft, 'talks' | 'promises'>,
+  draft: Pick<BreakDraft, 'talks' | 'promises' | 'visits' | 'invites'>,
   standings: Readonly<Record<string, BreakStanding>>,
   ended: Season
 ): Record<string, BreakMemory[]> {
   return Object.fromEntries(
     Object.entries(standings).map(([charId, standing]) => {
       const talks = draft.talks.filter((talk) => talk.charId === charId)
-      const memories: BreakMemory[] = talks.flatMap((talk) => talk.memories ?? [])
+      const visits = (draft.visits ?? []).filter((visit) => visit.charId === charId)
+      // Conversations and days spent with her, in the order they happened.
+      const memories: BreakMemory[] = [
+        ...talks.map((talk) => ({ slot: talk.slot, left: talk.memories ?? [] })),
+        ...visits.map((visit) => ({ slot: visit.slot, left: visit.memories }))
+      ]
+        .sort((a, b) => a.slot - b.slot)
+        .flatMap((entry) => entry.left)
       // A promise still open when the break ends is one he never kept. One is remembered,
       // the first: the conversation a promise was gone back on in has already said the rest.
       const unkept = (draft.promises[charId] ?? []).find((promise) => promise.state !== 'kept')
@@ -587,7 +812,17 @@ export function playedMemories(
           desc: `the reader promised to ${unkept.text} and never did`
         })
       }
-      if (talks.length === 0 && mindsSilence(standing, ended)) {
+      // Turning her down once is nothing, but for somebody he is with; again and again is not.
+      const declined = (draft.invites ?? []).filter(
+        (invite) => invite.charId === charId && invite.state === 'declined'
+      ).length
+      if (visits.length === 0 && declined >= (standing.lover ? 1 : 2)) {
+        memories.push({
+          type: 'disliked',
+          desc: 'the reader turned down her invitation to come and see her over the break'
+        })
+      }
+      if (talks.length === 0 && visits.length === 0 && mindsSilence(standing, ended)) {
         memories.push({
           type: 'disliked',
           desc: `the reader did not write to her once ${breakSpan(ended)}`
@@ -691,7 +926,10 @@ export function stampBreak(draft: BreakDraft, savedAt: number): TermBreak {
   return { ...draft, schemaVersion: BREAK_SCHEMA_VERSION, savedAt }
 }
 
-const BREAK_REQUIRED: Record<keyof Omit<TermBreak, 'memories' | 'cards' | 'alone' | 'reaches' | 'reachedWeek'>, true> = {
+const BREAK_REQUIRED: Record<keyof Omit<
+    TermBreak,
+    'memories' | 'cards' | 'alone' | 'reaches' | 'reachedWeek' | 'invites' | 'visits'
+  >, true> = {
   schemaVersion: true,
   savedAt: true,
   stats: true,

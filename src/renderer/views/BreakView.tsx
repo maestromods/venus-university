@@ -20,8 +20,17 @@ import {
   BREAK_SLOTS_PER_WEEK,
   openBreak,
   openTalk,
+  mayInvite,
+  openInvite,
   pendingReachWeek,
   playedMemories,
+  tripDeparture,
+  tripSlotsAhead,
+  tripStep,
+  activeTrip,
+  withInvite,
+  withInviteAnswered,
+  withTravel,
   unansweredReach,
   withReaches,
   withReachRead,
@@ -40,7 +49,7 @@ import {
   type BreakTalk
 } from '@shared/termBreak'
 import type { BreakMemory } from '@shared/termCarry'
-import type { AppError, Character } from '@shared/types'
+import type { AppError, Character, SceneLine } from '@shared/types'
 import { CardCaption } from '../components/CardCaption'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { LlmFailureModal } from '../components/LlmFailureModal'
@@ -62,6 +71,7 @@ import {
   spendTimeAlone,
   writeBreakCards,
   writeBreakMemories,
+  startVisit,
   writeReachOuts
 } from '../stores/termBreak'
 import { useAudioStore } from '../stores/audioStore'
@@ -69,7 +79,7 @@ import { useUiStore } from '../stores/uiStore'
 import { isWebBuild } from '../platform'
 import { StatRadar } from '../components/StatRadar'
 import { BreakAloneModal } from './BreakAloneModal'
-import { BreakNarration } from './BreakNarration'
+import { aloneLines, BreakNarration } from './BreakNarration'
 import { BreakMemoriesModal } from './BreakMemoriesModal'
 import { BreakTalkModal, type TalkPhase } from './BreakTalkModal'
 import { heldScreenTheme } from './clockTheme'
@@ -144,8 +154,10 @@ export function BreakView(): JSX.Element | null {
   const [alone, setAlone] = useState(false)
   const [aloneWriting, setAloneWriting] = useState(false)
   const [aloneSpent, setAloneSpent] = useState<BreakAlone | null>(null)
+  // A leg of a trip being told, and the break as it stands once that leg has been read.
+  const [travel, setTravel] = useState<{ lines: SceneLine[]; next: BreakDraft } | null>(null)
   // The box is up from the moment the slot is asked for until its last line is clicked past.
-  const telling = aloneWriting || aloneSpent !== null
+  const telling = aloneWriting || aloneSpent !== null || travel !== null
 
   // The call for what the girls send at the top of a week is out.
   const [checking, setChecking] = useState(false)
@@ -241,6 +253,57 @@ export function BreakView(): JSX.Element | null {
     if (!written.ok) showError(written.error)
   }
 
+  /** Whether she may ask him to come and stay, as the break stands. */
+  function invitable(base: BreakDraft, charId: string): boolean {
+    if (!from) return false
+    const standing = breakStandings(from)[charId]
+    return standing !== undefined && mayInvite(base, charId, standing, ended)
+  }
+
+  /** His answer to her invitation, which costs nothing either way. */
+  function answerInvite(charId: string, accept: boolean): void {
+    if (!draft) return
+    const next = withInviteAnswered(draft, charId, accept, ended)
+    if (next !== draft) void keep(next)
+  }
+
+  /** The slot the trip under way claims: a leg of the journey told, or a stretch with her played. */
+  function takeTrip(): void {
+    if (!from || !draft || dead) return
+    const step = tripStep(draft)
+    if (!step) return
+    if (step.kind === 'visit') {
+      if (!startVisit(from, draft)) {
+        showError(appError('BREAK_NO_VISIT', 'The visit could not be started.'))
+      }
+      return
+    }
+    const name = from.characters[step.charId]?.firstName ?? 'her'
+    const lines =
+      step.kind === 'out'
+        ? [
+            `You pack a bag and set off on the long way out to see ${name}.`,
+            `By the time you get there, the week is gone.`
+          ]
+        : [
+            `You say goodbye to ${name} and start the long way home.`,
+            `By the time you are back in your own room, the trip is behind you.`
+          ]
+    setTravel({
+      lines: lines.map((text) => ({ speaker: '', text })),
+      next: withTravel(draft, ended)
+    })
+  }
+
+  /** The leg has been read: its slot is spent, and the break closed where that was its last. */
+  function closeTravel(): void {
+    if (!travel) return
+    const { next } = travel
+    setTravel(null)
+    if (breakSpent(next, ended)) void keep(next).then(() => closePlayed(next))
+    else void keep(next)
+  }
+
   /** Asks who writes to him in `week`, and files what they send; nothing else moves meanwhile. */
   async function checkPhone(base: BreakDraft, week: number): Promise<void> {
     if (!from) return
@@ -260,7 +323,15 @@ export function BreakView(): JSX.Element | null {
     }
     const { arrived, cards } = outcome.data
     if (arrived.length > 0) useAudioStore.getState().play('text_in')
-    await keep(withReaches(cards ? { ...base, cards: { ...base.cards, ...cards } } : base, week, arrived))
+    let next = withReaches(
+      cards ? { ...base, cards: { ...base.cards, ...cards } } : base,
+      week,
+      arrived
+    )
+    for (const sent of arrived) {
+      if (sent.invites && invitable(next, sent.charId)) next = withInvite(next, sent.charId, ended)
+    }
+    await keep(next)
   }
 
   /** Closes a break nobody played on memories written for it, and opens them to be reworded. */
@@ -351,8 +422,14 @@ export function BreakView(): JSX.Element | null {
       })
       return
     }
-    const next = withTalkJudged(base, outcome.data)
-    setShown(next.talks[next.talks.length - 1] ?? null)
+    const judged = withTalkJudged(base, outcome.data)
+    const charId = openTalk(base)?.charId
+    // An invitation is hers to make only where she may, whatever the reply claims.
+    const next =
+      charId && outcome.data.invited && invitable(judged, charId)
+        ? withInvite(judged, charId, ended)
+        : judged
+    setShown(judged.talks[judged.talks.length - 1] ?? null)
     await keep(next)
   }
 
@@ -478,6 +555,14 @@ export function BreakView(): JSX.Element | null {
     if (next !== draft) void keep(next)
   }
 
+  // What the booked trip asks of the slot being played, and who it is to see.
+  const step = draft && !over ? tripStep(draft) : null
+  const away = step !== null
+  const trip = draft && !over ? activeTrip(draft) : null
+  const tripName = trip ? (from.characters[trip.charId]?.firstName ?? 'her') : ''
+  const inviters = draft
+    ? faces.filter((c) => openInvite(draft, c.charId) !== null).map((c) => c.firstName)
+    : []
   // Who has written and not been opened yet, for the line over the faces.
   const unread = faces.filter((c) => wroteOf(c.charId) === 'new').map((c) => c.firstName)
 
@@ -526,7 +611,14 @@ export function BreakView(): JSX.Element | null {
         initial="hidden"
         animate="shown"
       >
-        {draft && <BreakCalendar spent={draft.spent} ended={ended} over={over} />}
+        {draft && (
+          <BreakCalendar
+            spent={draft.spent}
+            booked={over ? [] : tripSlotsAhead(draft)}
+            ended={ended}
+            over={over}
+          />
+        )}
         {draft && (
           <div className="vu-break-statpanel vu-paper">
             <StatRadar className="vu-break-radar" stats={draft.stats} arrival={{}} />
@@ -538,9 +630,19 @@ export function BreakView(): JSX.Element | null {
         <>
           {!over && (
             <p className="vu-hint vu-break-hint">
-              {unread.length > 0
-                ? `${listed(unread)} wrote to you. Reading is free and there is no rush: she will wait for an answer, this week or a later one.`
-                : 'Click somebody to text her.'}
+              {step
+                ? step.kind === 'out'
+                  ? `It is time to leave for ${tripName}'s.`
+                  : step.kind === 'back'
+                    ? `It is time to travel home from ${tripName}'s.`
+                    : `You are staying with ${tripName}.`
+                : trip
+                  ? `You leave to see ${tripName} once this slot is spent.`
+                  : inviters.length > 0
+                    ? `${listed(inviters)} invited you to come and stay. Open her messages to answer; it costs nothing, and she will wait.`
+                    : unread.length > 0
+                      ? `${listed(unread)} wrote to you. Reading is free and there is no rush: she will wait for an answer, this week or a later one.`
+                      : 'Click somebody to text her.'}
             </p>
           )}
           <motion.ul className="vu-break-grid" variants={GRID_IN} initial="hidden" animate="shown">
@@ -550,7 +652,8 @@ export function BreakView(): JSX.Element | null {
                 character={character}
                 texted={draft?.talks.filter((talk) => talk.charId === character.charId).length ?? 0}
                 // A girl he cannot reach, and anybody once the slots are gone, is only a face.
-                opens={!over && !spent && !dead && canText(from, character.charId)}
+                opens={!over && !spent && !dead && !away && canText(from, character.charId)}
+                invited={draft !== null && openInvite(draft, character.charId) !== null}
                 wrote={wroteOf(character.charId)}
                 tag={tags[character.charId]}
                 onOpen={() => openTalkPanel(character.charId)}
@@ -602,6 +705,21 @@ export function BreakView(): JSX.Element | null {
               onClick={() => draft && finish(draft)}
             >
               Finish the break
+            </motion.button>
+          ) : step ? (
+            <motion.button
+              id="break-trip"
+              className="vu-btn vu-btn--primary vu-btn--panel vu-paper"
+              {...gestures(dead, lift, press)}
+              disabled={dead}
+              onClick={takeTrip}
+            >
+              {step.kind === 'out'
+                ? `Leave to see ${tripName}`
+                : step.kind === 'back'
+                  ? 'Travel home'
+                  : `Spend the ${step.day === 1 ? 'first' : 'last'} days with ${tripName}`}
+              <ChevronIcon />
             </motion.button>
           ) : (
             <>
@@ -698,6 +816,17 @@ export function BreakView(): JSX.Element | null {
             week={breakClock(panelTalk?.slot ?? draft.spent.length, ended).week}
             talk={panelTalk?.charId === talkingTo.charId ? panelTalk : null}
             opening={unansweredReach(draft, talkingTo.charId)?.lines ?? []}
+            invite={
+              openInvite(draft, talkingTo.charId) && !over
+                ? {
+                    // A yes is refused while another trip is booked or the break has not the room.
+                    bookable: activeTrip(draft) === null && tripDeparture(draft, ended) !== null,
+                    busy: activeTrip(draft) !== null,
+                    leaves: breakClock(tripDeparture(draft, ended) ?? 0, ended).week
+                  }
+                : null
+            }
+            onInvite={(accept) => answerInvite(talkingTo.charId, accept)}
             phase={phase}
             onSend={(text) => void send(talkingTo.charId, text)}
             onLeave={leave}
@@ -708,7 +837,11 @@ export function BreakView(): JSX.Element | null {
 
       <AnimatePresence>
         {telling && !failure && (
-          <BreakNarration key="told" spent={aloneSpent} onDone={closeAlone} />
+          <BreakNarration
+            key="told"
+            lines={travel ? travel.lines : aloneSpent ? aloneLines(aloneSpent) : null}
+            onDone={travel ? closeTravel : closeAlone}
+          />
         )}
       </AnimatePresence>
 
@@ -772,12 +905,27 @@ export function BreakView(): JSX.Element | null {
  * boxes: ticked where the slot went on a conversation, struck where it was let go by, and the
  * week being played picked out.
  */
+/** What each state of a slot's box is called. */
+const SLOT_WORDS: Record<BreakEntry['kind'] | 'next' | 'booked' | 'open', string> = {
+  text: 'Spent texting',
+  alone: 'Spent on himself',
+  rest: 'Let go by',
+  travel: 'Spent travelling',
+  visit: 'Spent with her',
+  next: 'The slot being spent',
+  booked: 'Taken by a trip',
+  open: 'Not yet spent'
+}
+
 function BreakCalendar({
   spent,
+  booked,
   ended,
   over
 }: {
   spent: readonly BreakEntry[]
+  /** The slots a booked trip has still to take, by index. */
+  booked: readonly number[]
   ended: Season
   over: boolean
 }): JSX.Element {
@@ -801,24 +949,24 @@ function BreakCalendar({
             {Array.from({ length: BREAK_SLOTS_PER_WEEK }, (_, half) => {
               const slot = week * BREAK_SLOTS_PER_WEEK + half
               const entry = spent[slot]
-              const state = entry ? entry.kind : !over && slot === spent.length ? 'next' : 'open'
+              const state = entry
+                ? entry.kind
+                : !over && slot === spent.length
+                  ? 'next'
+                  : booked.includes(slot)
+                    ? 'booked'
+                    : 'open'
               return (
                 <span
                   key={half}
-                  className={`vu-break-box vu-break-box--${state}`}
-                  aria-label={
-                    state === 'text'
-                      ? 'Spent texting'
-                      : state === 'alone'
-                        ? 'Spent on himself'
-                        : state === 'rest'
-                        ? 'Let go by'
-                        : state === 'next'
-                          ? 'The slot being spent'
-                          : 'Not yet spent'
-                  }
+                  className={`vu-break-box vu-break-box--${state}${
+                    state === 'next' && booked.includes(slot) ? ' vu-break-box--booked' : ''
+                  }`}
+                  aria-label={SLOT_WORDS[state]}
                 >
-                  {state === 'text' || state === 'alone' ? <CheckIcon /> : null}
+                  {state === 'text' || state === 'alone' || state === 'visit' ? (
+                    <CheckIcon />
+                  ) : null}
                 </span>
               )
             })}
@@ -829,21 +977,24 @@ function BreakCalendar({
   )
 }
 
-/** One girl who is coming back: her archway and her name, and how often he has written to her. */
 /** Names as a sentence lists them: "Ami", "Ami and Lili", "Ami, Lili and Gwen". */
 function listed(names: readonly string[]): string {
   if (names.length <= 1) return names[0] ?? ''
   return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
+/** One girl who is coming back: her archway and her name, and how often he has written to her. */
 function BreakFace({
   character,
   texted,
   wrote,
+  invited,
   tag,
   opens,
   onOpen
 }: {
+  /** Whether an invitation of hers is waiting on his answer. */
+  invited: boolean
   /** What the reader calls her, as her contact page says it. */
   tag: string | undefined
   character: Character
@@ -878,12 +1029,16 @@ function BreakFace({
           {tag}
         </span>
       )}
-      {wrote && (
-        <span
-          className={`vu-sticker vu-break-wrote${wrote === 'new' ? ' vu-sticker--accent' : ''}`}
-        >
-          {wrote === 'new' ? 'New text' : 'Wrote you'}
-        </span>
+      {invited ? (
+        <span className="vu-sticker vu-sticker--accent vu-break-wrote">Invited you</span>
+      ) : (
+        wrote && (
+          <span
+            className={`vu-sticker vu-break-wrote${wrote === 'new' ? ' vu-sticker--accent' : ''}`}
+          >
+            {wrote === 'new' ? 'New text' : 'Wrote you'}
+          </span>
+        )
       )}
       {texted > 0 && (
         <span className="vu-sticker vu-break-texted">

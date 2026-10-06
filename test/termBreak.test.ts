@@ -10,6 +10,7 @@ import {
   breakSlots,
   breakSpent,
   openBreak,
+  mayInvite,
   openTalk,
   pendingReachWeek,
   playedMemories,
@@ -18,11 +19,16 @@ import {
   TALK_TURNS,
   withBreakClosed,
   withBreakThreads,
+  tripStep,
+  withInvite,
+  withInviteAnswered,
   withPlayerLine,
   withReaches,
   withReply,
   withSlotSpent,
   withTimeAlone,
+  withTravel,
+  withVisit,
   withTalkJudged,
   withTalkLeft,
   withTalkStarted,
@@ -440,5 +446,71 @@ describe('what the girls send on their own', () => {
     expect(reachOutDue('a', lover, 4, 'fall')).toBe('last')
     expect(reachOutDue('a', known, 12, 'spring')).toBeNull()
     expect(reachOutDue('a', known, 4, 'fall')).toBeNull()
+  })
+})
+
+describe('a trip to see somebody', () => {
+  const fresh: BreakDraft = {
+    stats: { brain: 0, body: 0, heart: 0 },
+    spent: [],
+    talks: [],
+    promises: {}
+  }
+  const lover: BreakStanding = { disposition: 'devoted', lover: true }
+  const judged = {
+    verdict: 'warmer' as const,
+    summary: 'They walked the pier.',
+    memories: [{ type: 'liked' as const, desc: 'the reader came to see her' }],
+    exercised: { brain: false, body: false, heart: true }
+  }
+
+  it('takes four slots from the next second slot of a week, and nothing else may be done in them', () => {
+    const invited = withInvite(fresh, 'a', 'spring')
+    const booked = withInviteAnswered(invited, 'a', true, 'spring')
+    expect(booked.invites).toEqual([{ charId: 'a', week: 1, state: 'accepted', departs: 1 }])
+    // The first slot of the week is still his own.
+    expect(tripStep(booked)).toBeNull()
+    const leaving = withSlotSpent(booked, 'spring')
+    expect(tripStep(leaving)).toEqual({ charId: 'a', kind: 'out' })
+    expect(withSlotSpent(leaving, 'spring')).toBe(leaving)
+    expect(withTalkStarted(leaving, 'b', 'hey', 'spring')).toBe(leaving)
+    expect(withVisit(leaving, judged, 'spring')).toBe(leaving)
+
+    const there = withTravel(leaving, 'spring')
+    expect(tripStep(there)).toEqual({ charId: 'a', kind: 'visit', day: 1 })
+    expect(withTravel(there, 'spring')).toBe(there)
+    const second = withVisit(there, judged, 'spring')
+    expect(second.stats.heart).toBe(1)
+    const last = withVisit(second, judged, 'spring')
+    expect(tripStep(last)).toEqual({ charId: 'a', kind: 'back' })
+    const home = withTravel(last, 'spring')
+    expect(home.spent.map((entry) => entry.kind)).toEqual([
+      'rest',
+      'travel',
+      'visit',
+      'visit',
+      'travel'
+    ])
+    expect(home.invites?.[0]?.state).toBe('done')
+    expect(tripStep(home)).toBeNull()
+    expect(playedMemories(home, { a: lover }, 'spring').a).toEqual([
+      { type: 'liked', desc: 'the reader came to see her' },
+      { type: 'liked', desc: 'the reader came to see her' }
+    ])
+  })
+
+  it('cannot be booked over another trip or past the end of the break', () => {
+    const two = withInvite(withInvite(fresh, 'a', 'spring'), 'b', 'spring')
+    const booked = withInviteAnswered(two, 'a', true, 'spring')
+    expect(withInviteAnswered(booked, 'b', true, 'spring')).toBe(booked)
+    expect(mayInvite(booked, 'a', lover, 'spring')).toBe(false)
+
+    // A winter of eight slots with five gone has not four left from the next second slot.
+    let late = fresh
+    for (let slot = 0; slot < 5; slot += 1) late = withSlotSpent(late, 'fall')
+    expect(mayInvite(late, 'a', lover, 'fall')).toBe(false)
+    const asked = { ...late, invites: [{ charId: 'a', week: 3, state: 'open' as const }] }
+    expect(withInviteAnswered(asked, 'a', true, 'fall')).toBe(asked)
+    expect(withInviteAnswered(asked, 'a', false, 'fall').invites?.[0]?.state).toBe('declined')
   })
 })

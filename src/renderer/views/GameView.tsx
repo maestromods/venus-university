@@ -111,6 +111,7 @@ import {
   submitQuizAnswer,
   submitGift
 } from '../stores/gameLoop'
+import { loopState } from '../stores/loop/state'
 import {
   abandonHangoutClassify,
   blockedThreadHidden,
@@ -826,7 +827,9 @@ export function GameView(): JSX.Element {
   // The same cache-buster for the speaker's portrait: the player can reframe one mid-playthrough.
   const spriteVersions = useCharacterStore((s) => s.spriteVersion)
   // Which half of the day the layer resolves; the epilogue is always night.
-  const half = isEpilogueNight(date, time, graduationSeen) ? 'night' : slotHalf(time)
+  // A scene a break is running names its own half.
+  const half =
+    loopState.trip?.half ?? (isEpilogueNight(date, time, graduationSeen) ? 'night' : slotHalf(time))
   // The sky over this slot, which picks the background's render and the mark the chromes wear.
   const slotSky = slotWeather(weather, date, time, graduationSeen)
   const wet = isWet(slotSky)
@@ -1821,6 +1824,7 @@ export function GameView(): JSX.Element {
         <SceneChrome
           theme={half}
           date={date}
+          stamp={loopState.trip?.stamp}
           night={half === 'night'}
           weather={slotSky}
           covered={covered}

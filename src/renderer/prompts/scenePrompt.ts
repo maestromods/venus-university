@@ -192,6 +192,11 @@ export interface PromptState {
    */
   farewell?: { firstName: string; senior: boolean }
   /**
+   * Set only for a scene a break is running, down the goodbye's path: what stands in the NOW
+   * block where a goodbye's own two lines would.
+   */
+  trip?: { now: readonly string[] }
+  /**
    * Classes he added at add/drop and has not yet walked into — every unspent add;
    * `classCode` decides which applies.
    */
@@ -989,8 +994,10 @@ function nowBlock(cast: readonly Character[], state: PromptState): string[] {
   return [
     'NOW',
     // A farewell replaces the date and semester lines.
-    ...(state.farewell
-      ? farewellNowLines(state.farewell.firstName, state.farewell.senior)
+    ...(state.trip
+      ? state.trip.now
+      : state.farewell
+        ? farewellNowLines(state.farewell.firstName, state.farewell.senior)
       : [
           `It is ${formatDateBanner(state.date, state.time)}`,
           formatSemesterProgress(state.date),

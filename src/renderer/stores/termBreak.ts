@@ -1,8 +1,27 @@
 import { FINAL_DATE } from '@shared/classes'
-import { affectionFor, dispositionOf, relationshipTagOf } from '@shared/relationship'
-import { daysToNextTerm, seasonOf, setActiveTerm, termIndexOf, type Season } from '@shared/term'
 import {
+  affectionFor,
+  dispositionOf,
+  memoryStatusLine,
+  relationshipTagOf
+} from '@shared/relationship'
+import {
+  daysToNextTerm,
+  seasonOf,
+  seasonWords,
+  setActiveTerm,
+  termIndexOf,
+  type Season
+} from '@shared/term'
+import {
+  breakClock,
+  breakSlotDate,
+  breakWeeks,
+  mayInvite,
   openTalk,
+  tripStep,
+  visitGains,
+  withVisit,
   reachesIgnored,
   reachOutDue,
   strongAllowed,
@@ -14,7 +33,15 @@ import {
   type TalkJudgement
 } from '@shared/termBreak'
 import { returningChars, type BreakMemory } from '@shared/termCarry'
-import type { AppError, Character, Result, StructuredRequest } from '@shared/types'
+import {
+  charKeyOf,
+  READER_SPEAKER,
+  type AppError,
+  type Character,
+  type GameSave,
+  type Result,
+  type StructuredRequest
+} from '@shared/types'
 import { normalizeBreakReply, type BreakGenReply } from '../prompts/breakPrompt'
 import {
   buildBreakAlonePrompt,
@@ -22,10 +49,12 @@ import {
   buildBreakJudgePrompt,
   buildBreakReachPrompt,
   buildBreakTalkPrompt,
+  buildBreakVisitPrompt,
   normalizeBreakAlone,
   normalizeBreakCards,
   normalizeBreakJudgement,
   normalizeBreakReach,
+  normalizeBreakVisit,
   type BreakAloneReply,
   type BreakCardsReply,
   type BreakGirl,
@@ -33,9 +62,22 @@ import {
   type BreakReachGirl,
   type BreakReachReply,
   type BreakSetting,
-  type BreakTalkReply
+  type BreakTalkReply,
+  type BreakTripNotes,
+  type BreakVisitReply
 } from '../prompts/breakTalkPrompt'
-import { breakAskOf, breakReaderOf, keptFrom, type Continuation } from './newGame'
+import { formatNumericGameDate } from '../prompts/gameDate'
+import { enterTrip, leaveToMenu } from './gameLoop'
+import { markStatusLine } from './loop/statusSteps'
+import type { TripRun } from './loop/state'
+import {
+  breakAskOf,
+  breakReaderOf,
+  keptFrom,
+  stageContinuation,
+  type Continuation
+} from './newGame'
+import { useUiStore } from './uiStore'
 import { useSettingsStore } from './settingsStore'
 import { retrySilently } from './silentRetry'
 
@@ -214,7 +256,7 @@ export async function writeBreakCards(
 
 /** What a week's own texts came to: whoever wrote, and the cards where they had to be written first. */
 export interface ReachOuts {
-  arrived: Array<Pick<BreakReach, 'charId' | 'lines' | 'beat'>>
+  arrived: Array<Pick<BreakReach, 'charId' | 'lines' | 'beat'> & { invites: boolean }>
   cards?: Record<string, BreakCard>
 }
 
@@ -263,7 +305,9 @@ export async function writeReachOuts(
           (talk) => talk.charId === charId && talk.verdict !== undefined
         ),
         promises: draft.promises[charId] ?? [],
-        ignored: reachesIgnored(draft, charId)
+        ignored: reachesIgnored(draft, charId),
+        trip: tripNotesOf(draft, charId),
+        mayInvite: mayInviteNow(from, draft, charId)
       }
     ]
   })
@@ -275,9 +319,16 @@ export async function writeReachOuts(
       const texts = normalizeBreakReach(reply, writing)
       return {
         arrived: writing.flatMap(({ girl, beat }) => {
-          const lines = texts[girl.character.charId]
-          return lines
-            ? [{ charId: girl.character.charId, lines, ...(beat === 'plain' ? {} : { beat }) }]
+          const sent = texts[girl.character.charId]
+          return sent
+            ? [
+                {
+                  charId: girl.character.charId,
+                  lines: sent.lines,
+                  invites: sent.invites,
+                  ...(beat === 'plain' ? {} : { beat })
+                }
+              ]
             : []
         }),
         ...(written ? { cards: written } : {})
@@ -303,6 +354,8 @@ function talkInputOf(from: Continuation, draft: BreakDraft) {
     ),
     promises: draft.promises[talk.charId] ?? [],
     ignored: reachesIgnored(draft, talk.charId),
+    trip: tripNotesOf(draft, talk.charId),
+    mayInvite: mayInviteNow(from, draft, talk.charId),
     setting
   }
 }
@@ -375,6 +428,175 @@ export async function spendTimeAlone(
     }
   }
   return outcome
+}
+
+/** What a call is told of trips with her: the days already spent together, and where her invitation stands. */
+function tripNotesOf(draft: BreakDraft, charId: string): BreakTripNotes {
+  const invites = (draft.invites ?? []).filter((invite) => invite.charId === charId)
+  const last = invites[invites.length - 1]
+  return {
+    visits: (draft.visits ?? []).filter((visit) => visit.charId === charId),
+    ...(last && last.state !== 'done' ? { invite: last.state } : {})
+  }
+}
+
+/** Whether she may ask him to come and stay, as the break stands. */
+function mayInviteNow(from: Continuation, draft: BreakDraft, charId: string): boolean {
+  const standing = breakStandings(from)[charId]
+  return standing !== undefined && mayInvite(draft, charId, standing, endedOf(from))
+}
+
+/** How long a line of the trip's own narration is given before the engine takes the screen back. */
+const VISIT_OVER = 'The day is over.'
+
+/**
+ * Opens the engine on the stretch of a trip the break is up to: a real scene with her, wherever
+ * she is spending the break, written from the break's own premise. Nothing the scene does is
+ * written to the finished semester; when its last line has been read the break is told what it
+ * came to — judged by one call against her card — and takes the screen back with the slot spent.
+ * Returns whether the scene was opened.
+ */
+export function startVisit(from: Continuation, draft: BreakDraft): boolean {
+  const step = tripStep(draft)
+  const card = step ? draft.cards?.[step.charId] : undefined
+  if (!step || step.kind !== 'visit' || !card) return false
+  const { girls, setting } = castFor(from)
+  const girl = girls.find(({ character }) => character.charId === step.charId)
+  const info = from.save.charInfo[step.charId]
+  if (!girl || !info) return false
+
+  const ended = setting.ended
+  const name = girl.character.firstName
+  const key = charKeyOf(girl.character.firstName, girl.character.lastName)
+  const words = seasonWords(ended)
+  const slot = draft.spent.length
+  const { week } = breakClock(slot, ended)
+  const day = step.day ?? 1
+  const earlier = draft.talks.filter(
+    (talk) => talk.charId === step.charId && talk.verdict !== undefined
+  )
+  const visits = (draft.visits ?? []).filter((visit) => visit.charId === step.charId)
+
+  // The finished semester's last save as the break has left it: his stats as they stand now, and
+  // what the break has already given her to remember of him.
+  const left: BreakMemory[] = [
+    ...earlier.flatMap((talk) => talk.memories ?? []),
+    ...visits.flatMap((visit) => visit.memories)
+  ]
+  const save: GameSave = {
+    ...from.save,
+    scene: null,
+    stats: draft.stats,
+    charInfo: {
+      ...from.save.charInfo,
+      [step.charId]: {
+        ...info,
+        memories: [
+          ...info.memories,
+          ...left.map((memory) => ({ ...memory, date: from.save.date }))
+        ]
+      }
+    }
+  }
+
+  const before = [
+    ...earlier.map((talk) => ({ slot: talk.slot, text: `they texted. ${talk.summary ?? ''}` })),
+    ...visits.map((visit) => ({ slot: visit.slot, text: `he arrived and they spent time together. ${visit.summary}` }))
+  ]
+    .sort((a, b) => a.slot - b.slot)
+    .map((entry) => `week ${breakClock(entry.slot, ended).week}, ${entry.text.trim()}`)
+
+  const action = [
+    `It is ${words.endBreak}, week ${week} of ${breakWeeks(ended)}, and the reader has travelled a long way from Venus University to stay with ${name} for a few days, at her invitation.`,
+    `${card.where}`,
+    day === 1
+      ? `This is his first stretch there: he has just arrived, and the two of them have not seen each other in person since the semester ended.`
+      : `This is his second and last stretch there before he travels home.`,
+    before.length > 0 ? `So far this break: ${before.join(' ')}` : '',
+    `The scene is somewhere in ${name}'s own world over the break, never on campus, and nobody else from the university is there.`
+  ]
+    .filter((line) => line !== '')
+    .join(' ')
+
+  const now = [
+    `It is week ${week} of ${breakWeeks(ended)} of ${words.endBreak}, and the reader is far from Venus University, staying with ${name} where she is spending the break.`,
+    `Nobody has classes or shifts: whatever is said below about schedules is for ${words.backIn}, not now.`
+    ,
+    day === 1 ? 'It is the middle of the day.' : 'It is the evening.'
+  ]
+
+  let judged: ReturnType<typeof normalizeBreakVisit> | null = null
+
+  const trip: TripRun = {
+    charId: step.charId,
+    action,
+    now,
+    half: day === 1 ? 'day' : 'night',
+    stamp: {
+      week,
+      figure: formatNumericGameDate(breakSlotDate(slot, ended).date, ended === 'spring' ? 'fall' : 'spring'),
+      weekday: 'AWAY'
+    },
+    lines: null,
+    judge: async (log) => {
+      const scene = log.map((line) => ({
+        who: line.speaker === key ? name : line.speaker === READER_SPEAKER ? 'Reader' : '',
+        text: line.text
+      }))
+      const outcome = await send<BreakVisitReply>(
+        'visit',
+        buildBreakVisitPrompt({
+          girl,
+          card,
+          day,
+          slot,
+          scene,
+          earlier,
+          promises: draft.promises[step.charId] ?? [],
+          trip: tripNotesOf(draft, step.charId),
+          setting
+        })
+      )
+      // A judgement that could not be had leaves the slot spent and nothing remembered of it,
+      // rather than holding the scene on a call that will not come.
+      if (outcome.status !== 'done') return [{ speaker: '', text: VISIT_OVER }]
+      judged = normalizeBreakVisit(outcome.data)
+      const gains = visitGains(judged.exercised).lines
+      const lines = [
+        ...judged.memories.map((memory) => memoryStatusLine(name, memory)),
+        ...gains.map((gain) => markStatusLine(gain.text, undefined, gain.polarity))
+      ]
+      return lines.length > 0 ? lines : [{ speaker: '', text: VISIT_OVER }]
+    },
+    done: () => {
+      const next = withVisit(
+        draft,
+        judged ?? {
+          verdict: 'neutral',
+          summary: '',
+          memories: [],
+          exercised: { brain: false, body: false, heart: false }
+        },
+        ended
+      )
+      void (async () => {
+        const written = await window.api.saves.writeBreak(from.playthroughId, next)
+        if (!written.ok) useUiStore.getState().showError(written.error)
+        await leaveToMenu()
+        stageContinuation(from)
+        useUiStore.getState().setView('break')
+      })()
+    }
+  }
+
+  enterTrip(
+    save,
+    from.record,
+    from.characters,
+    trip
+  )
+  useUiStore.getState().setView('game')
+  return true
 }
 
 /** Abandons the call in flight: the player left the screen, or answered its failure with no. */

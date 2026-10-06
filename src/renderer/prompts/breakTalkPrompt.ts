@@ -15,6 +15,7 @@ import {
   type ReachBeat,
   type BreakTalk,
   type BreakVerdict,
+  type BreakVisit,
   type TalkJudgement
 } from '@shared/termBreak'
 import type { BreakMemory } from '@shared/termCarry'
@@ -97,13 +98,20 @@ function transcriptLines(lines: readonly BreakLine[], name: string): string[] {
   return lines.map((line) => `${line.sender === 'player' ? 'Reader' : name}: ${line.text}`)
 }
 
-/** What the earlier conversations with her came to, what he still owes her, and what he ignored. */
+/** What a call is told of trips: the days he has spent with her, and where her invitation stands. */
+export interface BreakTripNotes {
+  visits?: readonly BreakVisit[]
+  invite?: 'open' | 'accepted' | 'declined'
+}
+
+/** What the earlier conversations and days with her came to, what he still owes her, and what he ignored. */
 function historyLines(
   name: string,
   earlier: readonly BreakTalk[],
   promises: readonly BreakPromise[],
   ended: Season,
-  ignored = 0
+  ignored = 0,
+  trip: BreakTripNotes = {}
 ): string[] {
   const lines: string[] = []
   if (ignored > 0) {
@@ -112,13 +120,36 @@ function historyLines(
       ''
     )
   }
-  if (earlier.length > 0) {
+  const visits = trip.visits ?? []
+  if (earlier.length > 0 || visits.length > 0) {
     lines.push('EARLIER THIS BREAK')
-    for (const talk of earlier) {
-      const { week } = breakClock(talk.slot, ended)
-      lines.push(`- Week ${week}: ${talk.summary ?? 'They texted.'}`)
+    const told = [
+      ...earlier.map((talk) => ({
+        slot: talk.slot,
+        text: `they texted. ${talk.summary ?? ''}`.trim()
+      })),
+      ...visits.map((visit) => ({
+        slot: visit.slot,
+        text: `the reader came to stay with her. ${visit.summary}`.trim()
+      }))
+    ].sort((a, b) => a.slot - b.slot)
+    for (const entry of told) {
+      lines.push(`- Week ${breakClock(entry.slot, ended).week}: ${entry.text}`)
     }
     lines.push('')
+  }
+  if (trip.invite === 'open') {
+    lines.push(
+      `${name} has invited the reader to come and stay with her for a few days. He has not said yes or no yet, and she is not pressing him.`,
+      ''
+    )
+  } else if (trip.invite === 'accepted') {
+    lines.push(
+      `${name} invited the reader to come and stay with her for a few days and he said yes: the trip is coming up, and she is looking forward to it.`,
+      ''
+    )
+  } else if (trip.invite === 'declined') {
+    lines.push(`${name} invited the reader to come and stay with her, and he said no.`, '')
   }
   const open = promises.filter((promise) => promise.state === 'open')
   if (open.length > 0) {
@@ -253,11 +284,14 @@ export interface BreakReachGirl {
   promises: readonly BreakPromise[]
   /** How many times she has already written this break and had nothing back. */
   ignored: number
+  trip?: BreakTripNotes
+  /** Whether she may ask him to come and stay. */
+  mayInvite?: boolean
 }
 
 /** The reply as the reach-out call returns it: one record per character, each naming its charKey. */
 export interface BreakReachReply {
-  characters: Array<{ key: string; messages?: string[] }>
+  characters: Array<{ key: string; messages?: string[]; invites?: boolean }>
 }
 
 /** What has her writing, as the call is told it. */
@@ -288,7 +322,7 @@ export function buildBreakReachPrompt(
     'YOUR TURN',
     'Each character below texts the reader first this week, on her own, in a private DM. Write what each of them sends as her "messages" array: one or two text bubbles, never more.',
     'Stay in each one\'s voice and keep it text-length. It comes out of her own break and of how things stand between the two of them now, including anything said or promised earlier this break.',
-    'She writes about her own side of things and may ask him something. She NEVER states what the reader did, is doing or will do, and nobody suggests meeting up.',
+    'She writes about her own side of things and may ask him something. She NEVER states what the reader did, is doing or will do, and nobody suggests meeting up unless her own entry below says she may invite him.',
     'Nobody chases him or makes him feel guilty over a text he has not answered yet: everybody is busy over a break, and a late answer is fine.',
     '---',
     ''
@@ -301,14 +335,21 @@ export function buildBreakReachPrompt(
     setting.reader,
     '',
     'CHARACTERS',
-    ...writing.flatMap(({ girl, card, beat, earlier, promises, ignored }, index) => {
+    ...writing.flatMap(({ girl, card, beat, earlier, promises, ignored, trip, mayInvite }, index) => {
       const name = girl.character.firstName
       return [
         `${keys[index]} — ${fullNameOf(girl.character)}`,
         ...girlLines(girl, setting),
         ...cardLines(name, card),
-        ...historyLines(name, earlier, promises, setting.ended, ignored),
+        ...historyLines(name, earlier, promises, setting.ended, ignored, trip),
         `WHY SHE WRITES: ${BEAT_LINES[beat](name, words.backIn)}`,
+        ...(mayInvite
+          ? [
+              beat === 'mid'
+                ? `With all that going on she may well ask him to come and stay with her for a few days. If her texts invite him, set her "invites" to true.`
+                : `She may, if it fits how things stand, ask him to come and stay with her for a few days; most weeks she does not. If her texts invite him, set her "invites" to true.`
+            ]
+          : [`She does not invite him anywhere: her "invites" is false.`]),
         ''
       ]
     })
@@ -323,10 +364,11 @@ export function buildBreakReachPrompt(
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['key', 'messages'],
+          required: ['key', 'messages', 'invites'],
           properties: {
             key: { type: 'string', enum: keys },
-            messages: { type: 'array', items: { type: 'string' } }
+            messages: { type: 'array', items: { type: 'string' } },
+            invites: { type: 'boolean' }
           }
         }
       }
@@ -337,29 +379,35 @@ export function buildBreakReachPrompt(
   }
 }
 
-/** What the reach-out reply is worth, keyed by charId: at most two texts each, blanks dropped. */
+/**
+ * What the reach-out reply is worth, keyed by charId: at most two texts each with the blanks
+ * dropped, and whether they invite him, which only somebody who may can.
+ */
 export function normalizeBreakReach(
   reply: BreakReachReply,
   writing: readonly BreakReachGirl[]
-): Record<string, string[]> {
-  const idByKey = new Map(
-    writing.map(({ girl }) => [
-      charKeyOf(girl.character.firstName, girl.character.lastName),
-      girl.character.charId
+): Record<string, { lines: string[]; invites: boolean }> {
+  const byKey = new Map(
+    writing.map((entry) => [
+      charKeyOf(entry.girl.character.firstName, entry.girl.character.lastName),
+      entry
     ])
   )
   const list: unknown = reply?.characters
-  const texts: Record<string, string[]> = {}
+  const texts: Record<string, { lines: string[]; invites: boolean }> = {}
   for (const raw of Array.isArray(list) ? list : []) {
     if (typeof raw !== 'object' || raw === null) continue
     const entry = raw as Record<string, unknown>
-    const charId = typeof entry.key === 'string' ? idByKey.get(entry.key.trim()) : undefined
-    if (!charId || texts[charId] || !Array.isArray(entry.messages)) continue
+    const asked = typeof entry.key === 'string' ? byKey.get(entry.key.trim()) : undefined
+    const charId = asked?.girl.character.charId
+    if (!asked || !charId || texts[charId] || !Array.isArray(entry.messages)) continue
     const said = entry.messages
       .filter((text): text is string => typeof text === 'string' && text.trim() !== '')
       .map((text) => text.trim())
       .slice(0, 2)
-    if (said.length > 0) texts[charId] = said
+    if (said.length > 0) {
+      texts[charId] = { lines: said, invites: asked.mayInvite === true && entry.invites === true }
+    }
   }
   return texts
 }
@@ -376,6 +424,9 @@ export interface BreakTalkInput {
   promises: readonly BreakPromise[]
   /** How many times she wrote this break and had nothing back. */
   ignored?: number
+  trip?: BreakTripNotes
+  /** Whether she may ask him to come and stay. */
+  mayInvite?: boolean
   setting: BreakSetting
 }
 
@@ -409,7 +460,7 @@ export function buildBreakTalkPrompt(input: BreakTalkInput): StructuredRequest {
     'This is hers alone. She never recites it; it is what her mood, her news and her reactions come out of.',
     ...cardLines(name, card),
     '',
-    ...historyLines(name, earlier, promises, setting.ended, input.ignored),
+    ...historyLines(name, earlier, promises, setting.ended, input.ignored, input.trip),
     'THIS CONVERSATION',
     "'''",
     ...transcriptLines(talk.lines, name),
@@ -420,7 +471,9 @@ export function buildBreakTalkPrompt(input: BreakTalkInput): StructuredRequest {
     `Write ${name}'s reply to the reader's newest text, the last line of THIS CONVERSATION, as the "messages" array: each entry is one text bubble she sends.`,
     'Stay in her voice and keep it text-length: this is a phone thread, not prose. Let her have a break of her own to talk about.',
     'React to what he actually wrote. Praise with nothing in it, or the same sweet line again, lands flat on her. What would hurt her hurts, and she does not smooth it over for him.',
-    'Nobody can meet up: if he suggests it, she answers as somebody who is hours away.',
+    input.mayInvite
+      ? `Nobody can meet up on a whim: everybody is hours away. But ${name} may invite the reader to come and stay with her for a few days, if this conversation is going well enough that she would want him there, or if he hints at it and she likes the idea. Only she can offer it, she does not have to, and she never assumes he has said yes. A hint from somebody she is not that close to is pushy, and puts her off.`
+      : 'Nobody can meet up: if he suggests it, she answers as somebody who is hours away, and nobody invites anybody anywhere.',
     '',
     'ENDING IT',
     last
@@ -450,6 +503,7 @@ export interface BreakJudgeReply {
   promisesMade?: string[]
   promisesKept?: number[]
   promisesBroken?: number[]
+  invited?: boolean
 }
 
 /** Everything the judgement of one conversation reads. */
@@ -466,6 +520,9 @@ export interface BreakJudgeInput {
   strong: Record<Exclude<BreakVerdict, 'neutral'>, boolean>
   /** How many times she wrote this break and had nothing back. */
   ignored?: number
+  trip?: BreakTripNotes
+  /** Whether she may ask him to come and stay. */
+  mayInvite?: boolean
   setting: BreakSetting
 }
 
@@ -500,7 +557,7 @@ export function buildBreakJudgePrompt(input: BreakJudgeInput): StructuredRequest
     `${name.toUpperCase()}'S BREAK`,
     ...cardLines(name, card),
     '',
-    ...historyLines(name, earlier, promises, setting.ended, input.ignored),
+    ...historyLines(name, earlier, promises, setting.ended, input.ignored, input.trip),
     'THE CONVERSATION',
     "'''",
     ...transcriptLines(talk.lines, name),
@@ -527,7 +584,12 @@ export function buildBreakJudgePrompt(input: BreakJudgeInput): StructuredRequest
     '"promisesMade" lists anything the reader said in this conversation that he would do for her or with her later — call, write again, send something, visit — each as a phrase completing "the reader promised to ...", e.g. "call her once she is back from the lake". A vague nicety is not a promise. Empty when he promised nothing.',
     open.length > 0
       ? '"promisesKept" lists the numbers of the promises above that this conversation made good on, and "promisesBroken" the numbers of those he went back on or showed he had forgotten. A promise nothing here touched is in neither.'
-      : '"promisesKept" and "promisesBroken" are empty: he owed her nothing going in.'
+      : '"promisesKept" and "promisesBroken" are empty: he owed her nothing going in.',
+    '',
+    'INVITATION',
+    input.mayInvite
+      ? `"invited" is true only if ${name}, in her own texts above, asked the reader to come and stay with her. His asking, or hinting, is not her inviting him.`
+      : '"invited" is false.'
   ].join('\n')
 
   const numbers = { type: 'array', items: { type: 'integer' } }
@@ -543,7 +605,8 @@ export function buildBreakJudgePrompt(input: BreakJudgeInput): StructuredRequest
         'memories',
         'promisesMade',
         'promisesKept',
-        'promisesBroken'
+        'promisesBroken',
+        'invited'
       ],
       {
         verdict: { type: 'string', enum: [...VERDICTS] },
@@ -564,7 +627,8 @@ export function buildBreakJudgePrompt(input: BreakJudgeInput): StructuredRequest
         },
         promisesMade: { type: 'array', items: { type: 'string' } },
         promisesKept: numbers,
-        promisesBroken: numbers
+        promisesBroken: numbers,
+        invited: { type: 'boolean' }
       }
     ),
     cacheKey: 'venus-university-break-judgement'
@@ -602,7 +666,148 @@ export function normalizeBreakJudgement(reply: BreakJudgeReply): TalkJudgement {
       )
       .filter((promise) => promise !== ''),
     promisesKept: numbers(reply?.promisesKept),
-    promisesBroken: numbers(reply?.promisesBroken)
+    promisesBroken: numbers(reply?.promisesBroken),
+    invited: reply?.invited === true
+  }
+}
+
+/** One line of a scene as the visit's judgement reads it: who said it, and what. */
+export interface VisitLine {
+  /** Her first name, `"Reader"` for his own action, or empty for narration. */
+  who: string
+  text: string
+}
+
+/** Everything the judgement of one slot spent with her reads. */
+export interface BreakVisitInput {
+  girl: BreakGirl
+  card: BreakCard
+  /** Which of the trip's two slots with her this was. */
+  day: 1 | 2
+  /** The slot it was spent on. */
+  slot: number
+  /** The scene as it was played, oldest line first. */
+  scene: readonly VisitLine[]
+  earlier: readonly BreakTalk[]
+  promises: readonly BreakPromise[]
+  trip?: BreakTripNotes
+  setting: BreakSetting
+}
+
+/** The judgement of a visit as the model returns it. */
+export interface BreakVisitReply {
+  verdict?: string
+  summary?: string
+  memories?: Array<{ type?: string; desc?: string }>
+  stats?: { brain?: boolean; body?: boolean; heart?: boolean }
+}
+
+/** Builds the request that judges one slot spent with her, once its scene is over. */
+export function buildBreakVisitPrompt(input: BreakVisitInput): StructuredRequest {
+  const { girl, card, day, slot, scene, earlier, promises, trip, setting } = input
+  const name = girl.character.firstName
+  const words = seasonWords(setting.ended)
+  const { week } = breakClock(slot, setting.ended)
+
+  const system = [
+    'You keep the continuity of a visual novel set at a university, between one semester and the next.',
+    'You judge one scene the reader has just spent in person with a character he travelled to see over the break, fairly and by what actually happened in it.',
+    'You return a single JSON object matching the provided schema exactly.'
+  ].join(' ')
+
+  const user = [
+    'THE READER',
+    setting.reader,
+    '',
+    'THE CHARACTER',
+    `${fullNameOf(girl.character)}.`,
+    ...girlLines(girl, setting),
+    '',
+    `${name.toUpperCase()}'S BREAK`,
+    ...cardLines(name, card),
+    '',
+    ...historyLines(name, earlier, promises, setting.ended, 0, trip),
+    'THE SCENE',
+    `Week ${week} of ${words.endBreak}: the ${day === 1 ? 'first' : 'second and last'} of the two stretches the reader spends with ${name} where she is staying, at her invitation.`,
+    "'''",
+    ...scene.map((line) => (line.who ? `${line.who}: ${line.text}` : line.text)),
+    "'''",
+    '',
+    'THE JUDGEMENT',
+    `Decide how this time together left ${name} feeling about the reader, going by her card above and by what happened.`,
+    '"verdict" is "warmer", "cooler" or "neutral". He came all this way, which counts for something by itself; what he did once he was there counts for more.',
+    `"summary" is one or two sentences of what happened, in the third person, calling him "the reader", for whatever the two of them do next.`,
+    '',
+    'MEMORIES',
+    `"memories" holds what ${name} will still remember of this when the semester starts: one or two, on the verdict's own side.`,
+    'Each desc completes the sentence "<Name> <type> that ...", in the past tense, about something the reader actually did or said here, e.g. "the reader helped her father close up the stall".',
+    'Call the reader "the reader" every time, never "you", "he" or "him".',
+    'A warmer scene leaves "liked", or "loved" for something that truly moved her; a cooler one leaves "disliked", or "hated" for something that truly wounded her.',
+    '',
+    'STATS',
+    "Say which of the reader's stats this actually exercised.",
+    'Set Brain to true if he worked on his smarts, Body to true if he worked on his fitness, and Heart to true if he worked on his charisma or social skills.',
+    'Set a stat to false if it did not exercise it.'
+  ].join('\n')
+
+  const flag = { type: 'boolean' }
+  return {
+    system,
+    user,
+    schema: objectSchema('break_visit', ['verdict', 'summary', 'memories', 'stats'], {
+      verdict: { type: 'string', enum: [...VERDICTS] },
+      summary: { type: 'string' },
+      memories: {
+        type: 'array',
+        maxItems: 2,
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['type', 'desc'],
+          properties: {
+            type: { type: 'string', enum: [...MEMORY_TYPES] },
+            desc: { type: 'string' }
+          }
+        }
+      },
+      stats: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['brain', 'body', 'heart'],
+        properties: { brain: flag, body: flag, heart: flag }
+      }
+    }),
+    cacheKey: 'venus-university-break-visit'
+  }
+}
+
+/**
+ * What the visit's judgement is worth: an unknown verdict reads as neutral, a memory of no known
+ * type, with nothing written or against the verdict's own side is dropped, and a stat counts
+ * only where the reply said true.
+ */
+export function normalizeBreakVisit(
+  reply: BreakVisitReply
+): Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised'> {
+  const verdict = VERDICTS.find((value) => value === reply?.verdict) ?? 'neutral'
+  const memories: BreakMemory[] = []
+  for (const item of Array.isArray(reply?.memories) ? reply.memories : []) {
+    const desc = typeof item?.desc === 'string' ? item.desc.trim() : ''
+    const type = item?.type as MemoryType
+    if (!MEMORY_TYPES.includes(type) || desc === '') continue
+    const warm = type === 'liked' || type === 'loved'
+    if (verdict !== 'neutral' && warm !== (verdict === 'warmer')) continue
+    memories.push({ type, desc: storedMemoryDesc(desc) })
+  }
+  return {
+    verdict,
+    summary: typeof reply?.summary === 'string' ? reply.summary.trim() : '',
+    memories: memories.slice(0, 2),
+    exercised: {
+      brain: reply?.stats?.brain === true,
+      body: reply?.stats?.body === true,
+      heart: reply?.stats?.heart === true
+    }
   }
 }
 

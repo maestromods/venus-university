@@ -120,6 +120,24 @@
   color: var(--vu-accent);
 }
 
+/* Spent with her: the conversation's own ticked state. */
+.vu-break-box--visit {
+  border-color: var(--vu-accent);
+  background: var(--vu-accent);
+}
+
+/* Spent on the road: filled like a slot on himself, and unticked. */
+.vu-break-box--travel {
+  border-color: var(--vu-accent);
+  background: var(--vu-highlight);
+}
+
+/* Taken by a trip he has said yes to and not yet left on. */
+.vu-break-box--booked {
+  border-style: dashed;
+  border-color: var(--vu-accent);
+}
+
 /* Let go by: filled in the border's own tone and struck through, so it reads as gone. */
 .vu-break-box--rest {
   background: var(--vu-border);
@@ -258,6 +276,27 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+}
+
+/* Her invitation over the thread: what it would cost, and the two answers under it. */
+.vu-breaktalk-invite {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px;
+  border: 2.5px solid var(--vu-accent);
+  border-radius: 18px;
+  background: var(--vu-highlight);
+}
+
+.vu-breaktalk-invite p {
+  margin: 0;
+}
+
+.vu-breaktalk-answers {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
 }
 
 /* The scroll box takes whatever height the panel has left, so the well and the foot keep

@@ -1,7 +1,7 @@
 /**
- * A slot of the break he spent on himself, told in the box a scene speaks through: how it went
- * a line at a time, then what it did for his stats, each line put away by the click that brings
- * the next. The box stands waiting while the telling is still being written.
+ * Something of the break told in the box a scene speaks through — a slot he spent on himself,
+ * or a leg of a trip — a line at a time, each put away by the click that brings the next. The
+ * box stands waiting while the telling is still being written.
  */
 import { useEffect, useRef, useState, type JSX } from 'react'
 import { motion } from 'motion/react'
@@ -15,8 +15,8 @@ import { veilIn } from './motion'
 import '../vu_styles/Break.css'
 
 export interface BreakNarrationProps {
-  /** The slot as it was spent; absent while the call that writes it is out. */
-  spent: BreakAlone | null
+  /** What is told, in order; absent while the call that writes it is out. */
+  lines: readonly SceneLine[] | null
   /** The last line has been read and clicked past. */
   onDone: () => void
 }
@@ -27,8 +27,8 @@ const REVEAL_MS = 18
 /** What has a sound as it is typed: a letter or a digit, and nothing a space or a mark says. */
 const VOICED = /[\p{L}\p{N}]/u
 
-/** How it went, then what it did for him in the lines a scene's ending gives the same thing. */
-function linesOf(spent: BreakAlone): SceneLine[] {
+/** A slot spent alone as it is told: how it went, then what it did for him in the lines a scene's ending gives the same thing. */
+export function aloneLines(spent: BreakAlone): SceneLine[] {
   const gains = aloneGains(spent.exercised).lines
   return [
     ...spent.lines.map((text) => ({ speaker: '', text })),
@@ -38,19 +38,12 @@ function linesOf(spent: BreakAlone): SceneLine[] {
   ]
 }
 
-export function BreakNarration({ spent, onDone }: BreakNarrationProps): JSX.Element {
-  const [lines, setLines] = useState<SceneLine[]>([])
+export function BreakNarration({ lines: told, onDone }: BreakNarrationProps): JSX.Element {
   const [at, setAt] = useState(0)
   const [revealed, setRevealed] = useState(0)
   const [typeHeld, setTypeHeld] = useState(false)
   const [skips, setSkips] = useState(0)
-
-  // Read once, as the telling arrives: the lines are the slot's own and never change after.
-  const read = useRef(false)
-  if (spent && !read.current) {
-    read.current = true
-    setLines(linesOf(spent))
-  }
+  const lines = told ?? []
 
   const line = lines[at]
   const text = line?.text ?? ''
