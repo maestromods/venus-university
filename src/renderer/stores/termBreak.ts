@@ -18,6 +18,7 @@ import {
   type Season
 } from '@shared/term'
 import {
+  activeTrip,
   breakClock,
   breakSlotDate,
   breakWeeks,
@@ -294,6 +295,8 @@ export async function writeReachOuts(
       standing && canText(from, charId) ? reachOutDue(charId, standing, week, setting.ended) : null
     // Somebody still waiting on an answer does not write again, but for the last week's goodbye.
     if (beat !== 'last' && unansweredReach(draft, charId)) return []
+    // Nor does somebody he is about to see, or is staying with: she has him there to tell.
+    if (activeTrip(draft)?.charId === charId) return []
     return beat ? [{ girl, beat }] : []
   })
   if (due.length === 0) return { status: 'done', data: { arrived: [] } }

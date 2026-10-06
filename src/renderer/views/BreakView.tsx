@@ -663,7 +663,8 @@ export function BreakView(): JSX.Element | null {
                 // A girl he cannot reach, and anybody once the slots are gone, is only a face.
                 opens={!over && !spent && !dead && !away && canText(from, character.charId)}
                 invited={draft !== null && openInvite(draft, character.charId) !== null}
-                wrote={wroteOf(character.charId)}
+                // Whatever she sent before he arrived, she has since said to his face.
+                wrote={step ? null : wroteOf(character.charId)}
                 tag={tags[character.charId]}
                 onOpen={() => openTalkPanel(character.charId)}
               />
