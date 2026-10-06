@@ -234,8 +234,8 @@ export function BreakView(): JSX.Element | null {
   const nameKnown = Object.fromEntries(
     cast.map((c) => [c.charId, from.save.charInfo[c.charId]?.nameKnown === true])
   )
-  // What he calls each of them, which does not move over the break.
-  const tags = breakTags(from)
+  // What he calls each of them: as the semester left it, and as a visit has since changed it.
+  const tags = breakTags(from, draft?.visits)
   // A face is drawn only for somebody whose name he has learned.
   const faces = cast.filter((c) => nameKnown[c.charId])
 
@@ -535,7 +535,8 @@ export function BreakView(): JSX.Element | null {
         stats: draft.stats,
         memories: draft.memories,
         talks: draft.talks.filter((talk) => talk.verdict !== undefined),
-        reaches: draft.reaches ?? []
+        reaches: draft.reaches ?? [],
+        visits: draft.visits ?? []
       }
     })
     setView('newGame')

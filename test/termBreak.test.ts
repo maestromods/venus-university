@@ -18,6 +18,7 @@ import {
   stampBreak,
   TALK_TURNS,
   withBreakClosed,
+  withBreakEvents,
   withBreakThreads,
   tripStep,
   withInvite,
@@ -37,6 +38,7 @@ import {
   type TalkJudgement
 } from '@shared/termBreak'
 import type { TermCarry } from '@shared/termTypes'
+import { emptyFlags } from '@shared/relationship'
 import { emptyBunnyboard, type CharState } from '@shared/types'
 
 /**
@@ -499,7 +501,32 @@ describe('a trip to see somebody', () => {
     ])
   })
 
-  it('cannot be booked over another trip or past the end of the break', () => {
+it('carries what a visit reached into the next semester, dated on the slot it happened in', () => {
+    const booked = withInviteAnswered(withInvite(fresh, 'a', 'spring'), 'a', true, 'spring')
+    const there = withTravel(withSlotSpent(booked, 'spring'), 'spring')
+    const visited = withVisit(
+      there,
+      { ...judged, events: ['kissed', 'became_lovers', 'gave_contact_info'] },
+      'spring'
+    )
+    // Only what a visit may reach is kept.
+    expect(visited.visits?.[0]?.events).toEqual(['kissed', 'became_lovers'])
+
+    const state = {
+      flags: emptyFlags(),
+      memories: []
+    } as unknown as CharState
+    const carry = { charInfo: { a: state }, bunnyboard: emptyBunnyboard() } as unknown as TermCarry
+    const carried = withBreakEvents(carry, visited.visits ?? [], 'spring').charInfo.a
+    const on = breakSlotDate(2, 'spring').date
+    expect(carried?.flags.isLover).toBe(true)
+    expect(carried?.datingSince).toBe(on)
+    expect(carried?.memories).toEqual([
+      { date: on, type: 'loved', desc: 'the reader kissed her for the first time' }
+    ])
+  })
+
+    it('cannot be booked over another trip or past the end of the break', () => {
     const two = withInvite(withInvite(fresh, 'a', 'spring'), 'b', 'spring')
     const booked = withInviteAnswered(two, 'a', true, 'spring')
     expect(withInviteAnswered(booked, 'b', true, 'spring')).toBe(booked)

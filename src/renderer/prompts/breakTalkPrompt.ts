@@ -8,6 +8,7 @@ import {
   breakWeeks,
   TALK_TURNS,
   talkTurns,
+  VISIT_EVENTS,
   type BreakAlone,
   type BreakCard,
   type BreakLine,
@@ -26,6 +27,7 @@ import {
   type Character,
   type CharState,
   type MemoryType,
+  type RelationshipEvent,
   type StructuredRequest
 } from '@shared/types'
 import { relationshipLines } from './relationship'
@@ -98,6 +100,31 @@ function transcriptLines(lines: readonly BreakLine[], name: string): string[] {
   return lines.map((line) => `${line.sender === 'player' ? 'Reader' : name}: ${line.text}`)
 }
 
+/** What a milestone reached on a visit is told as, to whatever with her follows. */
+const EVENT_TOLD: Partial<Record<RelationshipEvent, string>> = {
+  kissed: 'They kissed.',
+  sex: 'They slept together.',
+  became_lovers: 'They agreed to be a couple.',
+  agreed_to_harem: 'She agreed to an open relationship with him.',
+  friendzoned_by_reader: 'He made it clear they are just friends.',
+  friendzoned_reader: 'She made it clear they are just friends.',
+  broke_up: 'Their relationship ended.'
+}
+
+/** What the visit's judgement is told each milestone is. */
+const EVENT_ASKED: Record<string, string> = {
+  kissed: 'they kissed in this scene',
+  sex: 'they slept together in this scene',
+  became_lovers: 'they agreed to be a couple in this scene',
+  agreed_to_harem:
+    'she agreed in this scene to an open relationship and/or to share the reader with other girls',
+  friendzoned_by_reader:
+    "the reader turned her confession down or made it clear they're just friends",
+  friendzoned_reader:
+    "she turned the reader's confession down or made it clear they're just friends",
+  broke_up: 'their relationship ended in this scene'
+}
+
 /** What a call is told of trips: the days he has spent with her, and where her invitation stands. */
 export interface BreakTripNotes {
   visits?: readonly BreakVisit[]
@@ -130,7 +157,9 @@ function historyLines(
       })),
       ...visits.map((visit) => ({
         slot: visit.slot,
-        text: `the reader came to stay with her. ${visit.summary}`.trim()
+        text: `the reader came to stay with her. ${visit.summary} ${(visit.events ?? [])
+          .map((event) => EVENT_TOLD[event] ?? '')
+          .join(' ')}`.trim()
       }))
     ].sort((a, b) => a.slot - b.slot)
     for (const entry of told) {
@@ -700,6 +729,7 @@ export interface BreakVisitReply {
   summary?: string
   memories?: Array<{ type?: string; desc?: string }>
   stats?: { brain?: boolean; body?: boolean; heart?: boolean }
+  events?: string[]
 }
 
 /** Builds the request that judges one slot spent with her, once its scene is over. */
@@ -747,14 +777,19 @@ export function buildBreakVisitPrompt(input: BreakVisitInput): StructuredRequest
     'STATS',
     "Say which of the reader's stats this actually exercised.",
     'Set Brain to true if he worked on his smarts, Body to true if he worked on his fitness, and Heart to true if he worked on his charisma or social skills.',
-    'Set a stat to false if it did not exercise it.'
+    'Set a stat to false if it did not exercise it.',
+    '',
+    'MILESTONES',
+    '"events" lists what the two of them actually reached in this scene, and nothing they only talked about or nearly did. Empty when nothing below happened.',
+    ...VISIT_EVENTS.map((event) => `- ${event}: ${EVENT_ASKED[event]}`)
   ].join('\n')
 
   const flag = { type: 'boolean' }
   return {
     system,
     user,
-    schema: objectSchema('break_visit', ['verdict', 'summary', 'memories', 'stats'], {
+    schema: objectSchema('break_visit', ['verdict', 'summary', 'memories', 'stats', 'events'], {
+      events: { type: 'array', items: { type: 'string', enum: [...VISIT_EVENTS] } },
       verdict: { type: 'string', enum: [...VERDICTS] },
       summary: { type: 'string' },
       memories: {
@@ -788,7 +823,7 @@ export function buildBreakVisitPrompt(input: BreakVisitInput): StructuredRequest
  */
 export function normalizeBreakVisit(
   reply: BreakVisitReply
-): Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised'> {
+): Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised' | 'events'> {
   const verdict = VERDICTS.find((value) => value === reply?.verdict) ?? 'neutral'
   const memories: BreakMemory[] = []
   for (const item of Array.isArray(reply?.memories) ? reply.memories : []) {
@@ -807,7 +842,14 @@ export function normalizeBreakVisit(
       brain: reply?.stats?.brain === true,
       body: reply?.stats?.body === true,
       heart: reply?.stats?.heart === true
-    }
+    },
+    events: [
+      ...new Set(
+        (Array.isArray(reply?.events) ? reply.events : []).filter(
+          (event): event is RelationshipEvent => VISIT_EVENTS.includes(event as RelationshipEvent)
+        )
+      )
+    ]
   }
 }
 

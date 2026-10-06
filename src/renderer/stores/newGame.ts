@@ -4,7 +4,13 @@ import { readerStandingOf } from '@shared/relationship'
 import { emptyTallies } from '@shared/tallies'
 import { isGameOver } from '@shared/money'
 import type { PlayerStats } from '@shared/playerStats'
-import { withBreakThreads, type BreakReach, type BreakTalk } from '@shared/termBreak'
+import {
+  withBreakEvents,
+  withBreakThreads,
+  type BreakReach,
+  type BreakTalk,
+  type BreakVisit
+} from '@shared/termBreak'
 import { hasNextTerm, seasonOf, termIndexOf, yearAfter } from '@shared/term'
 import {
   carryTerm,
@@ -92,6 +98,8 @@ export interface Continuation {
     talks: BreakTalk[]
     /** What the girls sent on their own, of which the unanswered are filed there too. */
     reaches?: BreakReach[]
+    /** The slots spent with somebody he travelled to see, whose milestones are carried. */
+    visits?: BreakVisit[]
   }
 }
 
@@ -514,7 +522,11 @@ function continuedAttempt(
     ? {
         ...handed,
         stats: played.stats,
-        carry: withBreakThreads(handed.carry, played.talks, ended, played.reaches)
+        carry: withBreakEvents(
+          withBreakThreads(handed.carry, played.talks, ended, played.reaches),
+          played.visits ?? [],
+          ended
+        )
       }
     : handed
 

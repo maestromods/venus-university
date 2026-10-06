@@ -6,11 +6,17 @@ import {
   type LedgerStats,
   type PlayerStats
 } from './playerStats'
-import type { Disposition } from './relationship'
+import { foldRelationshipEvents, type Disposition } from './relationship'
 import type { Season } from './term'
 import type { BreakMemory } from './termCarry'
 import type { TermCarry } from './termTypes'
-import type { ChatMessage, GameSave, MemoryType, TimeSlot } from './types'
+import type {
+  ChatMessage,
+  GameSave,
+  MemoryType,
+  RelationshipEvent,
+  TimeSlot
+} from './types'
 
 /**
  * The break between two semesters as something played: a run of slots, two to a week, spent one
@@ -148,7 +154,20 @@ export interface BreakVisit {
   memories: BreakMemory[]
   /** Which of his stats the scene exercised. */
   exercised: LedgerStats
+  /** What the two of them reached in it, as a scene's own ledger names such things; absent with none. */
+  events?: RelationshipEvent[]
 }
+
+/** The milestones a slot spent with her may reach: the ones that need the two of them in a room. */
+export const VISIT_EVENTS: readonly RelationshipEvent[] = [
+  'kissed',
+  'sex',
+  'became_lovers',
+  'agreed_to_harem',
+  'friendzoned_by_reader',
+  'friendzoned_reader',
+  'broke_up'
+]
 
 /** Something he told her he would do, each completing "the reader promised to ___". */
 export interface BreakPromise {
@@ -524,7 +543,7 @@ export function visitGains(exercised: LedgerStats): ReturnType<typeof resolveSta
  */
 export function withVisit(
   draft: BreakDraft,
-  judged: Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised'>,
+  judged: Pick<BreakVisit, 'verdict' | 'summary' | 'memories' | 'exercised' | 'events'>,
   ended: Season
 ): BreakDraft {
   const step = tripStep(draft)
@@ -533,6 +552,7 @@ export function withVisit(
     .map((memory) => ({ type: memory.type, desc: memory.desc.trim() }))
     .filter((memory) => memory.desc !== '')
     .slice(0, TALK_MEMORIES)
+  const events = (judged.events ?? []).filter((event) => VISIT_EVENTS.includes(event))
   return {
     ...draft,
     stats: applyStatDeltas(draft.stats, visitGains(judged.exercised).deltas),
@@ -545,7 +565,8 @@ export function withVisit(
         verdict: judged.verdict,
         summary: judged.summary.trim(),
         memories,
-        exercised: judged.exercised
+        exercised: judged.exercised,
+        ...(events.length > 0 ? { events } : {})
       }
     ]
   }
@@ -919,6 +940,29 @@ export function withBreakThreads(
     conversations[run.charId] = { ...thread, messages: [...thread.messages, ...messages] }
   }
   return { ...carry, bunnyboard: { ...carry.bunnyboard, conversations } }
+}
+
+/**
+ * `carry` with what the break's visits reached folded in: each milestone on the day its slot
+ * fell on, as a scene's own would be, so a couple made over the break is one from that day and a
+ * first kiss is remembered on it. Somebody who is not coming back is left out.
+ */
+export function withBreakEvents(
+  carry: TermCarry,
+  visits: readonly BreakVisit[],
+  ended: Season
+): TermCarry {
+  const charInfo = { ...carry.charInfo }
+  for (const visit of visits) {
+    const info = charInfo[visit.charId]
+    if (!info || !visit.events || visit.events.length === 0) continue
+    charInfo[visit.charId] = foldRelationshipEvents(
+      info,
+      visit.events,
+      breakSlotDate(visit.slot, ended).date
+    )
+  }
+  return { ...carry, charInfo }
 }
 
 /** One break with its version and the moment it was written stamped on it. */

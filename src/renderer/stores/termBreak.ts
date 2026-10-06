@@ -2,7 +2,11 @@ import { FINAL_DATE } from '@shared/classes'
 import {
   affectionFor,
   dispositionOf,
+  emptyFlags,
+  foldRelationshipEvents,
   memoryStatusLine,
+  milestoneMarkOf,
+  milestoneStatusLines,
   relationshipTagOf
 } from '@shared/relationship'
 import {
@@ -30,6 +34,7 @@ import {
   type BreakDraft,
   type BreakReach,
   type BreakStanding,
+  type BreakVisit,
   type TalkJudgement
 } from '@shared/termBreak'
 import { returningChars, type BreakMemory } from '@shared/termCarry'
@@ -40,6 +45,7 @@ import {
   type Character,
   type GameSave,
   type Result,
+  type SceneLine,
   type StructuredRequest
 } from '@shared/types'
 import { normalizeBreakReply, type BreakGenReply } from '../prompts/breakPrompt'
@@ -158,15 +164,24 @@ export function breakStandings(from: Continuation): Record<string, BreakStanding
   )
 }
 
-/** What the reader calls each of them, as her contact page said it when the semester ended. */
-export function breakTags(from: Continuation): Record<string, string> {
+/**
+ * What the reader calls each of them, as her contact page said it when the semester ended, with
+ * whatever the break's visits have reached since folded in.
+ */
+export function breakTags(
+  from: Continuation,
+  visits: readonly BreakVisit[] = []
+): Record<string, string> {
   const { girls, setting } = castFor(from)
   const then = FINAL_DATE - daysToNextTerm(setting.ended)
   return Object.fromEntries(
-    girls.map(({ character, state }) => [
-      character.charId,
-      relationshipTagOf(state.flags, affectionFor(state, then, character))
-    ])
+    girls.map(({ character, state }) => {
+      const events = visits
+        .filter((visit) => visit.charId === character.charId)
+        .flatMap((visit) => visit.events ?? [])
+      const flags = foldRelationshipEvents(state, events, then).flags
+      return [character.charId, relationshipTagOf(flags, affectionFor(state, then, character))]
+    })
   )
 }
 
@@ -483,6 +498,13 @@ export function startVisit(from: Continuation, draft: BreakDraft): boolean {
     ...earlier.flatMap((talk) => talk.memories ?? []),
     ...visits.flatMap((visit) => visit.memories)
   ]
+  // And what the days already spent with her reached, so a couple made on the first is one on
+  // the second.
+  const known = foldRelationshipEvents(
+    info,
+    visits.flatMap((visit) => visit.events ?? []),
+    from.save.date
+  )
   const save: GameSave = {
     ...from.save,
     scene: null,
@@ -490,9 +512,9 @@ export function startVisit(from: Continuation, draft: BreakDraft): boolean {
     charInfo: {
       ...from.save.charInfo,
       [step.charId]: {
-        ...info,
+        ...known,
         memories: [
-          ...info.memories,
+          ...known.memories,
           ...left.map((memory) => ({ ...memory, date: from.save.date }))
         ]
       }
@@ -562,8 +584,24 @@ export function startVisit(from: Continuation, draft: BreakDraft): boolean {
       if (outcome.status !== 'done') return [{ speaker: '', text: VISIT_OVER }]
       judged = normalizeBreakVisit(outcome.data)
       const gains = visitGains(judged.exercised).lines
+      const reached = foldRelationshipEvents(known, judged.events ?? [], from.save.date)
+      const milestones = milestoneStatusLines(
+        name,
+        known.flags ?? emptyFlags(),
+        reached.flags ?? emptyFlags()
+      )
       const lines = [
         ...judged.memories.map((memory) => memoryStatusLine(name, memory)),
+        ...milestones.map((text): SceneLine => {
+          const mark = milestoneMarkOf(text)
+          return mark
+            ? {
+                speaker: '',
+                text,
+                status: { marks: [mark], polarity: mark.tone === 'loss' ? 'negative' : 'positive' }
+              }
+            : { speaker: '', text }
+        }),
         ...gains.map((gain) => markStatusLine(gain.text, undefined, gain.polarity))
       ]
       return lines.length > 0 ? lines : [{ speaker: '', text: VISIT_OVER }]
