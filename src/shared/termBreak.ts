@@ -518,6 +518,16 @@ export function withTravel(draft: BreakDraft, ended: Season): BreakDraft {
   return {
     ...draft,
     spent: [...draft.spent, { kind: 'travel', charId: step.charId }],
+    // Whatever she had sent and he had not answered, he is answering in person.
+    ...(draft.reaches?.some((reach) => reach.charId === step.charId && !reach.answered)
+      ? {
+          reaches: draft.reaches.map((reach) =>
+            reach.charId === step.charId && !reach.answered
+              ? { ...reach, read: true, answered: true }
+              : reach
+          )
+        }
+      : {}),
     ...(step.kind === 'back'
       ? {
           invites: draft.invites?.map((invite) =>
