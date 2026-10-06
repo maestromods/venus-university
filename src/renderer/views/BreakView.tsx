@@ -264,7 +264,14 @@ export function BreakView(): JSX.Element | null {
   function answerInvite(charId: string, accept: boolean): void {
     if (!draft) return
     const next = withInviteAnswered(draft, charId, accept, ended)
-    if (next !== draft) void keep(next)
+    if (next === draft) return
+    void keep(next)
+    // A yes puts her panel away: the trip may claim the very slot being played, and there is
+    // nothing left in it to write to her with.
+    if (accept) {
+      setTalking(null)
+      setShown(null)
+    }
   }
 
   /** The slot the trip under way claims: a leg of the journey told, or a stretch with her played. */
