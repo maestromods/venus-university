@@ -60,6 +60,11 @@ declare module './types' {
 /** Semester-local days form stable keys without moving the archive's dates at each break. */
 export function whisperIssueId(term: number, day: number): string { return `whisper:${term}:${day}` }
 
+/** Bunnyboard stores the reader's profile name, but has no separate reader handle field. */
+export function whisperPlayerHandle(firstName: string, lastName: string): string {
+  return charKeyOf(firstName.trim(), lastName.trim()).replace(/^_+|_+$/g, '') || 'reader'
+}
+
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
 const text = (v: unknown, limit: number): v is string => typeof v === 'string' && !!v.trim() && v.length <= limit
 const stamp = (v: unknown): v is number => Number.isSafeInteger(v) && (v as number) >= 0 && (v as number) <= 100000

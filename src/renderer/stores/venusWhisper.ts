@@ -1,6 +1,6 @@
 import {
   VENUS_WHISPER_MOD, WHISPER_COMMENTS, WHISPER_TEXT, ensureWhisperAuthor, whisperCommenters,
-  whisperIssueId, whisperMentions, whisperPeople, whisperSources, validateWhisperComments,
+  whisperIssueId, whisperMentions, whisperPeople, whisperPlayerHandle, whisperSources, validateWhisperComments,
   validateWhisperDraft, withWhisperIssue, type VenusWhisper, type WhisperComment, type WhisperIssue
 } from '@shared/venusWhisper'
 import { fullNameOf } from '@shared/types'
@@ -67,7 +67,7 @@ export async function commentOnWhisper(issueId: string, value: string, replyTo: 
     if (issue.comments.length >= WHISPER_COMMENTS - 3) throw Error('This discussion is full.')
     if (replyTo && !issue.comments.some(c => c.id === replyTo)) throw Error('That comment is no longer available.')
     const id = crypto.randomUUID()
-    const comment: WhisperComment = { id, person: { id: 'reader', name: [game.playerFirstName, game.playerLastName].filter(Boolean).join(' ') || 'Reader', handle: 'reader' }, player: true,
+    const comment: WhisperComment = { id, person: { id: 'reader', name: [game.playerFirstName, game.playerLastName].filter(Boolean).join(' ') || 'Reader', handle: whisperPlayerHandle(game.playerFirstName, game.playerLastName) }, player: true,
       text: value.trim(), mentions: whisperMentions(value, whisperPeople(game)), ...(replyTo ? { replyTo } : {}) }
     await commit(withWhisperIssue(state, { ...issue, comments: [...issue.comments, comment] }))
     return id
@@ -86,7 +86,7 @@ export async function replyOnWhisper(issueId: string, replyTo: string | undefine
     const priority = [...(parent && !parent.player ? [parent.person.id] : []), ...(target?.mentions ?? [])]
     const people = whisperCommenters(game, Math.random, priority, Math.min(WHISPER_COMMENTS - issue.comments.length, replyTo ? (Math.random() < .35 ? 3 : 1) : 3))
     if (!people.length) return []
-    const response = await window.api.llm.completeWhisper(buildWhisperReplies(issue, people, replyTo), group)
+    const response = await window.api.llm.completeWhisper(buildWhisperReplies(issue, people, replyTo, whisperPlayerHandle(game.playerFirstName, game.playerLastName)), group)
     if (!current()) throw Error('The game changed. No replies were added.')
     if (!response.ok) throw Error(response.error.message)
     const batch = validateWhisperComments(response.data, people).map(c => {

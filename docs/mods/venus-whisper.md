@@ -11,6 +11,10 @@ character profiles, Bunnyboard Updates, and Meanwhile's spectator conversations.
   in-game day from current/previous-day public material. Reading an existing issue is free.
   Skipped days are not backfilled, and nothing generates automatically in the background.
 - The byline is anonymous. NPC comments use their regular names, handles and profile pictures.
+- Player comments use the player's Bunnyboard profile name and a name-derived handle (for
+  example, Sam Rowe becomes `@sam_rowe`). The base game has no separately editable player
+  handle. Older player comments saved as `@reader` display and reach reply prompts with the
+  name-derived handle; their saved IDs and reply links remain unchanged.
 - Comment on the article or select **Reply** on a particular comment. Type `@handle` or use
   **Mention** to tag a known character. NPCs can answer; sometimes other students chime in.
 - Replies appear with short pauses and typing indicators. They are already saved when their

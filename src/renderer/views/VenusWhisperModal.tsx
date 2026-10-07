@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type JSX } from 'react'
 import { createPortal } from 'react-dom'
 import { motion } from 'motion/react'
-import { VENUS_WHISPER_MOD, WHISPER_COMMENTS, WHISPER_TEXT, whisperIssueId, whisperPeople } from '@shared/venusWhisper'
+import { VENUS_WHISPER_MOD, WHISPER_COMMENTS, WHISPER_TEXT, whisperIssueId, whisperPeople, whisperPlayerHandle } from '@shared/venusWhisper'
 import { TitleTab } from '../components/TitleTab'
 import { useModalShell } from '../components/useModalShell'
 import { useGameStore } from '../stores/gameStore'
@@ -124,7 +124,7 @@ export function VenusWhisperModal({ theme, onClose }: { theme: 'day' | 'night'; 
                   const parent = issue.comments.find(p => p.id === c.replyTo)
                   return <div key={c.id} className="vu-whisper-comment">
                     <span className="vu-whisper-avatar" aria-hidden="true"><span>{c.person.name.charAt(0)}</span>{!c.player && <img src={profileUrl(c.person.id)} alt=""/>}</span>
-                    <div><div className="vu-whisper-byline"><strong>{c.person.name}</strong><span>@{c.person.handle}</span></div>
+                    <div><div className="vu-whisper-byline"><strong>{c.person.name}</strong><span>@{c.player && c.person.handle === 'reader' ? whisperPlayerHandle(game.playerFirstName, game.playerLastName) : c.person.handle}</span></div>
                       {parent && <small className="vu-whisper-reply-label">Reply to {parent.person.name}: {parent.text.slice(0, 90)}{parent.text.length > 90 ? '…' : ''}</small>}
                       <p>{c.text}</p>
                       {activeIssue && <motion.button className="vu-pill" disabled={!ready} {...gestures(!ready, quietLift, quietPress)} onClick={() => setReplyTo(c.id)}>Reply</motion.button>}

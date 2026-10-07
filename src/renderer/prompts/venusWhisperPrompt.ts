@@ -42,14 +42,14 @@ export function buildWhisperIssue(sources: readonly WhisperSource[], voice: stri
 }
 
 /** Public thread only: no secret author field, private memories, or article-writing temperament. */
-export function buildWhisperReplies(issue: WhisperIssue, people: readonly WhisperPerson[], replyTo?: string): StructuredRequest {
+export function buildWhisperReplies(issue: WhisperIssue, people: readonly WhisperPerson[], replyTo?: string, playerHandle?: string): StructuredRequest {
   const target = issue.comments.find(c => c.id === replyTo)
   const parent = issue.comments.find(c => c.id === target?.replyTo)
   const thread = [...new Map([...issue.comments.slice(-10), ...(parent ? [parent] : []), ...(target ? [target] : [])].map(c => [c.id, c])).values()]
   return {
     system: `${publicRules}\n${commentsRule(people)}\n${replyTo ? 'Reply to the selected comment and any @mentions. Answer questions naturally without promising automatic agreement. If you do not know an answer, say so. Other selected students may chime in. Nobody gains firsthand knowledge from reading a post.' : 'React to the article as ordinary readers. No production notes.'}`,
     user: JSON.stringify({ article: { title: issue.title, body: issue.body },
-      thread: thread.map(c => ({ id: c.id, name: c.person.name, handle: c.person.handle, text: c.text, replyTo: c.replyTo })),
+      thread: thread.map(c => ({ id: c.id, name: c.person.name, handle: c.player && c.person.handle === 'reader' ? playerHandle ?? c.person.handle : c.person.handle, text: c.text, replyTo: c.replyTo })),
       ...(target ? { respondingTo: { id: target.id, name: target.person.name, text: target.text } } : {}),
       profiles: people }),
     schema: { name: 'venus_whisper_comments', schema: { type: 'object', additionalProperties: false,
