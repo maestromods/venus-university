@@ -36,7 +36,7 @@ export function MeanwhilePage(): JSX.Element | null {
     } catch(e) { if(own.active)setError(e instanceof Error?e.message:'Could not write this conversation.') }
     finally { if(own.active)setBusy(false) }
   }
-  const backdrop = selected ? meanwhileBackgroundUrl(selected) : null
+  const backdrop = selected ? meanwhileBackgroundUrl(selected, game.classes[selected.ref]) : null
   return <section className="vu-bb-feature vu-meanwhile" aria-label="Meanwhile conversations">
       <header className="vu-bb-feature-heading">
         <div><span className="vu-bb-feature-label">Away from the spotlight</span><h1>Meanwhile…</h1><p>A little campus life, even when you’re not there.</p></div>

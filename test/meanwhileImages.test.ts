@@ -3,7 +3,7 @@ import { meanwhileBackgroundKey, meanwhileBackgroundUrl } from '../src/renderer/
 import { bgUrl } from '../src/renderer/views/bgAssets'
 
 vi.mock('../src/renderer/views/bgAssets', () => ({ bgUrl: vi.fn((key: string) =>
-  ['asian_food', 'bowling_alley', 'roller_rink', 'cat_cafe'].includes(key) ? `/art/${key}.png` : null) }))
+  ['asian_food', 'bowling_alley', 'roller_rink', 'cat_cafe', 'gymnasium'].includes(key) ? `/art/${key}.png` : null) }))
 
 describe('Meanwhile location artwork', () => {
   it('resolves timetable IDs and outing locations instead of treating them as filenames', () => {
@@ -20,5 +20,21 @@ describe('Meanwhile location artwork', () => {
       expect(meanwhileBackgroundUrl({ kind: 'hangout', ref })).toBe(`/art/${ref}.png`)
     }
     expect(meanwhileBackgroundUrl({ kind: 'hangout', ref: 'missing-location' })).toBeNull()
+  })
+  it('uses a saved class activity and its matching PE category instead of a universal classroom', () => {
+    const climbing = { kind: 'class' as const, ref: 'PE 102', where: 'Indoor Rock Climbing and Belaying' }
+    expect(meanwhileBackgroundUrl(climbing, { name: climbing.where, category: 'pe' })).toBe('/art/gymnasium.png')
+    expect(meanwhileBackgroundKey({ ...climbing, where: 'Functional Movement' }, { name: 'Functional Movement', category: 'pe' })).toBe('gymnasium')
+    expect(meanwhileBackgroundKey({ ...climbing, where: 'Swimming Technique' }, { name: 'Swimming Technique', category: 'pe' })).toBe('pool')
+    expect(meanwhileBackgroundKey({ ...climbing, where: 'History of Swimming' }, { name: 'History of Swimming', category: 'humanities' })).toBe('classroom')
+    // Old replays keep their captured activity when a new semester reuses their course code.
+    expect(meanwhileBackgroundKey(climbing, { name: 'Mass Communication', category: 'humanities' })).toBe('gymnasium')
+    expect(meanwhileBackgroundKey(climbing)).toBe('gymnasium')
+  })
+  it('falls back to native PE artwork when optional venue art is not installed', () => {
+    const bowling = { kind: 'class' as const, ref: 'PE 201', where: 'Bowling Fundamentals' }
+    expect(meanwhileBackgroundUrl(bowling)).toBe('/art/bowling_alley.png')
+    vi.mocked(bgUrl).mockReturnValueOnce(null)
+    expect(meanwhileBackgroundUrl(bowling)).toBe('/art/gymnasium.png')
   })
 })

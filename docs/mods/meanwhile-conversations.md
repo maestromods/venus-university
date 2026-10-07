@@ -12,6 +12,14 @@ have no time/weather stamp, so the viewer uses day artwork. Missing art leaves a
 background; switching to valid art resets a failed image's visibility. Portraits refresh
 when their character assets become available. Generation displays **Loading their conversation…**.
 
+Class encounters use their captured course title and matching course category to choose
+activity-appropriate existing art: PE uses the gym by default, swimming the pool, strength
+training the weight room, running the track, and practical cooking/art/music/lab classes
+their respective rooms. Rock climbing uses the gym because no climbing-wall background
+ships with the game. Optional bowling/rink art falls back to the gym if unavailable. Cached
+replays receive this fix immediately; a later semester reusing a course code cannot substitute
+its new course's category for an old replay with a different title. No additional AI call is used.
+
 ## Where encounters come from
 
 The base game's NPC relationship system already records class, dorm, and hangout
