@@ -1,3 +1,4 @@
+import { CONTINUING_SEMESTERS, CONTINUING_SEMESTERS_MOD } from './continuingSemestersMod'
 import { PHOTO_LOADERS, photoLoaderOf } from './photoLoader'
 import { loaderOptionId, PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSwitches'
 import type { PlaythroughRecord } from './types'
@@ -65,43 +66,12 @@ export interface ModDef {
   optionGroups?: readonly ModOptionGroup[]
 }
 
-export const CONTINUING_SEMESTERS = 'continuing-semesters'
+export { CONTINUING_SEMESTERS }
 export const PHOTO_FEATURE = 'photo-feature'
 
 /** Every mod in this build, in the order the Mods screen lists them. */
 export const MODS: readonly ModDef[] = [
-  {
-    id: CONTINUING_SEMESTERS,
-    name: 'Continuing Semesters',
-    author: 'morrowkiln',
-    version: '0.2.0',
-    scope: 'anytime',
-    defaultOn: true,
-    blurb:
-      'Carry a finished semester into the next one, with a break to play in between. Seniors graduate, everybody else moves up a year, and new girls can join.',
-    offNote:
-      'Off, a finished semester no longer offers the next one. Semesters and breaks already started keep working.',
-    options: [
-      {
-        id: 'play-the-break',
-        label: 'Play the break between semesters',
-        hint: 'Off, the break is skipped and what everybody remembers of it is written for you.',
-        default: true
-      },
-      {
-        id: 'seniors-graduate',
-        label: 'Seniors graduate',
-        hint: 'Off, seniors stay on as seniors for another year, and can come back with everyone else.',
-        default: true
-      },
-      {
-        id: 'offer-in-load-game',
-        label: 'Offer continuing in Load Game',
-        hint: 'Off, only the ending screen offers the next semester.',
-        default: true
-      }
-    ]
-  },
+  CONTINUING_SEMESTERS_MOD,
   {
     ...PHOTO_FEATURE_MOD,
     id: PHOTO_FEATURE,
