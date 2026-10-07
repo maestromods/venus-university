@@ -90,6 +90,8 @@ switch is left as the player set it.
 | `src/renderer/stores/modsStore.ts` | The switches in the renderer, and the hooks. |
 | `src/renderer/views/ModsModal.tsx` | The Mods screen. |
 | `test/mods.test.ts` | The rules, tested against a list with every shape of mod. |
+| `src/renderer/mods/hooks.ts` | The hook points (prototype, below). |
+| `src/renderer/mods/index.ts` | Registers every mod's hooks at boot. |
 
 ## How Continuing Semesters uses it
 
@@ -134,8 +136,91 @@ Option ids are written to disk, so they never change: `photos`, `explicit`, `loa
 `loader-shimmer`, `loader-dots`. `test/photoHooks.test.ts` fails if the handover in `modsStore.ts`
 or `modsService.ts` goes missing.
 
+## Hook points (prototype)
+
+A switch decides whether a mod acts. Hook points decide **where** it acts without editing the
+game there. At each place mods commonly add to, the game asks once, in one line of its own
+file; a mod answers from its own files. Two mods adding to the same place then never touch the
+same lines, and neither touches the game's code at that place.
+
+Everything is in `src/renderer/mods/hooks.ts`. The game's side, at each place:
+
+```ts
+...promptLines('dm', { character, info, state })   // in textingPrompt.ts
+afterDmReply({ charId, character, reply: data })    // in textingLoop.ts
+```
+
+A mod's side, once, in its own file:
+
+```ts
+registerHooks(PHOTO_FEATURE, {
+  prompts: { dm: { lines: (ctx) => photoLines(ctx.character, ctx.info, ctx.state) } },
+  afterDmReply: ({ charId, character, reply }) => void sendPhoto(charId, character, reply)
+})
+```
+
+and one line in `src/renderer/mods/index.ts` (`import './photoFeature'`), which `App.tsx`
+imports at boot.
+
+### The rules
+
+- **Only mods that are on are asked.** The mods store hands the hooks its switches
+  (`setHookRules`), so a mod that is off is never called and the game runs as it would without
+  it. A mod rarely needs to check its own switch at a hook.
+- **Mods are asked in the order `MODS` lists them**, whatever order they registered in.
+- **Adding to the game, not replacing it.** Lines, fields and events from every mod are all
+  used. Where only one answer can win (likes), the first mod that answers decides and the game's
+  own roll is the fallback.
+
+### The hook points
+
+| Hook | Where the game asks | What a mod can do |
+| --- | --- | --- |
+| `prompts.dm` | `textingPrompt.ts` | Add lines to her DM prompt, and fields to its reply |
+| `prompts['slot-posts']` | `slotIntroPrompt.ts` | Add lines about status posts, and fields to each post |
+| `prompts.character` | `characterPrompt.ts` | Add lines and fields to character generation |
+| `dmHistoryNote` | `textingPrompt.ts` | Add a note after a DM in the history the prompt quotes |
+| `characterFromDraft` | `characterPrompt.ts` | Fill fields of a generated character from the reply |
+| `afterDmReply` | `textingLoop.ts` | Act after her reply in a DM has landed |
+| `playerActs` | `gameLoop.ts` (`submitAction`), `loop/hangouts.ts` | Act when the reader commits to something |
+| `gameEntered` | `gameLoop.ts` (`enterGame`) | Act when a game is entered, new or loaded |
+| `fileFeedPost` | `loop/feed.ts` | Change a slot post before it is filed, or file it later itself (`held`) |
+| `postLikes` | `loop/feed.ts`, `NewGameView.tsx` | Decide likes on ending, stranger and winter posts |
+| `postVisible` | `feedView.ts`, `loop/feed.ts`, `ContactPage.tsx` | Keep a post off the feed for now |
+
+A hook point is added where mods actually meet, not ahead of need. Once mods use one, it stays
+as it is: renaming it or changing what it passes breaks them. A change that is needed goes in
+as a new hook beside the old one.
+
+### Photo Feature on hooks
+
+All of Photo Feature's prompt, event and feed additions are in `src/renderer/mods/photoFeature.ts`.
+In the ten game files involved, lines naming Photo Feature went from 67 to 4: two for its gallery
+on `ContactPage.tsx` (screens have no hook points yet) and two that are Continuing Semesters'
+own photo carry-over in `NewGameView.tsx`.
+
+Off, three things differ from before hooks, all because a mod that is off is not asked: the
+photo fields leave the reply's schema rather than being asked for empty; old DMs lose their
+"[attached a photo]" note in the history the prompt quotes; and a render left unfinished from
+an earlier session is settled only once the mod is on again.
+
+### Not covered yet
+
+- Screens: the photo bubble, the gallery, the character editor's body fields.
+- Main process: IPC, image protocols, the ComfyUI service, settings and character rules.
+
+Both are still direct edits, as before.
+
+### Tests
+
+- `test/modHooks.test.ts`: only mods that are on are asked, in list order; likes fall back to
+  the game's own; a post a mod holds is not passed on.
+- `test/photoHooks.test.ts`: every hook line is still in the game's files after a merge, and
+  Photo Feature is still registered.
+
 ## Not decided yet
 
 - The build's name and version (`BUILD` in `mods.ts`).
 - Whether `data/mods.json` goes into the game's own backup; it does not today.
 - How a mod that patches the built code, rather than the source, reads its switch.
+- Whether hook points go into the framework, and which ones.
