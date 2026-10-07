@@ -131,8 +131,8 @@ These used to be in the game's Settings. `modsService.ts` carries a player's old
 (`withPhotoSettingsCarried`) until the Mods screen stores its own.
 
 Option ids are written to disk, so they never change: `photos`, `explicit`, `loader-bunny`,
-`loader-shimmer`, `loader-dots`. `test/photoHooks.test.ts` fails if one of the three places
-above goes missing.
+`loader-shimmer`, `loader-dots`. `test/photoHooks.test.ts` fails if the handover in `modsStore.ts`
+or `modsService.ts` goes missing.
 
 ## Not decided yet
 
