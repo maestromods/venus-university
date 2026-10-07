@@ -188,7 +188,9 @@ export function postPhotoLines(canRenderImages: boolean): string[] {
  * actually posted. How many are kept is rolled against how many girls she is close to; this only
  * has to supply enough of them, and the right kind.
  */
-export function postCommentLines(): string[] {
+export function postCommentLines(on = true): string[] {
+  // The field is in the schema either way, as `image` is, so it is told it is empty.
+  if (!on) return ['Leave "comments" empty on every post.']
   return [
     'Each post also carries "comments": what other students replied underneath it, in their own voices — up to five, and an empty array on the posts nobody answers, which is most of them. A post with a picture draws more than one without.',
     'They are strangers from the four thousand this campus holds, not the characters above: they do not know her, they are not the reader, and none of them may be named. No handles and no @s — just what each one said.',

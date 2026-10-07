@@ -55,6 +55,13 @@ describe('the shipped list', () => {
     expect(optionOn(NO_SWITCHES, CONTINUING_SEMESTERS, 'seniors-graduate')).toBe(true)
   })
 
+  it('has the Photo Feature on until it is switched off, on its own', () => {
+    expect(modOn(NO_SWITCHES, 'photo-feature')).toBe(true)
+    const off = withMod(NO_SWITCHES, 'photo-feature', false)
+    expect(modOn(off, 'photo-feature')).toBe(false)
+    expect(modOn(off, 'continuing-semesters')).toBe(true)
+  })
+
   it('has Continuing Semesters on until it is switched off', () => {
     expect(modOn(NO_SWITCHES, CONTINUING_SEMESTERS)).toBe(true)
     expect(modOn(withMod(NO_SWITCHES, CONTINUING_SEMESTERS, false), CONTINUING_SEMESTERS)).toBe(false)

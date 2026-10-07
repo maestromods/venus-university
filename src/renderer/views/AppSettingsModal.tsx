@@ -30,6 +30,8 @@ import { TitleTab } from '../components/TitleTab'
 import { ComboField } from '../components/ComboField'
 import { SelectField } from '../components/SelectField'
 import { PhotoLoaderField } from './photoLoaderField'
+import { useModOn } from '../stores/modsStore'
+import { PHOTO_FEATURE } from '@shared/mods'
 import { TextField } from '../components/TextField'
 import { CheckField } from '../components/CheckField'
 import { SfwCheckList } from '../components/SfwCheckList'
@@ -144,6 +146,8 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
   // Likewise absent means the window opens fullscreen.
   const [fullscreen, setFullscreen] = useState(settings?.fullscreen !== false)
   const [photos, setPhotos] = useState(settings?.photos !== false)
+  // The Photo Feature's own settings go with it when it is off in Mods.
+  const photoMod = useModOn(PHOTO_FEATURE)
   // Likewise absent means a scene warns before an ending is interrupted.
   const [warnEndingInterrupt, setWarnEndingInterrupt] = useState(
     settings?.warnEndingInterrupt !== false
@@ -804,7 +808,7 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
                   {/* The switch that decides whether the cast photographs itself at all sits over the
                       ones that decide what a picture may show. Named for the playthrough it makes,
                       like they are: what is turned on here is the absence. */}
-                  {!webBuild && (
+                  {!webBuild && photoMod && (
                     <CheckField
                       id="settings-photos"
                       label="No DM and feed photos"
@@ -813,7 +817,7 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
                       onChange={(checked) => handlePhotosChange(!checked)}
                     />
                   )}
-                  {!webBuild && photos && <PhotoLoaderField />}
+                  {!webBuild && photoMod && photos && <PhotoLoaderField />}
 
                   {/* Each toggle carries what turning it on costs; the note is the whole of what the
                       app promises about either setting. */}

@@ -49,6 +49,7 @@ export interface ModDef {
 }
 
 export const CONTINUING_SEMESTERS = 'continuing-semesters'
+export const PHOTO_FEATURE = 'photo-feature'
 
 /** Every mod in this build, in the order the Mods screen lists them. */
 export const MODS: readonly ModDef[] = [
@@ -83,6 +84,18 @@ export const MODS: readonly ModDef[] = [
         default: true
       }
     ]
+  },
+  {
+    id: PHOTO_FEATURE,
+    name: 'Photo Feature',
+    author: 'naudh1r',
+    version: '1.1.3',
+    scope: 'anytime',
+    defaultOn: true,
+    blurb:
+      'The girls send photos in their DMs and post them on their feeds, with comments from the rest of campus. Adds a gallery to each contact and optional body details for characters. Needs local image generation.',
+    offNote:
+      'Off, nobody takes a new photo, posts get no comments and body details are not used. Photos already sent stay where they are. Its own settings are in Settings and Manage Characters.'
   }
 ]
 

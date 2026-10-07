@@ -264,7 +264,7 @@ const HOOKS: readonly {
   },
   {
     file: 'src/renderer/views/AppSettingsModal.tsx',
-    needs: ['{!webBuild && photos && <PhotoLoaderField />}'],
+    needs: ['{!webBuild && photoMod && photos && <PhotoLoaderField />}'],
     why: 'the player cannot pick how a photo waits'
   },
   {

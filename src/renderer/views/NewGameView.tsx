@@ -17,6 +17,7 @@ import { placeNpcShifts, rollFreshmanJobStart, rollJobClosures } from '@shared/j
 import { rollSemesterWeather } from '@shared/weather'
 import { initialFlags } from '@shared/relationship'
 import { npcFriendsOf, rollInitialNpcRelationships } from '@shared/npcRelationships'
+import { rollPostLikes } from '@shared/feed'
 import { reachOf, rollAudienceLikes } from '@shared/postAudience'
 import { andList } from '@shared/sentences'
 import { shuffle } from '@shared/shuffle'
@@ -72,8 +73,8 @@ import {
 } from '../stores/crossingStore'
 import { slotStampOf } from '../stores/slotCrossing'
 import { lockedIdsOf, spriteUrl, useCharacterStore, visibleOrderOf } from '../stores/characterStore'
-import { playthroughMods } from '@shared/mods'
-import { useModsStore } from '../stores/modsStore'
+import { PHOTO_FEATURE, playthroughMods } from '@shared/mods'
+import { modIsOn, useModsStore } from '../stores/modsStore'
 import { useSaveStore } from '../stores/saveStore'
 import { useUiStore } from '../stores/uiStore'
 import { CharacterHeightModal } from './CharacterHeightModal'
@@ -149,7 +150,10 @@ function dealWinterPosts(
       date: Math.floor(slot / 2),
       // `%` keeps the dividend's sign and every slot is negative, so the remainder is floored into 0/1.
       time: (((slot % 2) + 2) % 2) as TimeSlot,
-      likes: rollAudienceLikes({ reach, friends, photoTier: 'none' })
+      // The Photo Feature's roll while it is on in Mods, the game's own otherwise.
+      likes: modIsOn(PHOTO_FEATURE)
+        ? rollAudienceLikes({ reach, friends, photoTier: 'none' })
+        : rollPostLikes(friends)
     }))
 }
 

@@ -1,3 +1,5 @@
+import { rollPostLikes } from '@shared/feed'
+import { PHOTO_FEATURE } from '@shared/mods'
 import { npcFriendsOf } from '@shared/npcRelationships'
 import { globalSlotOf } from '@shared/jobs'
 import type { PhotoTier } from '@shared/photoGate'
@@ -11,6 +13,7 @@ import {
 } from '../prompts/feedRandoms'
 import { useGameStore } from './gameStore'
 import { useGrabBagStore } from './grabBagStore'
+import { modIsOn } from './modsStore'
 
 /**
  * Dresses the replies the model wrote for one post: a handle, an emoji for a face, and the slot
@@ -30,7 +33,8 @@ export function rollComments(
   photoTier: PhotoTier = 'none'
 ): PostComment[] {
   const lines = (written ?? []).map((text) => text.trim()).filter(Boolean)
-  if (lines.length === 0) return []
+  // With the Photo Feature off in Mods a post is the game's own: no replies under it.
+  if (lines.length === 0 || !modIsOn(PHOTO_FEATURE)) return []
 
   const game = useGameStore.getState()
   const reach = reachOf(game.playthroughId, charId, game.characters[charId])
@@ -60,6 +64,9 @@ export function rollComments(
  */
 export function postLikes(charId: string, photoTier: PhotoTier = 'none'): number {
   const game = useGameStore.getState()
+  // Off in Mods, the game's own roll.
+  if (!modIsOn(PHOTO_FEATURE))
+    return rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
   return rollAudienceLikes({
     reach: reachOf(game.playthroughId, charId, game.characters[charId]),
     friends: npcFriendsOf(game.npcRelationships, charId, game.chars).length,
@@ -69,6 +76,7 @@ export function postLikes(charId: string, photoTier: PhotoTier = 'none'): number
 
 /** The likes on the slot's random student's post: one of the four thousand, with no roster friends. */
 export function strangerLikes(handle: string): number {
+  if (!modIsOn(PHOTO_FEATURE)) return rollPostLikes(0)
   const game = useGameStore.getState()
   return rollAudienceLikes({
     reach: reachOf(game.playthroughId, handle, undefined),

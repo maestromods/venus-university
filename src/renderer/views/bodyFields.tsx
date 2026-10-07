@@ -12,6 +12,8 @@ import {
   type CharacterBody
 } from '@shared/characterBody'
 import { useSettingsStore } from '../stores/settingsStore'
+import { useModOn } from '../stores/modsStore'
+import { PHOTO_FEATURE } from '@shared/mods'
 import { gestures, quietLift, quietPress } from './motion'
 import '../vu_styles/BodyFields.css'
 
@@ -20,10 +22,13 @@ import '../vu_styles/BodyFields.css'
  * asked at creation, what her editor shows and what her sprites, CGs and photos are drawn with,
  * all of which are made here.
  */
-export function BodyDetailsToggle(): JSX.Element {
+export function BodyDetailsToggle(): JSX.Element | null {
+  const modOn = useModOn(PHOTO_FEATURE)
   const on = useSettingsStore((s) => s.settings?.bodyDetails === true)
   const update = useSettingsStore((s) => s.update)
   const [saving, setSaving] = useState(false)
+  // The switch belongs to the Photo Feature, so it goes when that is off in Mods.
+  if (!modOn) return null
   return (
     <motion.button
       id="manage-body-details"
@@ -81,7 +86,8 @@ export function BodyFieldsSection({
   baseAppearance: readonly string[]
   onChange: (body: CharacterBody) => void
 }): JSX.Element | null {
-  const on = useSettingsStore((s) => s.settings?.bodyDetails === true)
+  const modOn = useModOn(PHOTO_FEATURE)
+  const on = useSettingsStore((s) => s.settings?.bodyDetails === true) && modOn
   // Off, the section is not there; what she has is kept, and written back as it was.
   if (!on) return null
 

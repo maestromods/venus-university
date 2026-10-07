@@ -5,6 +5,8 @@ import { writeAutosave } from './loop/saves'
 import { loopState } from './loop/state'
 import { sceneInProgress } from './loop/stream'
 import { useSettingsStore } from './settingsStore'
+import { modIsOn } from './modsStore'
+import { PHOTO_FEATURE } from '@shared/mods'
 import { useSetupStore } from './setupStore'
 
 /**
@@ -35,6 +37,8 @@ function canRenderImages(): boolean {
  * renderer check below is the real gate anyway.
  */
 export function canSendPhotos(): boolean {
+  // The build's own switch first: with the mod off in Mods, nobody is asked for a picture.
+  if (!modIsOn(PHOTO_FEATURE)) return false
   return useSettingsStore.getState().settings?.photos !== false && canRenderImages()
 }
 

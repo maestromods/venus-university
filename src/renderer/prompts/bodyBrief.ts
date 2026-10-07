@@ -1,5 +1,7 @@
 import { BODY_POOLS, drawBody, type CharacterBody } from '@shared/characterBody'
 import { useSettingsStore } from '../stores/settingsStore'
+import { modIsOn } from '../stores/modsStore'
+import { PHOTO_FEATURE } from '@shared/mods'
 
 /**
  * What the character call is asked about her body, and what is made of the answer.
@@ -14,7 +16,7 @@ import { useSettingsStore } from '../stores/settingsStore'
 
 /** The body switch, as the settings store holds it. */
 export function bodyDetailsOn(): boolean {
-  return useSettingsStore.getState().settings?.bodyDetails === true
+  return modIsOn(PHOTO_FEATURE) && useSettingsStore.getState().settings?.bodyDetails === true
 }
 
 /** The BODY section of the character call, in the shape APPEARANCE asks its picks in. */
