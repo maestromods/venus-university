@@ -6,6 +6,7 @@ import type { ChatPhoto } from '@shared/photoTypes'
 import type { TimeSlot } from '@shared/types'
 import { openShot } from '../components/PhotoBubble'
 import { newestFirst } from '../stores/feedRolls'
+import { useExplicitBlocked, usePhotosVisible } from '../stores/photoSwitchHooks'
 import { useGameStore } from '../stores/gameStore'
 import { Card, Locked } from './ContactPage'
 import { gestures, quietLift, quietPress } from './motion'
@@ -61,8 +62,8 @@ const CONTACT_TABS: readonly { key: ContactTab; label: string }[] = [
 
 /** What the page needs from the gallery: the strip, the panel, and which reading is open. */
 export interface ContactGallery {
-  /** The tab strip, drawn under her name. */
-  tabs: JSX.Element
+  /** The tab strip, drawn under her name; none while the mod's photos are hidden. */
+  tabs: JSX.Element | null
   /** True while the gallery is the reading being shown; the page draws its own cards otherwise. */
   showing: boolean
   /** The gallery itself, drawn in the profile cards' place. */
@@ -86,7 +87,11 @@ function Shot({
   tier: string
   from: ShotSource
 }): JSX.Element | null {
-  const [shown, setShown] = useState(tier !== 'explicit')
+  const [opened, setShown] = useState(tier !== 'explicit')
+  // An undressed picture while they are forbidden stays covered, and cannot be opened.
+  const explicitBlocked = useExplicitBlocked()
+  const locked = tier === 'explicit' && explicitBlocked
+  const shown = opened && !locked
   // A picture the save names but the folder does not hold — one a save brought along without
   // its pictures — is left out of the grid rather than drawn as an empty frame.
   const [missing, setMissing] = useState(false)
@@ -100,6 +105,8 @@ function Shot({
         className="vu-gallery-cell vu-contact-shot"
         type="button"
         {...gestures(false, quietLift, quietPress)}
+        disabled={locked}
+        title={locked ? 'Explicit photos are switched off' : undefined}
         onClick={() => (shown ? openShot(src) : setShown(true))}
       >
         {/* Covered the way the thread covers it: the picture itself, blurred past reading. */}
@@ -114,7 +121,7 @@ function Shot({
       </motion.button>
       {/* The thread's own eye, so an explicit one can be covered again once seen. Beside the cell
           rather than in it, since a button cannot sit inside another. */}
-      {tier === 'explicit' && (
+      {tier === 'explicit' && !locked && (
         <button
           type="button"
           className={`vu-bb-photo-eye vu-contact-shot-eye${shown ? '' : ' vu-bb-photo-eye--covered'}`}
@@ -146,6 +153,7 @@ export function useContactGallery({
 }): ContactGallery {
   const [tab, setTab] = useState<ContactTab>('profile')
   const [filter, setFilter] = useState<ShotFilter>('all')
+  const visible = usePhotosVisible()
   const playthroughId = useGameStore((s) => s.playthroughId)
   const conversation = useGameStore((s) => s.bunnyboard.conversations[charId])
   const feed = useGameStore((s) => s.charInfo[charId]?.feed)
@@ -264,6 +272,8 @@ export function useContactGallery({
     </Card>
   )
 
+  // Hidden while the mod is off, unless the player keeps them: her page is the game's own again.
+  if (!visible) return { tabs: null, showing: false, panel }
   return { tabs, showing: tab === 'gallery', panel }
 }
 
@@ -280,7 +290,8 @@ export function PostPhotoLink({
   photo: ChatPhoto | undefined
 }): JSX.Element | null {
   const playthroughId = useGameStore((s) => s.playthroughId)
-  if (!playthroughId || !photo?.file) return null
+  const visible = usePhotosVisible()
+  if (!visible || !playthroughId || !photo?.file) return null
   const src = photoUrl(playthroughId, charId, photo.file)
   return (
     <motion.button

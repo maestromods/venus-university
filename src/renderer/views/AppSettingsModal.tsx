@@ -29,9 +29,8 @@ import { useModalShell } from '../components/useModalShell'
 import { TitleTab } from '../components/TitleTab'
 import { ComboField } from '../components/ComboField'
 import { SelectField } from '../components/SelectField'
+import { usePhotoSwitches } from '../stores/photoSwitchHooks'
 import { PhotoLoaderField } from './photoLoaderField'
-import { useModOn } from '../stores/modsStore'
-import { PHOTO_FEATURE } from '@shared/mods'
 import { TextField } from '../components/TextField'
 import { CheckField } from '../components/CheckField'
 import { SfwCheckList } from '../components/SfwCheckList'
@@ -146,8 +145,8 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
   // Likewise absent means the window opens fullscreen.
   const [fullscreen, setFullscreen] = useState(settings?.fullscreen !== false)
   const [photos, setPhotos] = useState(settings?.photos !== false)
-  // The Photo Feature's own settings go with it when it is off in Mods.
-  const photoMod = useModOn(PHOTO_FEATURE)
+  // With Photo Feature off its own settings are not offered; they keep what they were set to.
+  const photoMod = usePhotoSwitches().on
   // Likewise absent means a scene warns before an ending is interrupted.
   const [warnEndingInterrupt, setWarnEndingInterrupt] = useState(
     settings?.warnEndingInterrupt !== false

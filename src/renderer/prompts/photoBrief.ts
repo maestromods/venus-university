@@ -1,3 +1,4 @@
+import { photoFeatureOn } from '@shared/photoSwitches'
 import {
   allowedPhotoTier,
   PHOTO_TIERS,
@@ -188,8 +189,8 @@ export function postPhotoLines(canRenderImages: boolean): string[] {
  * actually posted. How many are kept is rolled against how many girls she is close to; this only
  * has to supply enough of them, and the right kind.
  */
-export function postCommentLines(on = true): string[] {
-  // The field is in the schema either way, as `image` is, so it is told it is empty.
+export function postCommentLines(on: boolean = photoFeatureOn()): string[] {
+  // The field is in the schema either way, so the call stays cacheable; off, it is told empty.
   if (!on) return ['Leave "comments" empty on every post.']
   return [
     'Each post also carries "comments": what other students replied underneath it, in their own voices — up to five, and an empty array on the posts nobody answers, which is most of them. A post with a picture draws more than one without.',

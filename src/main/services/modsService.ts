@@ -1,5 +1,6 @@
 import { mkdir } from 'fs/promises'
-import { cleanSwitches, NO_SWITCHES, type ModSwitches } from '@shared/mods'
+import { cleanSwitches, NO_SWITCHES, photoSwitchesOf, type ModSwitches } from '@shared/mods'
+import { setPhotoSwitches } from '@shared/photoSwitches'
 import { getDataPath, getModsPath } from '../paths'
 import { readValidatedJson, writeAtomicJson } from './jsonFile'
 
@@ -28,7 +29,10 @@ export async function getModSwitches(): Promise<ModSwitches> {
     required: { schemaVersion: true },
     onMissing: () => ({ schemaVersion: SCHEMA_VERSION, ...NO_SWITCHES })
   })
-  return cleanSwitches(file)
+  const switches = cleanSwitches(file)
+  // Main's own copy of Photo Feature's switches, for the renders it draws (body details).
+  setPhotoSwitches(photoSwitchesOf(switches))
+  return switches
 }
 
 /** Writes every switch and option atomically. */
@@ -39,4 +43,5 @@ export async function setModSwitches(switches: ModSwitches): Promise<void> {
     { schemaVersion: SCHEMA_VERSION, ...cleanSwitches(switches) },
     { code: 'MODS_UNWRITABLE', message: 'Could not save mods.json.' }
   )
+  setPhotoSwitches(photoSwitchesOf(switches))
 }

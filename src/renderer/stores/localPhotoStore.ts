@@ -1,12 +1,11 @@
+import { explicitPhotosAllowed, photoFeatureOn } from '@shared/photoSwitches'
 import type { ChatPhoto } from '@shared/photoTypes'
 import { isWebBuild } from '../platform'
 import { useGameStore } from './gameStore'
 import { writeAutosave } from './loop/saves'
 import { loopState } from './loop/state'
 import { sceneInProgress } from './loop/stream'
-import { useSettingsStore } from './settingsStore'
-import { modIsOn } from './modsStore'
-import { PHOTO_FEATURE } from '@shared/mods'
+import { noNsfwImagesOf, useSettingsStore } from './settingsStore'
 import { useSetupStore } from './setupStore'
 
 /**
@@ -37,9 +36,19 @@ function canRenderImages(): boolean {
  * renderer check below is the real gate anyway.
  */
 export function canSendPhotos(): boolean {
-  // The build's own switch first: with the mod off in Mods, nobody is asked for a picture.
-  if (!modIsOn(PHOTO_FEATURE)) return false
-  return useSettingsStore.getState().settings?.photos !== false && canRenderImages()
+  return (
+    photoFeatureOn() &&
+    useSettingsStore.getState().settings?.photos !== false &&
+    canRenderImages()
+  )
+}
+
+/**
+ * Whether an undressed photo is out of the question: the game's "No NSFW images", or the mod's
+ * own option where a build has one. What a photo she has already sent may show follows the same.
+ */
+export function noExplicitPhotos(): boolean {
+  return !explicitPhotosAllowed(noNsfwImagesOf(useSettingsStore.getState()))
 }
 
 /**

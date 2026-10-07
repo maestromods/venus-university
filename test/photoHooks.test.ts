@@ -268,6 +268,11 @@ const HOOKS: readonly {
     why: 'the player cannot pick how a photo waits'
   },
   {
+    file: 'src/renderer/stores/textingLoop.ts',
+    needs: ['noNsfwImages: noExplicitPhotos()'],
+    why: 'her DMs ignore the explicit-photos option a mods screen can set'
+  },
+  {
     file: 'src/renderer/vu_styles/PhotoBubble.css',
     needs: ['.vu-bb-bubble.vu-bb-bubble--photo'],
     why: 'at one class the build’s own bubble rule wins on load order and the picture sits in a padded bubble'

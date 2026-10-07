@@ -4,10 +4,12 @@ import {
   modOn,
   NO_SWITCHES,
   optionOn,
+  photoSwitchesOf,
   withMod,
   withOption,
   type ModSwitches
 } from '@shared/mods'
+import { setPhotoSwitches } from '@shared/photoSwitches'
 import { setSeniorsGraduate } from '@shared/term'
 import type { PlaythroughRecord } from '@shared/types'
 import { useUiStore } from './uiStore'
@@ -75,6 +77,8 @@ function tellSharedRules(switches: ModSwitches): void {
     modOn(switches, CONTINUING_SEMESTERS) &&
     !optionOn(switches, CONTINUING_SEMESTERS, 'seniors-graduate')
   setSeniorsGraduate(!staying)
+  // Photo Feature reads its own switches; this hands them over.
+  setPhotoSwitches(photoSwitchesOf(switches))
 }
 tellSharedRules(useModsStore.getState().switches)
 useModsStore.subscribe((state) => tellSharedRules(state.switches))

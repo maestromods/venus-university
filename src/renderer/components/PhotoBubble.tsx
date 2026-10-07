@@ -3,6 +3,7 @@ import { useEffect, useState, type JSX } from 'react'
 import { photoUrl } from '@shared/photoFiles'
 import { photoLoaderOf } from '@shared/photoLoader'
 import type { ChatPhoto } from '@shared/photoTypes'
+import { useExplicitBlocked, usePhotoSwitches, usePhotosVisible } from '../stores/photoSwitchHooks'
 import { useBunnyboardStore } from '../stores/bunnyboardStore'
 import { useGameStore } from '../stores/gameStore'
 import { useSettingsStore } from '../stores/settingsStore'
@@ -75,15 +76,21 @@ export function MessagePhoto({
   onOpen?: (src: string) => void
   /** Told when the file cannot be loaded, so the frame can offer to draw it again. */
   onMissing?: () => void
-}): JSX.Element {
+}): JSX.Element | null {
   const playthroughId = useGameStore((s) => s.playthroughId)
-  const [shown, setShown] = useState(photo.tier !== 'explicit')
+  const [opened, setShown] = useState(photo.tier !== 'explicit')
   // A picture the renderer cannot load says so, rather than collapsing to nothing and leaving
   // her talking about a photograph that is not there.
   const [broken, setBroken] = useState(false)
+  const modOn = usePhotoSwitches().on
+  // An undressed picture while they are forbidden stays covered, whatever was tapped before.
+  const explicitBlocked = useExplicitBlocked()
+  const locked = photo.tier === 'explicit' && explicitBlocked
+  const shown = opened && !locked
 
   if (photo.pending) {
-    return <PhotoWait />
+    // Off, nothing is being drawn, so there is nothing to wait for on screen.
+    return modOn ? <PhotoWait /> : null
   }
   if (photo.failed || broken || !photo.file || !playthroughId) {
     return <div className="vu-bb-photo vu-bb-photo--failed">The photo never came through.</div>
@@ -104,6 +111,7 @@ export function MessagePhoto({
       aria-label={shown ? 'Cover the photo' : 'Uncover the photo'}
       title={shown ? 'Cover the photo' : 'Uncover the photo'}
       onClick={() => setShown(!shown)}
+      disabled={locked}
     >
       {shown ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
     </button>
@@ -128,7 +136,11 @@ export function MessagePhoto({
    * Tapping does the obvious thing for the state it is in: a veiled picture lifts its veil, and
    * one already on show opens at the size it was drawn. The eye does the other direction.
    */
-  const picture = !shown ? (
+  const picture = locked ? (
+    <span className="vu-bb-photo-open" title="Explicit photos are switched off">
+      {image}
+    </span>
+  ) : !shown ? (
     <button type="button" className="vu-bb-photo-open" onClick={() => setShown(true)}>
       {image}
     </button>
@@ -144,7 +156,7 @@ export function MessagePhoto({
   return (
     <div className="vu-bb-photo-frame">
       {picture}
-      {eye}
+      {!locked && eye}
     </div>
   )
 }
@@ -165,7 +177,10 @@ function RerollablePhoto({
   photo: ChatPhoto
   onReroll: () => void
 }): JSX.Element {
-  const photosOn = useSettingsStore((s) => s.settings?.photos !== false)
+  // Drawing again is the mod acting: it waits for the mod and its photos switch both.
+  const photosSwitch = useSettingsStore((s) => s.settings?.photos !== false)
+  const modOn = usePhotoSwitches().on
+  const photosOn = photosSwitch && modOn
   const [missing, setMissing] = useState(false)
   if ((photo.failed || (missing && !photo.pending)) && photo.file && photo.scene) {
     return (
@@ -205,9 +220,14 @@ export function PostPhoto({
   charId: string
   postId: string
   photo: ChatPhoto
-}): JSX.Element {
+}): JSX.Element | null {
+  const visible = usePhotosVisible()
   // The first post with a picture on the tab, whoever posted it, is when BunnyBot explains them.
-  useEffect(() => tellAboutFeedPhotos(charId), [charId])
+  useEffect(() => {
+    if (visible) tellAboutFeedPhotos(charId)
+  }, [charId, visible])
+  // Hidden while the mod is off, unless the player keeps them; the post itself still shows.
+  if (!visible) return null
   return (
     <RerollablePhoto
       charId={charId}
@@ -234,7 +254,8 @@ export function MessagePhotoBubble({
   messageId: string
 }): JSX.Element | null {
   const charId = useBunnyboardStore((s) => s.viewingCharId)
-  if (!charId) return null
+  const visible = usePhotosVisible()
+  if (!charId || !visible) return null
   const side = sender === 'player' ? 'mine' : 'theirs'
   return (
     <div className={`vu-bb-bubble vu-bb-bubble--${side} vu-bb-bubble--photo`}>

@@ -1,3 +1,4 @@
+import { PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSwitches'
 import type { PlaythroughRecord } from './types'
 
 /**
@@ -86,16 +87,11 @@ export const MODS: readonly ModDef[] = [
     ]
   },
   {
+    ...PHOTO_FEATURE_MOD,
     id: PHOTO_FEATURE,
-    name: 'Photo Feature',
-    author: 'naudh1r',
     version: '1.1.3',
-    scope: 'anytime',
-    defaultOn: true,
-    blurb:
-      'The girls send photos in their DMs and post them on their feeds, with comments from the rest of campus. Adds a gallery to each contact and optional body details for characters. Needs local image generation.',
-    offNote:
-      'Off, nobody takes a new photo, posts get no comments and body details are not used. Photos already sent stay where they are. Its own settings are in Settings and Manage Characters.'
+    // The mod's own options, as it describes them; arrays from it are read-only.
+    options: [...PHOTO_FEATURE_MOD.options]
   }
 ]
 
@@ -268,5 +264,18 @@ declare module './types' {
      * and on every record written before the list existed.
      */
     mods?: string[]
+  }
+}
+
+/**
+ * Photo Feature's switches as this build's Mods screen has them: the mod's own module reads
+ * these wherever it acts, so the build only has to hand them over (`setPhotoSwitches`), in main
+ * when the switches are read or written and in the renderer whenever one moves.
+ */
+export function photoSwitchesOf(switches: ModSwitches): PhotoSwitches {
+  return {
+    on: modOn(switches, PHOTO_FEATURE),
+    explicit: optionOn(switches, PHOTO_FEATURE, 'explicit'),
+    showWhenOff: optionOn(switches, PHOTO_FEATURE, 'showWhenOff')
   }
 }

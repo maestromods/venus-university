@@ -2,6 +2,7 @@ import type { CSSProperties, JSX } from 'react'
 import { hashString } from '@shared/hash'
 import { shownComments, type PostComment } from '@shared/postComments'
 import { useGameStore } from '../stores/gameStore'
+import { usePhotosVisible } from '../stores/photoSwitchHooks'
 import '../vu_styles/PostComments.css'
 
 /**
@@ -17,8 +18,10 @@ import '../vu_styles/PostComments.css'
 export function PostComments({ comments }: { comments: readonly PostComment[] }): JSX.Element | null {
   const date = useGameStore((s) => s.date)
   const time = useGameStore((s) => s.time)
+  const visible = usePhotosVisible()
   const said = shownComments(comments, date, time)
-  if (said.length === 0) return null
+  // The mod's comments, hidden with the rest of it while it is off unless the player keeps them.
+  if (!visible || said.length === 0) return null
 
   return (
     <ul className="vu-bb-comments">
