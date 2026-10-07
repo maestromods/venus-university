@@ -464,26 +464,30 @@ export function MainMenu(): JSX.Element {
         <hr className="vu-rule" />
 
         <motion.nav className="vu-menu-admin vu-fan" variants={dealt(0.8, 0.045)}>
-          <motion.button
-            id="menu-settings"
-            className="vu-btn vu-btn--quiet"
-            variants={dealtItem}
-            {...gestures(false, quietLift, quietPress)}
-            onClick={() => openModal('settings')}
-          >
-            Settings
-          </motion.button>
-          {/* The community mods in this build, and how many of them are on. */}
-          <motion.button
-            id="menu-mods"
-            className="vu-btn vu-btn--quiet"
-            variants={dealtItem}
-            {...gestures(false, quietLift, quietPress)}
-            onClick={() => openModal('mods')}
-          >
-            Mods
-            <span className="vu-menu-mods-count">{modsOn(modSwitches).length}</span>
-          </motion.button>
+          {/* Side by side, so the list is no taller than the game's own and the footer under it
+              stays on screen. */}
+          <div className="vu-menu-admin-row">
+            <motion.button
+              id="menu-settings"
+              className="vu-btn vu-btn--quiet"
+              variants={dealtItem}
+              {...gestures(false, quietLift, quietPress)}
+              onClick={() => openModal('settings')}
+            >
+              Settings
+            </motion.button>
+            {/* The community mods in this build, and how many of them are on. */}
+            <motion.button
+              id="menu-mods"
+              className="vu-btn vu-btn--quiet"
+              variants={dealtItem}
+              {...gestures(false, quietLift, quietPress)}
+              onClick={() => openModal('mods')}
+            >
+              Mods
+              <span className="vu-menu-mods-count">{modsOn(modSwitches).length}</span>
+            </motion.button>
+          </div>
           {/* Ungated and last. */}
           <motion.button
             id="menu-credits"
