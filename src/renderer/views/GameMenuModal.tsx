@@ -35,6 +35,7 @@ export interface GameMenuModalProps {
   onMods?: () => void
   /** Absent when Plot Twist is off. Uses the native save gate, since edits are persisted. */
   onPlotTwist?: () => void
+  onWhisper?: () => void
   onMeanwhile?: () => void
   /** A reply is on its way: a rule is not changed under a turn already being written. */
   modsWaiting?: boolean
@@ -63,6 +64,7 @@ export function GameMenuModal({
   onStoryMemory,
   onMods,
   onPlotTwist,
+  onWhisper,
   onMeanwhile,
   modsWaiting = false,
   onControls,
@@ -166,6 +168,9 @@ export function GameMenuModal({
               </motion.button>
             </DeadNote>
           )}
+          {onWhisper && <motion.button id="game-menu-whisper" type="button"
+            className="vu-btn vu-btn--outline vu-paper" variants={dealtItem}
+            {...gestures(false, lift, press)} onClick={onWhisper}>The Venus Whisper</motion.button>}
           {onMeanwhile && <motion.button id="game-menu-meanwhile" type="button"
             className="vu-btn vu-btn--outline vu-paper" variants={dealtItem}
             {...gestures(false,lift,press)} onClick={onMeanwhile}>Meanwhile…</motion.button>}

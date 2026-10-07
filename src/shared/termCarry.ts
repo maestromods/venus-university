@@ -1,3 +1,4 @@
+import { carryWhisper } from './venusWhisper'
 import { FINAL_DATE } from './classes'
 import { isBossChat } from './jobs'
 import { pairKeyOf, type NpcFriendship, type NpcRelationshipMap } from './npcRelationships'
@@ -173,6 +174,7 @@ export function carryTerm(
     stats: rustedStats(save.stats),
     ...(save.bio ? { bio: save.bio } : {}),
     carry: {
+      ...(save.exVenusWhisper ? { exVenusWhisper: carryWhisper(save.exVenusWhisper, termIndexOf(record), save.date, save.charInfo) } : {}),
       money: save.money,
       ...(save.tallies ? { tallies: { ...save.tallies } } : {}),
       inventory: save.inventory.map((item) => ({ ...item })),
@@ -225,6 +227,7 @@ export function carriedOpening(draft: SaveDraft, carry: TermCarry): SaveDraft {
   )
   return {
     ...draft,
+    ...(carry.exVenusWhisper ? { exVenusWhisper: carry.exVenusWhisper } : {}),
     money: carry.money,
     tallies: {
       ...emptyTallies(),
@@ -268,6 +271,7 @@ const _SAVE_FIELDS: Record<keyof SaveDraft, 'carried' | 'fresh'> = {
   exPlotTwist: 'fresh',
   exStoryMemory: 'fresh',
   exBreakthrough: 'fresh',
+  exVenusWhisper: 'carried',
   exNpcWatch: 'fresh',
   tallies: 'carried',
   date: 'fresh',
