@@ -3,6 +3,7 @@ import {
   BUILD,
   buildLine,
   cleanSwitches,
+  CONTINUING_SEMESTERS,
   missingRequirement,
   modNames,
   modOn,
@@ -46,6 +47,17 @@ describe('the shipped list', () => {
     for (const mod of MODS) {
       for (const needed of mod.requires ?? []) expect(MODS.some((m) => m.id === needed)).toBe(true)
     }
+  })
+
+  it('plays the break and offers continuing in Load Game until told otherwise', () => {
+    expect(optionOn(NO_SWITCHES, CONTINUING_SEMESTERS, 'play-the-break')).toBe(true)
+    expect(optionOn(NO_SWITCHES, CONTINUING_SEMESTERS, 'offer-in-load-game')).toBe(true)
+    expect(optionOn(NO_SWITCHES, CONTINUING_SEMESTERS, 'seniors-graduate')).toBe(true)
+  })
+
+  it('has Continuing Semesters on until it is switched off', () => {
+    expect(modOn(NO_SWITCHES, CONTINUING_SEMESTERS)).toBe(true)
+    expect(modOn(withMod(NO_SWITCHES, CONTINUING_SEMESTERS, false), CONTINUING_SEMESTERS)).toBe(false)
   })
 })
 

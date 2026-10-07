@@ -133,6 +133,8 @@ import {
   endCrossing,
   useCrossingStore
 } from '../stores/crossingStore'
+import { CONTINUING_SEMESTERS } from '@shared/mods'
+import { useModOn } from '../stores/modsStore'
 import { resolveContinuation, stageContinuation } from '../stores/newGame'
 import { menuCrossing, revealSceneOpening } from '../stores/slotCrossing'
 import { goToText, goToVerdict, slotActionsNow } from '../stores/slotActions'
@@ -721,8 +723,9 @@ export function GameView(): JSX.Element {
   const gameOver = activeGameOver ? gameOverSceneOf(activeGameOver, readerGraduatesNow()) : null
 
   /** The semester ended well and another follows it, which the ending's modal can go on into. */
+  const semestersOn = useModOn(CONTINUING_SEMESTERS)
   const nextTerm =
-    activeGameOver === 'gameComplete' && hasNextTerm(termIndex)
+    semestersOn && activeGameOver === 'gameComplete' && hasNextTerm(termIndex)
       ? termLabel(termIndex + 1)
       : null
 

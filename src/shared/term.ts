@@ -40,9 +40,21 @@ export function yearAfter(year: number, from: Season): number {
   return from === 'spring' ? Math.min(SENIOR_YEAR, year + 1) : year
 }
 
+/**
+ * Whether seniors leave at all. Continuing Semesters' own option, told to this file by whoever
+ * holds the switches (`modsStore`), the way the active term is: off, a senior stays a senior
+ * for another year, so nobody is said goodbye to for good and everybody can come back.
+ */
+let seniorsLeave = true
+
+/** Says whether seniors graduate from here on. */
+export function setSeniorsGraduate(leave: boolean): void {
+  seniorsLeave = leave
+}
+
 /** Whether somebody in class `year` leaves the university at the end of a `season` semester. */
 export function graduatesAfter(year: number, season: Season): boolean {
-  return season === 'spring' && year >= SENIOR_YEAR
+  return seniorsLeave && season === 'spring' && year >= SENIOR_YEAR
 }
 
 /**

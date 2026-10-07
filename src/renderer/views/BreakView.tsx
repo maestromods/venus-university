@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type JSX } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 
 import { appError } from '@shared/errors'
+import { CONTINUING_SEMESTERS } from '@shared/mods'
 import { seasonOf, seasonWords, termIndexOf, type Season } from '@shared/term'
 import {
   breakClock,
@@ -75,6 +76,7 @@ import {
   writeReachOuts
 } from '../stores/termBreak'
 import { useAudioStore } from '../stores/audioStore'
+import { useModOption } from '../stores/modsStore'
 import { useUiStore } from '../stores/uiStore'
 import { isWebBuild } from '../platform'
 import { StatRadar } from '../components/StatRadar'
@@ -84,6 +86,7 @@ import { BreakMemoriesModal } from './BreakMemoriesModal'
 import { BreakTalkModal, type TalkPhase } from './BreakTalkModal'
 import { heldScreenTheme } from './clockTheme'
 import { GameMenuModal } from './GameMenuModal'
+import { ModsModal, type ModChange, type ModWarning } from './ModsModal'
 import {
   cardLift,
   dealt,
@@ -149,6 +152,7 @@ export function BreakView(): JSX.Element | null {
   // The conversation the panel goes on showing once it has been judged, until it is closed.
   const [shown, setShown] = useState<BreakTalk | null>(null)
   const [menu, setMenu] = useState(false)
+  const [modsOpen, setModsOpen] = useState(false)
   // The panel for a slot spent on himself: whether it is up, whether its call is out, and the
   // slot it goes on showing once it has been written, until it is closed.
   const [alone, setAlone] = useState(false)
@@ -244,6 +248,34 @@ export function BreakView(): JSX.Element | null {
   const underWay = draft !== null && openTalk(draft) !== null
   const dead = draft === null || writing || underWay || checking
   const played = draft !== null && breakPlayed(draft)
+
+  // With the break switched off in Mods, one nothing has happened in yet is skipped as it
+  // opens, by the same road its own Skip button takes: the memories are written for him and
+  // can be reworded before the semester. Once, so a call that failed and was put away leaves
+  // the break there to be played or skipped by hand; one already begun is left as it is.
+  const playBreak = useModOption(CONTINUING_SEMESTERS, 'play-the-break')
+  const skippedForHim = useRef(false)
+  useEffect(() => {
+    if (playBreak || skippedForHim.current) return
+    if (!draft || breakOver(draft) || breakPlayed(draft) || writing || failure) return
+    skippedForHim.current = true
+    finish(draft)
+    // `finish` is this render's own, and reads nothing the dependencies do not name.
+  }, [playBreak, draft, writing, failure])
+
+  /**
+   * Switching the break off in Mods skips one nothing has happened in yet, at once and for
+   * good, so that one change is asked about first. A break already begun is left as it is.
+   */
+  function warnOfSkip(change: ModChange): ModWarning | null {
+    if (change.modId !== CONTINUING_SEMESTERS || change.optionId !== 'play-the-break') return null
+    if (change.on || !draft || breakOver(draft) || breakPlayed(draft)) return null
+    return {
+      title: 'Skip this break?',
+      message: `Switching this off skips the break you are in now: the rest of ${words.endBreakSpan} goes by without you, and what everybody remembers of it is written for you. You can reword it before the semester starts.`,
+      confirmText: 'Switch off and skip'
+    }
+  }
 
   /** Puts the break as it stands on screen and on disk; a refused write is reported and play goes on. */
   async function keep(next: BreakDraft): Promise<void> {
@@ -822,9 +854,26 @@ export function BreakView(): JSX.Element | null {
               setMenu(false)
               openModal('settings')
             }}
+            onMods={() => {
+              setMenu(false)
+              setModsOpen(true)
+            }}
+            modsWaiting={writing}
             onLeave={() => setView('mainMenu')}
             // The browser has no window of its own to close, so it is offered no way out.
             onQuit={isWebBuild() ? undefined : () => void window.api.app.quit()}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {modsOpen && (
+          <ModsModal
+            key="mods"
+            theme={theme}
+            inGame
+            onClose={() => setModsOpen(false)}
+            warn={warnOfSkip}
           />
         )}
       </AnimatePresence>

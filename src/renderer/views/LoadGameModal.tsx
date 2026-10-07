@@ -37,6 +37,8 @@ import {
   switchGame
 } from '../stores/gameLoop'
 import { useGameStore } from '../stores/gameStore'
+import { CONTINUING_SEMESTERS } from '@shared/mods'
+import { useModOn, useModOption } from '../stores/modsStore'
 import { resolveContinuation, stageContinuation, stageEnrollment } from '../stores/newGame'
 import {
   castOf,
@@ -208,6 +210,11 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
   const [confirmingResume, setConfirmingResume] = useState<PlaythroughSummary | null>(null)
   // A save from after a semester's last day, which can be loaded or carried into the next one.
   const [choosingFinished, setChoosingFinished] = useState<ResolvedSave | null>(null)
+  // Continuing Semesters' offer here is the mod's switch and its own option together; with
+  // either off a finished save loads like any other.
+  const semestersOn = useModOn(CONTINUING_SEMESTERS)
+  const offerHere = useModOption(CONTINUING_SEMESTERS, 'offer-in-load-game')
+  const continuingOffered = semestersOn && offerHere
   // Captured with the promise so the hand-off uses the roster on screen at the click.
   const [entering, setEntering] = useState<Entering | null>(null)
   // Which row is under the cursor: the ✕ is revealed from React rather than by CSS.
@@ -541,6 +548,7 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
                   // picked from; otherwise loading over a running game asks first, and from the
                   // Main Menu the click loads.
                   if (
+                    continuingOffered &&
                     entry.summary.graduationSeen &&
                     !entry.unloadable &&
                     hasNextTerm(termIndexOf(entry.record))
