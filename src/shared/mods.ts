@@ -1,4 +1,5 @@
 import type { PlaythroughRecord } from './types'
+import { PLAYTHROUGH_NAMES_MOD } from './playthroughNames'
 
 /**
  * The community mods built into this copy of the game, and the switches a player turns them on
@@ -49,10 +50,18 @@ export interface ModDef {
 }
 
 /**
- * Every mod in this build, in the order the Mods screen lists them. None yet: this is the
- * frame alone, on the game as Venus Dev released it. A mod adds itself here (see MODDING.md).
+ * Every mod in this build, in the order the Mods screen lists them.
  */
-export const MODS: readonly ModDef[] = []
+export const MODS: readonly ModDef[] = [{
+  id: PLAYTHROUGH_NAMES_MOD,
+  name: 'Playthrough renaming',
+  author: 'Maestro Leeds',
+  version: '1.8.2',
+  scope: 'anytime',
+  defaultOn: true,
+  blurb: 'Give each saved playthrough a name from Load Game.',
+  offNote: 'Names remain saved and travel with backups. Turn this on to display and edit them.'
+}]
 
 /**
  * What the player has set, as `data/mods.json` holds it. A mod or an option that is not in

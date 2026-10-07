@@ -4,9 +4,9 @@ This branch is a proposal for how the community mods share one build: every mod'
 always in the game, and a switch decides whether it acts. Players turn mods on and off from
 **Mods** on the main menu; nothing is chosen at install time.
 
-It carries no mods yet. This is the frame alone, on the game as Venus Dev released it (0.3.0),
-so any mod can start from it. The `extracurriculars-base` branch adds Continuing Semesters on
-top as a worked example.
+This source port adds Playthrough renaming to the framework on Venus University 0.3.0.
+Its `anytime` switch controls display and editing of custom names; names stay in storage and
+backups while off. The storage service also enforces the switch before writing a new name.
 
 ## The three things a mod does
 

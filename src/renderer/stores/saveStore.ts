@@ -88,6 +88,8 @@ interface SaveStoreState {
   /** Deletes one save of the open playthrough and drops it from the list. */
   removeSave: (saveId: string) => Promise<void>
   removePlaythrough: (playthroughId: string) => Promise<void>
+  /** Writes a display name and updates the matching row and open heading. */
+  renamePlaythrough: (playthroughId: string, name: string) => Promise<boolean>
   /**
    * Reads one playthrough's enrollment, with the roster resolved and the same load gate a
    * save gets. Null when the file was refused, which reports itself.
@@ -282,6 +284,21 @@ export const useSaveStore = create<SaveStoreState>((set, get) => ({
     }
     // Labels are positional, so the surviving playthroughs have to renumber.
     void get().loadPlaythroughs()
+  },
+
+  renamePlaythrough: async (playthroughId, name) => {
+    const result = await window.api.saves.rename(playthroughId, name)
+    if (!result.ok) {
+      useUiStore.getState().showError(result.error)
+      return false
+    }
+    set(state => ({
+      playthroughs: state.playthroughs.map(row => row.playthroughId === playthroughId
+        ? { ...row, label: result.data.label } : row),
+      selected: state.selected?.playthroughId === playthroughId
+        ? { ...state.selected, label: result.data.label } : state.selected
+    }))
+    return true
   },
 
   resolveEnrollment: async (playthrough) => {

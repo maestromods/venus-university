@@ -110,6 +110,7 @@ const api: VenusUniversityApi = {
   },
   saves: {
     playthroughs: () => ipcRenderer.invoke('saves:playthroughs'),
+    rename: (id, name) => ipcRenderer.invoke('saves:rename', id, name),
     list: (playthroughId) => ipcRenderer.invoke('saves:list', playthroughId),
     read: (playthroughId, saveId) => ipcRenderer.invoke('saves:read', playthroughId, saveId),
     enroll: (draft) => ipcRenderer.invoke('saves:enroll', draft),

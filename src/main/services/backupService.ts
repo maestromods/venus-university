@@ -1,5 +1,7 @@
 import { mkdir, readFile, rename, rm, utimes, writeFile } from 'fs/promises'
 import { basename, dirname, join } from 'path'
+import { PLAYTHROUGH_NAME_FILE, PLAYTHROUGH_NAME_VERSION, validateBackupPlaythroughNames } from '@shared/playthroughNames'
+import { readPlaythroughName } from './playthroughNameService'
 import {
   BACKUP_NAME,
   BACKUP_READ,
@@ -127,7 +129,9 @@ function isBackedUpFile(rel: string): boolean {
 
 /** Everything one playthrough folder carries, minus whatever could not be read. */
 async function backupPlaythrough(playthroughId: string): Promise<BackupPlaythrough> {
+  const name = await readPlaythroughName(playthroughId)
   return {
+    ...(name === null ? {} : { exName: name }),
     record: await optional(`${playthroughId}'s record`, RECORD_NOT_FOUND.code, () =>
       readPlaythroughRecord(playthroughId)
     ),
@@ -342,6 +346,12 @@ async function restoreSaves(scratch: string, record: BackupFile): Promise<void> 
       const folder = join(staged, playthroughId)
       await mkdir(folder, { recursive: true })
 
+      if (playthrough.exName !== undefined) {
+        await writeAtomicJson(join(folder, PLAYTHROUGH_NAME_FILE), {
+          schemaVersion: PLAYTHROUGH_NAME_VERSION, name: playthrough.exName
+        }, RESTORE_FAILED)
+      }
+
       if (playthrough.record) {
         const name = basename(getPlaythroughRecordPath(playthroughId))
         await writeAtomicJson(join(folder, name), playthrough.record, RESTORE_FAILED)
@@ -471,6 +481,7 @@ export async function importBackup(archivePath: string): Promise<void> {
     await extractZip(archivePath, scratch, BACKUP_ZIP_LIMITS)
     await checkExtractedContent(scratch, classifyBackupEntry, 'backup')
     const record = await readBackupRecord(scratch)
+    validateBackupPlaythroughNames(record)
 
     // Everything the record says is checked before anything here is written. The stored keys,
     // the dev switches and the ComfyUI build stay, being this install's own.
