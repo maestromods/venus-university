@@ -4,6 +4,7 @@ import { loaderOptionId, PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSw
 import type { PlaythroughRecord } from './types'
 import { PLAYTHROUGH_NAMES_MOD } from './playthroughNames'
 import { PLOT_TWIST_DEF } from './plotTwists'
+import { TEXT_REGENERATION_MOD } from './textRegeneration'
 
 /**
  * The community mods built into this copy of the game, and the switches a player turns them on
@@ -89,7 +90,13 @@ export const MODS: readonly ModDef[] = [
     blurb: 'Give each saved playthrough a name from Load Game.',
     offNote: 'Names remain saved and travel with backups. Turn this on to display and edit them.'
   },
-  PLOT_TWIST_DEF
+  PLOT_TWIST_DEF,
+  {
+    id: TEXT_REGENERATION_MOD, name: 'Text Regeneration', author: 'Maestro Leeds', version: '1.0.0',
+    scope: 'anytime', defaultOn: true,
+    blurb: 'Regenerate the whole latest phone reply, including every message in it.',
+    offNote: 'Existing messages and reply checkpoints stay saved. Regeneration uses your configured AI.'
+  }
 ]
 
 /**
