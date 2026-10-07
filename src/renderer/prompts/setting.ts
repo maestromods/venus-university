@@ -1,6 +1,8 @@
 import { describePlayer, describeReaderProfile, type PlayerStats } from '@shared/playerStats'
 import { acedExamsLine, GRADES_BAD_LINE, GRADES_GOOD_LINE } from '@shared/academics'
 import { andList } from '@shared/sentences'
+import { yearLabel } from '@shared/classes'
+import { activeTermIndex, readerYearOf } from '@shared/term'
 import { readerStandingOf, type ReaderStanding } from '@shared/relationship'
 import type { CharInfo, Character, ClassEntry, ClassRecord, Occasion } from '@shared/types'
 import { handedBackAcedCount } from './classProgress'
@@ -69,6 +71,11 @@ function bioLine(bio: string): string | null {
   return `The reader is ${closed}`
 }
 
+/** `"a freshman"` — the reader's class year in the semester being played, as his own block opens on it. */
+export function readerYearPhrase(): string {
+  return `a ${yearLabel(readerYearOf(activeTermIndex())).toLowerCase()}`
+}
+
 /** Who the reader is. */
 export function readerText(
   firstName: string,
@@ -86,7 +93,7 @@ export function readerText(
 ): string {
   const bio = bioLine(reputation.bio ?? '')
   return [
-    `The reader is a freshman named ${firstName} ${lastName}, a male who has a single dorm in Lowrise 4.`,
+    `The reader is ${readerYearPhrase()} named ${firstName} ${lastName}, a male who has a single dorm in Lowrise 4.`,
     describePlayer(stats),
     ...(bio ? [bio] : []),
     ...(reputation.aced && reputation.aced > 0 ? [acedExamsLine(reputation.aced)] : []),

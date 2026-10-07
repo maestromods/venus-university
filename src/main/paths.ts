@@ -200,6 +200,14 @@ export function getEnrollmentPath(playthroughId: string): string {
   return join(getPlaythroughPath(playthroughId), 'enrollment.json')
 }
 
+/**
+ * `/data/saves/{playthroughId}/break.json` — the break played after that semester, removed once
+ * the next one has been generated from it.
+ */
+export function getBreakPath(playthroughId: string): string {
+  return join(getPlaythroughPath(playthroughId), 'break.json')
+}
+
 /** `/data/saves/{playthroughId}/ending.png` — the graduation picture. */
 export function getEndingArtPath(playthroughId: string): string {
   return join(getPlaythroughPath(playthroughId), 'ending.png')

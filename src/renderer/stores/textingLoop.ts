@@ -5,6 +5,7 @@
  */
 
 import { formatDateBanner, prevSlot } from '../prompts/gameDate'
+import { awayForBreakReason } from '../prompts/springBreak'
 import type { CalendarEvent, CharInfo, EventCancellation, Occasion } from '@shared/types'
 import { affectionFor, dispositionOf, emptyFlags, isPositive } from '@shared/relationship'
 import { requestAcceptChance } from '@shared/feed'
@@ -757,14 +758,14 @@ export async function beginHangout(): Promise<void> {
   await startHangoutScene(armed.charId, armed.description)
 }
 
-/** The line under a meet-up agreed with a girl who has left campus for spring break. */
+/** The line under a meet-up agreed with a girl who has left campus for the week off. */
 function deliverAwayNotice(charId: string): void {
   const character = useGameStore.getState().characters[charId]
   deliver(
     charId,
     chatMessage(
       'system',
-      `${character?.firstName ?? 'She'} is away for spring break and can't meet up.`
+      `${awayForBreakReason(character?.firstName ?? 'She')} and can't meet up.`
     )
   )
 }
@@ -1329,7 +1330,7 @@ export function deliverEventCancellations(
     const employer = reason === 'shift' && jobId ? jobDefOf(jobId)?.employer : null
     const because =
       reason === 'away'
-        ? 'she is away for spring break'
+        ? awayForBreakReason('she')
         : reason === 'class'
           ? 'she remembered she had class'
           : employer

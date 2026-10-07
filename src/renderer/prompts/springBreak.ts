@@ -1,3 +1,4 @@
+import { seasonWords } from '@shared/term'
 import { formatDatePart } from './gameDate'
 import { SPRING_BREAK } from './occasions'
 
@@ -47,9 +48,14 @@ export function isSpringBreakOutingWeek(date: number): boolean {
   return date >= SPRING_BREAK.startDate && date <= SPRING_BREAK.endDate
 }
 
+/** `"She is away for spring break"` — why somebody off campus for the week cannot be reached. */
+export function awayForBreakReason(subject: string): string {
+  return `${subject} is away for ${seasonWords().midBreak}`
+}
+
 /**
  * The one sentence a character's spring break earns, from the notice through to the Saturday
- * after she is back.
+ * after she is back. In a fall the week off is fall break, and is named as that.
  */
 export function springBreakLines(
   firstName: string,
@@ -60,11 +66,12 @@ export function springBreakLines(
 ): string[] {
   if (!away) return []
   if (date < SPRING_BREAK_NOTICE || date >= SPRING_BREAK_FORGET) return []
+  const midBreak = seasonWords().midBreak
 
   if (!away.includes(charId)) {
     return date <= SPRING_BREAK_RETURN
-      ? [`${firstName} is staying on campus for spring break.`]
-      : [`${firstName} stayed on campus for spring break.`]
+      ? [`${firstName} is staying on campus for ${midBreak}.`]
+      : [`${firstName} stayed on campus for ${midBreak}.`]
   }
 
   // Plans end in a full stop; a blank plan takes one in place of the colon.
@@ -72,17 +79,17 @@ export function springBreakLines(
 
   if (date < SPRING_BREAK_LEAVE) {
     return [
-      `${firstName} has spring break plans next week${tail}` +
+      `${firstName} has ${midBreak} plans next week${tail}` +
         " She's leaving campus on Saturday without the reader, who is staying in Veridan for" +
         ' the break, and is fully committed.'
     ]
   }
   if (date < SPRING_BREAK_RETURN) {
     return [
-      `${firstName} left campus for spring break on ${formatDatePart(SPRING_BREAK_LEAVE)}` +
+      `${firstName} left campus for ${midBreak} on ${formatDatePart(SPRING_BREAK_LEAVE)}` +
         ` and can't hang out. What she's currently doing${tail}` +
         ' The reader is not with her: he stayed in Veridan.'
     ]
   }
-  return [`${firstName} came back from her spring break vacation on Sunday morning${tail}`]
+  return [`${firstName} came back from her ${midBreak} vacation on Sunday morning${tail}`]
 }

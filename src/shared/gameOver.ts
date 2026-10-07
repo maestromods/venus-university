@@ -72,6 +72,28 @@ export const GAME_OVER_SCENES: Record<GameOverReason, GameOverScene> = {
   }
 }
 
+/** The winning ending of the reader's own last semester: there is no next one to go home until. */
+const GRADUATED_SCENE: GameOverScene = {
+  lines: [
+    'You finally finish stuffing four years into your backpack and suitcase and head for the Loop.',
+    'From the tram window, you take one last look back down the road at the gates, where the stone statue of Zeus is waving your farewell.',
+    'As your flight takes off, you pick out the familiar buildings of Downtown, Stanchion, and the Promenade, thinking about all the memories you made here.',
+    'You smile as you realize how when you first arrived, you were a stranger to all the friends you made. Now, you\'ll never forget them.',
+    'There is no next semester this time. You find you don\'t mind as much as you thought you would.'
+  ],
+  title: 'Thanks for playing!',
+  message:
+    'Your university life is over, and this time for good: you graduated from Venus University. Congratulations on making it to the very end of the game! If an ending CG was generated for you, I\'d love it if you would email me it! I\'ll take it as proof you finished the game and will add you to the credits as a special thank you.'
+}
+
+/**
+ * The ending a reason plays. `readerGraduated` is the reader's own last semester, whose winning
+ * ending closes the story rather than the term.
+ */
+export function gameOverSceneOf(reason: GameOverReason, readerGraduated: boolean): GameOverScene {
+  return reason === 'gameComplete' && readerGraduated ? GRADUATED_SCENE : GAME_OVER_SCENES[reason]
+}
+
 /** Which *losing* ending, if any, applies right now — the one place those conditions are tested. */
 export function gameOverReasonOf(state: {
   money: number

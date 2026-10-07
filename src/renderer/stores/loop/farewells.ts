@@ -1,5 +1,5 @@
-import { SENIOR_YEAR } from '@shared/classes'
 import { affectionFor, dispositionOf, isPositive } from '@shared/relationship'
+import { graduatesNow, readerGraduatesNow } from '@shared/term'
 import { useGameStore } from '../gameStore'
 
 /**
@@ -11,7 +11,7 @@ import { useGameStore } from '../gameStore'
 export interface FarewellOption {
   charId: string
   firstName: string
-  /** She is graduating out of reach rather than home for the summer. */
+  /** One of the two is graduating out of reach, rather than both being home for the break. */
   senior: boolean
 }
 
@@ -42,7 +42,7 @@ export function farewellOptions(): FarewellOption[] {
       option: {
         charId,
         firstName: game.characters[charId].firstName,
-        senior: (game.charInfo[charId].year ?? 0) >= SENIOR_YEAR
+        senior: readerGraduatesNow() || graduatesNow(game.charInfo[charId].year)
       },
       affection: affectionFor(game.charInfo[charId], game.date, game.characters[charId])
     }))
@@ -57,13 +57,13 @@ export function farewellDisposition(charId: string): ReturnType<typeof dispositi
 }
 
 /**
- * The first names of everyone graduating, in roster order — who the reader watches cross the
- * stage.
+ * The first names of everyone graduating this semester, in roster order — who the reader
+ * watches cross the stage, or crosses it with.
  */
 export function seniorNames(): string[] {
   const game = useGameStore.getState()
   return game.chars
-    .filter((charId) => (game.charInfo[charId]?.year ?? 0) >= SENIOR_YEAR)
+    .filter((charId) => graduatesNow(game.charInfo[charId]?.year))
     .map((charId) => game.characters[charId]?.firstName)
     .filter((name): name is string => Boolean(name))
 }

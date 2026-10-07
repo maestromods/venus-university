@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useRef, useState, type JSX } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import { bytesToBase64 } from '@shared/base64'
 import { appError, toAppError } from '@shared/errors'
 import { EMOTIONS } from '@shared/emotions'
-import { DEFAULT_PLAYER_STATS, type PlayerStats } from '@shared/playerStats'
+import { DEFAULT_PLAYER_STATS, rustedStats, type PlayerStats } from '@shared/playerStats'
+import { seasonOf, setActiveTerm, termIndexOf, termLabel } from '@shared/term'
+import {
+  breakPostWindow,
+  carriedOpening,
+  graduatedChars,
+  returningChars
+} from '@shared/termCarry'
 import { STARTING_MONEY } from '@shared/money'
 import { emptyTallies } from '@shared/tallies'
 import { placeNpcShifts, rollFreshmanJobStart, rollJobClosures } from '@shared/jobs'
@@ -27,10 +35,12 @@ import {
   type JobAssignment,
   type Occasion,
   type Result,
+  type SaveDraft,
   type ShiftSlot,
   type SocialPost,
   type TimeSlot
 } from '@shared/types'
+import type { TermCarry, TermInfo } from '@shared/termTypes'
 import { CardCaption } from '../components/CardCaption'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { LlmFailureModal } from '../components/LlmFailureModal'
@@ -43,8 +53,10 @@ import { enterGame } from '../stores/gameLoop'
 import { useGameStore } from '../stores/gameStore'
 import {
   cancelNewGameStart,
+  clearStagedContinuation,
   clearStagedEnrollment,
   retryNewGameStart,
+  stagedContinuation,
   stagedEnrollment,
   startNewGame,
   type StartOutcome,
@@ -112,12 +124,19 @@ function firstNameKeyOf(character: Character): string {
 const WINTER_FIRST_DAY = -49
 const WINTER_LAST_DAY = -6
 
-/** Files a character's winter posts on actual days. */
-function dealWinterPosts(texts: readonly string[], friends: number): SocialPost[] {
+/**
+ * Files a character's winter posts on actual days. A continued semester names the window of
+ * the break it followed in place of the winter's.
+ */
+function dealWinterPosts(
+  texts: readonly string[],
+  friends: number,
+  window = { first: WINTER_FIRST_DAY, last: WINTER_LAST_DAY }
+): SocialPost[] {
   const slots = new Set<number>()
   // Distinct slots by redraw: the window holds 88 and nobody posts more than three times.
   while (slots.size < texts.length) {
-    const day = WINTER_FIRST_DAY + Math.floor(Math.random() * (WINTER_LAST_DAY - WINTER_FIRST_DAY + 1))
+    const day = window.first + Math.floor(Math.random() * (window.last - window.first + 1))
     slots.add(day * 2 + Math.floor(Math.random() * 2))
   }
 
@@ -165,11 +184,41 @@ export function NewGameView(): JSX.Element {
   // The semester this screen is being reopened on, taken once at mount and dropped by the
   // effect below; absent on a start of any other kind.
   const [resumed] = useState(stagedEnrollment)
+  // The finished semester this one carries on from, on the same terms; absent on a new story.
+  const [continued] = useState(stagedContinuation)
   useEffect(() => {
     clearStagedEnrollment()
+    clearStagedContinuation()
   }, [])
 
-  const [roster, setRoster] = useState<Character[]>(resumed?.characters ?? [])
+  // Which semester is being enrolled for: the one after a continued playthrough's, the one a
+  // reopened registrar was written for, or the first spring. Named as the active term in the
+  // same breath, since everything this screen generates and dates is read against it.
+  const [term] = useState<TermInfo | undefined>(() => {
+    const next = continued
+      ? { index: termIndexOf(continued.record) + 1, continuedFrom: continued.playthroughId }
+      : resumed?.enrollment.term
+    setActiveTerm(next?.index ?? 0)
+    return next
+  })
+  // Who of the finished roster has graduated and cannot be picked again.
+  const [graduated] = useState<ReadonlySet<string>>(
+    () => new Set(continued ? graduatedChars(continued.record) : [])
+  )
+  // What the opening save takes over from the semester before, held from the generation's
+  // reply to Finalize and seeded from the enrollment like the catalog.
+  const [carry, setCarry] = useState<TermCarry | undefined>(resumed?.enrollment.carry)
+
+  const [roster, setRoster] = useState<Character[]>(
+    () =>
+      resumed?.characters ??
+      (continued
+        ? returningChars(continued.record).flatMap((charId) => {
+            const character = continued.characters[charId]
+            return character ? [character] : []
+          })
+        : [])
+  )
   // The generated catalog, held between Start Game and Finalize and seeded from the enrollment
   // where the registrar is being reopened; why `classSelect` routes back to this component.
   const [schedules, setSchedules] = useState<ScheduleResult | null>(
@@ -213,13 +262,20 @@ export function NewGameView(): JSX.Element {
   const [playerName, setPlayerName] = useState(
     resumed
       ? { first: resumed.enrollment.playerFirstName, last: resumed.enrollment.playerLastName }
-      : { first: DEFAULT_PLAYER_FIRST_NAME, last: DEFAULT_PLAYER_LAST_NAME }
+      : continued
+        ? { first: continued.record.playerFirstName, last: continued.record.playerLastName }
+        : { first: DEFAULT_PLAYER_FIRST_NAME, last: DEFAULT_PLAYER_LAST_NAME }
   )
+  // A reader who is carried over comes back as the break left him — a tier rustier in
+  // everything, where it was not played — and is not asked.
   const [playerStats, setPlayerStats] = useState<PlayerStats>(
-    resumed?.enrollment.stats ?? DEFAULT_PLAYER_STATS
+    resumed?.enrollment.stats ??
+      (continued
+        ? (continued.played?.stats ?? rustedStats(continued.save.stats))
+        : DEFAULT_PLAYER_STATS)
   )
   // What the reader says about himself, as the same modal took it down; blank is an answer.
-  const [playerBio, setPlayerBio] = useState(resumed?.enrollment.bio ?? '')
+  const [playerBio, setPlayerBio] = useState(resumed?.enrollment.bio ?? continued?.save.bio ?? '')
   // What New Game's own calls cost, kept with the enrollment so the registrar can be left and
   // come back to.
   const [enrolledTokens, setEnrolledTokens] = useState(resumed?.enrollment.tokensGenerated ?? 0)
@@ -352,9 +408,10 @@ export function NewGameView(): JSX.Element {
       order.filter(
         (charId) =>
           EMOTIONS.every((emotion) => expressions[charId]?.[emotion]) &&
+          !graduated.has(charId) &&
           !roster.some((c) => c.charId === charId)
       ),
-    [order, expressions, roster]
+    [order, expressions, roster, graduated]
   )
 
   /**
@@ -446,7 +503,7 @@ export function NewGameView(): JSX.Element {
     // The two questions are asked over the generation's wait, heights first; the calls
     // themselves are `stores/newGame.ts`'s.
     setNamed(false)
-    setStarting(startNewGame(roster))
+    setStarting(startNewGame(roster, continued ?? undefined))
     setSizing(true)
   }
 
@@ -465,6 +522,8 @@ export function NewGameView(): JSX.Element {
     const tokensGenerated = useGameStore.getState().tallies.tokensGenerated
     setEnrolledTokens(tokensGenerated)
     const written = await useSaveStore.getState().enroll({
+      ...(term ? { term } : {}),
+      ...(semester.carried ? { carry: semester.carried.carry } : {}),
       chars: roster.map((c) => c.charId),
       classes: semester.schedules.classes,
       perChar: semester.schedules.perChar,
@@ -484,6 +543,12 @@ export function NewGameView(): JSX.Element {
       return
     }
     setPlaythroughId(written.data.playthroughId)
+    // The break this semester was generated from has been spent; a refusal leaves a file the
+    // next continuation of that save would only resume.
+    if (term?.continuedFrom) {
+      const removed = await window.api.saves.removeBreak(term.continuedFrom)
+      if (!removed.ok) console.warn('[newGame] the break could not be removed', removed.error)
+    }
   }
 
   /**
@@ -513,6 +578,7 @@ export function NewGameView(): JSX.Element {
     void (async () => {
       await enroll(outcome.data, playerName.first, playerName.last, playerStats, playerBio)
       endCrossing(() => {
+        setCarry(outcome.data.carried?.carry)
         setSchedules(outcome.data.schedules)
         setJobs(outcome.data.jobs)
         setHaunts(outcome.data.haunts)
@@ -530,7 +596,7 @@ export function NewGameView(): JSX.Element {
    */
   function retryStart(): void {
     setStartFailure(null)
-    setStarting(retryNewGameStart(roster))
+    setStarting(retryNewGameStart(roster, continued ?? undefined))
   }
 
   /** The failure modal's way out. */
@@ -543,6 +609,8 @@ export function NewGameView(): JSX.Element {
     setSizing(false)
     // Back to the roster, from under whatever cover the failure was read on.
     endCrossing()
+    // A carried reader was never asked who he is, so there is nothing of his to forget.
+    if (continued) return
     setPlayerName({ first: DEFAULT_PLAYER_FIRST_NAME, last: DEFAULT_PLAYER_LAST_NAME })
     setPlayerStats(DEFAULT_PLAYER_STATS)
     setPlayerBio('')
@@ -577,6 +645,15 @@ export function NewGameView(): JSX.Element {
     // What the curtain has been holding for all along, said now rather than when the cover went
     // up: until this answer there was a modal in front of it, and a screen captioned with what
     // it is loading while it asks the reader his name is reporting a wait he is not in.
+    nameCrossingWait('Generating class schedule')
+    setNamed(true)
+  }
+
+  /**
+   * A continued semester's stand-in for that answer: the reader is who he was, so the curtain
+   * goes straight to the wait it was raised for.
+   */
+  function onCarried(): void {
     nameCrossingWait('Generating class schedule')
     setNamed(true)
   }
@@ -651,6 +728,11 @@ export function NewGameView(): JSX.Element {
       roster.map((c) => ({ charId: c.charId, year: perChar[c.charId]?.year ?? 1 }))
     )
 
+    // Where a break post is dated: the winter before a new story, or the break a continued
+    // semester followed.
+    const postWindow =
+      term && term.index > 0 ? breakPostWindow(seasonOf(term.index - 1)) : undefined
+
     // The winter posts dated, and their likes rolled off the friend
     // count the pass above has just decided.
     const winterFeeds = Object.fromEntries(
@@ -661,7 +743,7 @@ export function NewGameView(): JSX.Element {
           c.charId,
           roster.map((entry) => entry.charId)
         ).length
-        return [c.charId, dealWinterPosts(assignment?.winterPosts ?? [], friends)] as const
+        return [c.charId, dealWinterPosts(assignment?.winterPosts ?? [], friends, postWindow)] as const
       })
     )
 
@@ -688,9 +770,13 @@ export function NewGameView(): JSX.Element {
       })
     )
 
+    // What New Game composes below is a fresh semester's; a continued one lays what it carried
+    // over the save, and names its term on the record.
+    const opening = (save: SaveDraft): SaveDraft => (carry ? carriedOpening(save, carry) : save)
     const startingMods = playthroughMods(useModsStore.getState().switches)
     const written = await useSaveStore.getState().createPlaythrough(
       {
+        ...(term ? { term } : {}),
         // The per-playthrough mods this one starts with; none in a build that has none.
         ...(startingMods.length > 0 ? { mods: startingMods } : {}),
         chars: roster.map((c) => c.charId),
@@ -703,7 +789,7 @@ export function NewGameView(): JSX.Element {
         weather,
         profiles
       },
-      {
+      opening({
         schemaVersion: 12,
         stats: playerStats,
         money: STARTING_MONEY,
@@ -781,7 +867,7 @@ export function NewGameView(): JSX.Element {
         endingArtWanted: false,
         // No scene in progress, so the game opens at the slot boundary.
         scene: null
-      },
+      }),
       playthroughId ?? undefined
     )
     if (!written.ok) {
@@ -789,6 +875,17 @@ export function NewGameView(): JSX.Element {
       endCrossing()
       showError(written.error)
       return
+    }
+
+    // The reader's own picture follows him into the new playthrough's folder. A copy that fails
+    // costs nothing but the picture.
+    if (term?.continuedFrom) {
+      const to = written.data.save.playthroughId
+      const picture = await window.api.saves.readProfilePicture(term.continuedFrom)
+      if (picture.ok && picture.data) {
+        const copied = await window.api.saves.writeProfilePicture(to, bytesToBase64(picture.data))
+        if (!copied.ok) console.warn('[new game] the profile picture was not carried over')
+      }
     }
 
     // Under the cover: the game boots and opens its first slot behind the splash announcing it,
@@ -910,7 +1007,7 @@ export function NewGameView(): JSX.Element {
         </motion.button>
 
         <div className="vu-title">
-          <h1 className="vu-title-text">New Game</h1>
+          <h1 className="vu-title-text">{continued && term ? termLabel(term.index) : 'New Game'}</h1>
         </div>
 
         <span className="vu-newgame-count">
@@ -987,7 +1084,7 @@ export function NewGameView(): JSX.Element {
         {picking && (
           <LoadCharacterModal
             key="picker"
-            taken={roster.map((c) => c.charId)}
+            taken={[...roster.map((c) => c.charId), ...graduated]}
             theme={theme}
             onClose={() => setPicking(false)}
             onPick={(character) => {
@@ -1049,7 +1146,8 @@ export function NewGameView(): JSX.Element {
               // The roster is left behind here: the name is asked once the curtain is down,
               // and what is under it from then on is the wait itself — the semester being
               // written, which is the longest load in the app and is declared as one.
-              beginCrossing(() => setNaming(true), { wait: true })
+              // A carried reader is not asked, and the wait starts at once.
+              beginCrossing(continued ? onCarried : () => setNaming(true), { wait: true })
             }}
           />
         )}

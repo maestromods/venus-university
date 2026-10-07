@@ -1,0 +1,453 @@
+/* The break screen's own layout. Only the decor blob is placed absolutely against the stage;
+   everything the player reads is flex and grid with `gap`.
+
+   Imported from the view module, never from index.css: a screen's file must load after
+   base.css or its overrides of a primitive lose at equal specificity. */
+.vu-break {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  height: 100%;
+  padding: 44px 80px 58px;
+  overflow: hidden;
+  background: var(--vu-ground);
+  color: var(--vu-text);
+  font-family: var(--font-body);
+}
+
+/* An archway the size of the corner it hangs off, behind everything and taking no pointer.
+   Translucent rather than filled, so night's ground keeps it decoration and not a panel. */
+.vu-break-decor {
+  position: absolute;
+  top: -340px;
+  left: -180px;
+  width: 620px;
+  height: 900px;
+  border-radius: 999px 999px 0 0;
+  background: color-mix(in srgb, var(--vu-tint) 60%, transparent);
+  rotate: 28deg;
+  pointer-events: none;
+}
+
+/* ---- the header ------------------------------------------------------------ */
+
+.vu-break-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.vu-break-back {
+  flex: none;
+}
+
+/* The way into the menu, at the far end of the row from the way back. */
+.vu-break-menu {
+  flex: none;
+  margin-left: auto;
+}
+
+/* ---- the reader ------------------------------------------------------------ */
+
+/* How much of the break is gone, beside what it has left of him: the calendar keeps the left
+   and the stat panel hangs on the right, the section as tall as that panel. The margin clears
+   the title's blob, which dips below the header under its own lean. */
+.vu-break-reader {
+  position: relative;
+  min-height: 162px;
+  margin-top: 14px;
+  padding-right: 400px;
+}
+
+/* The break's weeks six to a row, a tile each: the calendar the clock is read off. */
+.vu-break-weeks {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vu-break-week {
+  gap: 8px;
+  min-height: 0;
+  padding: 10px 6px 12px;
+}
+
+/* A week's two slots, side by side under its date. */
+.vu-break-boxes {
+  display: flex;
+  gap: 8px;
+}
+
+/* One slot as the checkbox's own box, read and never pressed: empty until it is spent. */
+.vu-break-box {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 3px solid var(--vu-border);
+  border-radius: 9px;
+  background: var(--vu-ground);
+  color: var(--vu-accent-ink);
+}
+
+.vu-break-box svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* The slot the next action is spent on. */
+.vu-break-box--next {
+  border-color: var(--vu-accent);
+}
+
+/* Spent on a conversation: the checkbox's ticked state. */
+.vu-break-box--text {
+  border-color: var(--vu-accent);
+  background: var(--vu-accent);
+}
+
+/* Spent on himself: ticked too, on the tint rather than the accent, so the two ways of using a
+   slot read apart. */
+.vu-break-box--alone {
+  border-color: var(--vu-accent);
+  background: var(--vu-highlight);
+  color: var(--vu-accent);
+}
+
+/* Spent with her: the conversation's own ticked state. */
+.vu-break-box--visit {
+  border-color: var(--vu-accent);
+  background: var(--vu-accent);
+}
+
+/* Spent on the road: filled like a slot on himself, under a plane. */
+.vu-break-box--travel {
+  border-color: var(--vu-accent);
+  background: var(--vu-highlight);
+  color: var(--vu-accent);
+}
+
+/* Taken by a trip he has said yes to and not yet left on. */
+.vu-break-box--booked {
+  border-style: dashed;
+  border-color: var(--vu-accent);
+}
+
+/* Let go by: filled in the border's own tone and struck through, so it reads as gone. */
+.vu-break-box--rest {
+  background: var(--vu-border);
+}
+
+.vu-break-box--rest::after {
+  content: '';
+  width: 12px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--vu-ground);
+}
+
+/* His three stats as the semester's own landing shows them: the same half-pill panel and the
+   same shape on it, drawn smaller. A paper element that may not clip, the badges riding its
+   edges. */
+.vu-break-statpanel {
+  --paper-face: var(--vu-surface);
+  --paper-shadow: var(--vu-shadow);
+  --paper-offset: 10px 9px;
+  --paper-tilt: -1.2deg;
+  position: absolute;
+  top: -42px;
+  right: 0;
+  width: 550px;
+  height: 360px;
+  border-radius: 90px 0 0 90px;
+  rotate: 2.4deg;
+  scale: 0.66;
+  transform-origin: 100% 0;
+}
+
+/* The shape fills the panel, so its own badge offsets land where they do on the landing. */
+.vu-break-radar {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- the grid -------------------------------------------------------------- */
+
+/* Six across and two down, the roster's own count: everybody who is coming back is on screen
+   at once and nothing here scrolls. */
+.vu-break-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 20px 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Away on a trip the screen is hers alone: her card, and beside it the four slots of the trip. */
+.vu-break-grid--away {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 5fr);
+  align-items: center;
+}
+
+.vu-break-trip {
+  padding-left: 40px;
+}
+
+.vu-break-legs {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One slot of the trip: muted until it is reached, struck once it is behind him. */
+.vu-break-leg {
+  color: var(--vu-text-muted);
+  font: 500 22px var(--font-body);
+}
+
+.vu-break-leg--done {
+  text-decoration: line-through;
+}
+
+.vu-break-leg--now {
+  color: var(--vu-text);
+  font-weight: 700;
+}
+
+.vu-break-arch {
+  --card-zoom: 1.95;
+  height: 232px;
+}
+
+.vu-break-empty {
+  position: relative;
+}
+
+/* ---- the foot -------------------------------------------------------------- */
+
+/* The answers, and beside them the one line said while something is being written. A row and
+   not a column: the screen has no height to spare under the faces, and a line over the buttons
+   pushed them off its foot. */
+.vu-break-foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 28px;
+  margin-top: auto;
+}
+
+.vu-break-writing {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--vu-text-muted);
+  font: 700 13px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ---- who he can write to --------------------------------------------------- */
+
+/* The one line saying what a click on the faces under it does. */
+.vu-break-hint {
+  position: relative;
+  margin: 0;
+}
+
+/* How often he has written to her, hung on the card's flat corner. */
+.vu-break-texted {
+  right: -6px;
+}
+
+/* What he calls her, the phone's own tag, stuck over the foot of her arch. */
+.vu-break-tag {
+  position: absolute;
+  top: 212px;
+  right: 4px;
+}
+
+/* That she has written and not been answered, on the card's other corner. */
+.vu-break-wrote {
+  left: -6px;
+  rotate: 3deg;
+}
+
+/* ---- the conversation ------------------------------------------------------ */
+
+/* The form modals' frame around one thread: the head clears the tab hung on its corner, and the
+   cap gives back what that tab and the paper's overhang need. The bubbles, the typing dots and
+   their colours are the phone's own.
+
+   No `overflow`: the tab overhangs, and the panel's own shadow pseudo would go with it. */
+.vu-breaktalk {
+  --paper-offset: 12px 11px;
+  --paper-tilt: -1.2deg;
+  --paper-shadow: var(--vu-panel-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(820px, 100% - 60px);
+  height: min(820px, 100% - 100px);
+  padding: 78px 56px 28px 100px;
+  border-radius: 120px 0 0 120px;
+  color: var(--vu-text);
+  font-family: var(--font-body);
+}
+
+/* Which week it is and how many texts he has had, in the bookkeeping voice. */
+.vu-breaktalk-count {
+  color: var(--vu-text-muted);
+  font: 700 12px var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Her invitation, said in the thread under whatever came before it: what it would cost, and
+   the two answers. No frame of its own: it is a line of the conversation, not a panel on it. */
+.vu-breaktalk-invite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px 0;
+  text-align: center;
+}
+
+.vu-breaktalk-invite p {
+  margin: 0;
+}
+
+.vu-breaktalk-answers {
+  display: flex;
+  gap: 12px;
+}
+
+/* The scroll box takes whatever height the panel has left, so the well and the foot keep
+   their place as the thread grows. */
+.vu-breaktalk-box {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The thread: a column of bubbles, each on its sender's side, padded for the fade at its foot. */
+.vu-breaktalk-thread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 4px 10px 34px 4px;
+  overflow: hidden auto;
+}
+
+/* What the panel is waiting on once nobody is typing, centred under the thread. */
+.vu-breaktalk-wait {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+  color: var(--vu-text-muted);
+  font: 700 12px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* What the conversation came to, under the last thing she sent: one line per thing it left
+   her remembering, in the words a scene's ending uses. */
+.vu-breaktalk-came {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 8px 0 0;
+  list-style: none;
+  text-align: center;
+}
+
+/* The verb she remembers it by, in the colour of which way it went. Ink and nothing else. */
+.vu-breaktalk-mark[data-tone='gain'] {
+  color: var(--vu-good);
+}
+
+.vu-breaktalk-mark[data-tone='loss'] {
+  color: var(--vu-danger);
+}
+
+/* ---- a slot to himself ------------------------------------------------------ */
+
+/* The conversation's own frame, as tall as what it holds rather than a thread's fixed height. */
+.vu-breakalone {
+  height: auto;
+  max-height: calc(100% - 100px);
+}
+
+/* The telling: the whole screen under a veil that takes the click, and the scene's box on it. */
+.vu-break-told {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background: color-mix(in srgb, var(--vu-accent-shadow) 35%, transparent);
+  cursor: pointer;
+}
+
+/* Over a screen of faces rather than a scene's background, so the box is close to solid. */
+.vu-break-told .vu-box-face {
+  --glass: 96%;
+  --glass-shadow: 85%;
+}
+
+/* What he might do with it, one a stat: the landing's own quiet suggestions, stacked. */
+.vu-breakalone-ideas {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* `block` and not `flex`: the stat word inside is its own element, and a flex container would
+   strip the spaces either side of it. Flat on the left like every other action. */
+.vu-breakalone-idea {
+  display: block;
+  max-width: 100%;
+  padding: 10px 24px 10px 20px;
+  border: 2.5px solid var(--vu-border);
+  border-radius: 0 999px 999px 0;
+  background: color-mix(in srgb, var(--vu-surface) 82%, transparent);
+  color: var(--vu-text-body);
+  font: 500 17px var(--font-body);
+  text-align: left;
+  transform-origin: left center;
+}
+
+/* The stat the suggestion is about, in its own identity hue. */
+.vu-breakalone-idea b {
+  color: var(--stat);
+  font-weight: 700;
+}
+
+/* The yes, filled as the answer the invitation is asking for. */
+.vu-breaktalk-answers .vu-pill--on {
+  border-color: var(--vu-accent);
+  background: var(--vu-accent);
+  color: var(--vu-accent-ink);
+}

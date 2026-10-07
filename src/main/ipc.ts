@@ -69,6 +69,8 @@ import {
   writeManualSave,
   writeSlotSave
 } from './services/saveService'
+import { readBreak, removeBreak, writeBreak } from './services/breakService'
+import type { BreakDraft } from '@shared/termBreak'
 import {
   applyWardrobeFix,
   decodePng,
@@ -366,6 +368,11 @@ export function registerIpcHandlers(): void {
   handle('saves:list', (_event, playthroughId: string) => listSaves(playthroughId))
   handle('saves:enroll', (_event, draft: EnrollmentDraft) => writeEnrollment(draft))
   handle('saves:enrollment', (_event, playthroughId: string) => readEnrollment(playthroughId))
+  handle('saves:break', (_event, playthroughId: string) => readBreak(playthroughId))
+  handle('saves:writeBreak', (_event, playthroughId: string, draft: BreakDraft) =>
+    writeBreak(playthroughId, draft)
+  )
+  handle('saves:removeBreak', (_event, playthroughId: string) => removeBreak(playthroughId))
   handle(
     'saves:create',
     (_event, playthrough: PlaythroughDraft, draft: SaveDraft, playthroughId?: string) =>
@@ -576,6 +583,11 @@ export function registerIpcHandlers(): void {
 
   // The third one-shot New Game call, on the same terms.
   handle('llm:generateOccasions', (_event, request: StructuredRequest, group: string) =>
+    runAbortable(group, (signal) => completeStructured(request, signal))
+  )
+
+  // The fourth, sent only when a semester is continued from the one before it.
+  handle('llm:generateBreak', (_event, request: StructuredRequest, group: string) =>
     runAbortable(group, (signal) => completeStructured(request, signal))
   )
 

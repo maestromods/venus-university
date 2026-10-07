@@ -18,6 +18,7 @@ import { jobDefOf, JOB_CATALOG } from '@shared/jobs'
 import { ELYSIUM_LOCATION, LOWRISE_LOCATION, ROOM_LOCATION } from '@shared/locations'
 import { loreEntryById } from '../../prompts/lorebook'
 import { hauntActivity } from '../../prompts/npcRelationship'
+import { awayForBreakReason } from '../../prompts/springBreak'
 
 /**
  * Who ends up on screen: the encounter ladder, the draws that use
@@ -155,7 +156,7 @@ export function resolveAttendance(
     // Two reasons, because a girl on spring break is not reachable all week.
     notes.push(
       charAwayNow(charId)
-        ? `${firstNameOf(charId)} is away for spring break and couldn't come.`
+        ? `${awayForBreakReason(firstNameOf(charId))} and couldn't come.`
         : `${firstNameOf(charId)} is busy and couldn't come.`
     )
   }

@@ -1,5 +1,6 @@
 import { affectionFor, dedupedMemoriesFor, emptyFlags } from '@shared/relationship'
 import { DEFAULT_PLAYER_STATS, type PlayerStats } from '@shared/playerStats'
+import { activeSeason, seasonWords } from '@shared/term'
 import {
   fullNameOf,
   type Character,
@@ -10,6 +11,7 @@ import {
 import { formatGameDate } from './gameDate'
 import { GRADUATION_DATE } from './occasions'
 import { relationshipLines } from './relationship'
+import { lastDayName } from './termEnd'
 import { objectSchema } from './schema'
 import { memoryLines, notesLines, personaFor, profileLines, spaced } from './scenePrompt'
 
@@ -59,24 +61,34 @@ const SCHEMA = objectSchema('ending_posts', ['posts'], {
   }
 })
 
+
 /** The day the semester ended and what the campus is doing about it. */
 function semesterBlock(): string[] {
+  const words = seasonWords()
+  if (activeSeason() === 'spring') {
+    return [
+      'THE SEMESTER IS OVER',
+      `The graduation ceremony was held on ${formatGameDate(GRADUATION_DATE)} and campus is emptying out for ${words.endBreak}.`,
+      'The seniors have graduated and are leaving Veridan.',
+      `Everybody else is heading home until ${words.backIn}.`
+    ]
+  }
   return [
     'THE SEMESTER IS OVER',
-    `The graduation ceremony was held on ${formatGameDate(GRADUATION_DATE)} and campus is emptying out for summer vacation.`,
-    'The seniors have graduated and are leaving Veridan.',
-    'Everybody else is heading home until the fall.'
+    `The winter send-off was held on ${formatGameDate(GRADUATION_DATE)} and campus is emptying out for ${words.endBreak}.`,
+    `Everybody is heading home until ${words.backIn}.`
   ]
 }
 
 /** When she is writing, and what she is writing it from — the last line of her entry. */
 function postingLine(poster: EndingPoster): string {
+  const words = seasonWords()
   const days = poster.daysAfter === 1 ? '1 day' : `${poster.daysAfter} days`
   const half = poster.time === 0 ? 'morning' : 'evening'
   const where = poster.senior
     ? 'has graduated and is moving on from Venus University'
-    : 'is home for the summer and back in the fall'
-  return `${poster.character.firstName} is posting ${days} after graduation, in the ${half}; she ${where}.`
+    : `is home for ${words.endBreakSpan} and back in ${words.backIn}`
+  return `${poster.character.firstName} is posting ${days} after ${lastDayName()}, in the ${half}; she ${where}.`
 }
 
 /** Everybody the call names, described once each. */
@@ -132,7 +144,7 @@ export function buildEndingPostsPrompt(
     'YOUR TURN',
     'Hey RITA, the semester is over and everybody is scattering. Write what each of them posts about it.',
     'Fill "posts", one entry per character under STATUS UPDATES. "char" is her key exactly as written there.',
-    '"text" is the post itself: one or two short lines in her own voice, the way she would actually type it — lowercase, slang and emoji are fine if that is how she writes. It is about how the days after graduation are going for her: what she is doing, where she is, what kind of mood she is in, something small she noticed. Looking back on the semester is welcome.',
+    `"text" is the post itself: one or two short lines in her own voice, the way she would actually type it — lowercase, slang and emoji are fine if that is how she writes. It is about how the days after ${lastDayName()} are going for her: what she is doing, where she is, what kind of mood she is in, something small she noticed. Looking back on the semester is welcome.`,
     'Even though the semester is over, she still hasn\'t gone home yet.',
     'She is NOT writing to the reader and must not address him, mention him, or refer to meeting anyone. No narration and no stage directions.'
   ].join('\n')

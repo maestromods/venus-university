@@ -1,3 +1,96 @@
+> [!IMPORTANT]
+> **This is an unofficial, modified version of Venus University.** It is not made, endorsed or
+> supported by Venus Dev. The official game is on itch.io, linked below.
+>
+> - **Please do not report problems with this version to Venus Dev** — neither by email nor in the
+>   game's community. Anything you find here may have been caused by the changes below.
+> - **Modified by morrowkiln, October 2026**, from Venus Dev's public mirror at commit `ec8f7ce`
+>   (0.3.0). The full list of changes is this branch's commit history.
+> - **What it adds: semesters that continue.** A finished semester can be carried into the next
+>   one, from the ending's own modal or from that save in Load Game. Spring is followed by a
+>   Fall with a calendar of its own, then Spring again, until the spring the reader graduates
+>   in. Seniors who graduated are gone and everybody else moves up a year; you drop and add
+>   until the roster is twelve. The reader keeps his money, inventory, phone and reputation,
+>   loses his job, and his stats slip a tier. Returning characters keep their memories,
+>   milestones, gifts, feed and your notes on them.
+> - **New in 0.2.0: the break is played.** Between two semesters there is now a short game of its
+>   own: two slots a week, twelve weeks after a spring and four after a fall. A slot goes on a
+>   text conversation with one of the girls coming back, on yourself to work on a stat, or is let
+>   go by. Conversations are typed freely and judged, so you can make things better or worse;
+>   the girls write first now and then, and will wait for an answer. Somebody close may invite
+>   you to come and stay: a trip takes four slots, and the days with her are real scenes. What
+>   each of them remembers of the break is what happened in it, and you can reword it before the
+>   next semester starts. The break can also be skipped, which writes those memories for you as
+>   before.
+> - **It stands on its own.** It is built directly on Venus Dev's version and needs no other
+>   mod.
+> - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
+>   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
+>   are here only so the game builds from source.
+> - **Reuse is welcome.** Everything I wrote for this mod may be used by other mods under the
+>   game's AGPL licence, with or without asking. Venus Dev may additionally use any of it in the
+>   official game on whatever terms he chooses, with no credit needed. This does not cover the
+>   setup in `patcher/`, which is adapted from naudh1r's and stays under their terms.
+>
+> ### Installing this version
+>
+> **With the download (recommended, Windows).** You need the official Venus University 0.3.0 from
+> itch.io and nothing else.
+>
+> 1. Back up your saves (the `data` folder next to `Venus University.exe`) and close the game.
+> 2. Download `Continuing-Semesters-<version>-no-exe.zip` from
+>    [Releases](https://github.com/morrowkiln/venus-university/releases) and extract it inside
+>    your game folder.
+> 3. Double-click `Install.cmd` in the extracted folder.
+>
+> Double-click `Uninstall.cmd` to put the official game back exactly as it was. The download has
+> no exe in it: two small scripts start the patch on the game's own exe, and everything in the
+> zip is text you can read first. It carries only code, none of the game's images, music or
+> characters, and refuses a game that is not the official 0.3.0 or that has a mod in it other
+> than the one named below. If you accept an official update in the game, it replaces the mod.
+> The patch is adapted from [naudh1r](https://github.com/naudh1r/venus-university)'s Photo
+> Feature mod; its source is in `patcher/`, which can also build a setup exe. That exe is
+> unsigned and antivirus tools flag it, so the zip is the one to use.
+>
+> **With naudh1r's Photo Feature as well.** The same download also goes on top of a game that
+> already has Photo Feature: `Install.cmd` tells which game it is given. Install Photo Feature
+> with its own setup first, then this. Two mods cannot be stacked as they are, since both
+> replace the same few code files, so for that case the download carries the differences that
+> turn the files Photo Feature installed into a build of both mods together, made from the
+> [`semester-0.3-photo`](https://github.com/morrowkiln/venus-university/tree/semester-0.3-photo)
+> branch, and none of Photo Feature's own code. It needs exactly the Photo Feature version the
+> release names. `Uninstall.cmd` then puts the game back to Photo Feature alone; take this mod
+> out first, before uninstalling or updating Photo Feature.
+>
+> **From source (any platform; needs Git and Node 22).** Starting fresh:
+>
+> ```
+> git clone -b semester-0.3 https://github.com/morrowkiln/venus-university.git
+> ```
+>
+> Already have Venus Dev's version cloned? Add this one beside it and switch to it — your unzipped
+> characters and your saves stay where they are. Commit or stash any changes of your own first.
+>
+> ```
+> git remote add morrowkiln https://github.com/morrowkiln/venus-university.git
+> git fetch morrowkiln
+> git checkout -b semester-0.3 morrowkiln/semester-0.3
+> ```
+>
+> Then set it up as Venus Dev's instructions below describe. `git checkout main` takes you back
+> to his version. If `npm run dev` stops on "Electron uninstall", run
+> `node node_modules/electron/install.js` once.
+>
+> **Saves.** A save made on Venus Dev's own version loads here, a finished one included.
+> A semester started by continuing is a playthrough only this version understands: do not expect
+> it to load in Venus Dev's own build.
+>
+> **This version follows Venus Dev's releases by hand, not automatically.** It is built on 0.3.0
+> and keeps working as it is when he publishes something newer; it just does not have his new
+> changes until they are merged in here.
+>
+> Venus Dev's own README follows, unedited.
+
 # Venus University
 
 Venus University is a single-player AI-driven dating sim available for web and desktop (via Electron).

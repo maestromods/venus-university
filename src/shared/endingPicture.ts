@@ -1,6 +1,7 @@
 import { appError } from './errors'
 import { imageTypeOf } from './imageBytes'
 import type { ImageSize } from './providers'
+import type { Season } from './term'
 
 /**
  * The graduation picture's prompt — `room.ts`'s charter applied to the one image
@@ -36,10 +37,11 @@ export function assertEndingRequest(friendCount: number, sheet: Uint8Array): voi
   }
 }
 
-/** The exact prompt sent with the reference sheet. */
-export function endingPicturePrompt(count: number): string {
+/** The exact prompt sent with the reference sheet, for the party a semester of `season` ends on. */
+export function endingPicturePrompt(count: number, season: Season = 'spring'): string {
+  const party = season === 'spring' ? 'graduation party' : 'end-of-semester party'
   return [
-    'Create a candid photo of these characters enjoying themselves at a dorm lounge graduation party at Venus University. Don\'t keep the characters in their reference poses or have them stare at the camera: have them interact in the frame, make their poses natural, and make it lively and fun.',
+    `Create a candid photo of these characters enjoying themselves at a dorm lounge ${party} at Venus University. Don't keep the characters in their reference poses or have them stare at the camera: have them interact in the frame, make their poses natural, and make it lively and fun.`,
     'Before you finalize your composition, check these things:',
     `- All ${count} characters in the reference image are present.`,
     '- All characters appear once; none are duplicated.',

@@ -3,6 +3,12 @@ import { markedLine } from '@shared/statusMark'
 import type { SceneLine, TimeSlot } from '@shared/types'
 import { formatDatePart, formatGameDate } from './gameDate'
 import { FINALS_WEEK, GRADUATION_DATE, SUMMER_VACATION } from './occasions'
+import {
+  fallFarewellAction,
+  fallFarewellNowLines,
+  lastDayEvent,
+  termEndScrollLines
+} from './termEnd'
 
 /**
  * The end of the semester: the last fortnight's dates, and every sentence said about a
@@ -44,7 +50,7 @@ export function isEpilogueNight(
 export function graduationCastLines(firstName: string, date: number): string[] {
   if (date < FINALS_WEEK.startDate || date >= GRADUATION_DATE) return []
   return [
-    `${firstName} isn't leaving campus until after the graduation ceremony on ${formatDatePart(GRADUATION_DATE)}.`
+    `${firstName} isn't leaving campus until after ${lastDayEvent()} on ${formatDatePart(GRADUATION_DATE)}.`
   ]
 }
 
@@ -59,7 +65,13 @@ function graduateList(names: readonly string[]): string {
  * The scripted graduation morning, one line per click — the arrival scroll's bookend, with `bg`
  * named only where the camera moves.
  */
-export function graduationScrollLines(seniors: readonly string[]): SceneLine[] {
+export function graduationScrollLines(
+  seniors: readonly string[],
+  readerGraduates = false
+): SceneLine[] {
+  // A fall's send-off and the reader's own ceremony are scrolls of their own.
+  const other = termEndScrollLines(seniors, readerGraduates)
+  if (other) return other
   return [
     {
       bg: 'lowrise_dorm_room',
@@ -104,11 +116,16 @@ export function graduationScrollLines(seniors: readonly string[]): SceneLine[] {
  * orientation premise, so it is never classified.
  */
 export function farewellAction(firstName: string): string {
-  return `The reader is saying goodbye to ${firstName} some time after graduation day.`
+  return (
+    fallFarewellAction(firstName) ??
+    `The reader is saying goodbye to ${firstName} some time after graduation day.`
+  )
 }
 
 /** The two `NOW` lines a goodbye scene replaces the date banner and the semester line with. */
 export function farewellNowLines(firstName: string, senior: boolean): string[] {
+  const fall = fallFarewellNowLines(firstName)
+  if (fall) return fall
   return [
     `An unspecified night a few days after ${formatGameDate(GRADUATION_DATE)}, graduation day...`,
     senior

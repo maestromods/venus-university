@@ -13,6 +13,8 @@ export type ViewName =
   | 'mainMenu'
   | 'manageCharacters'
   | 'newGame'
+  /** The break a finished semester is continued through, on the way to the next one's roster. */
+  | 'break'
   /** The canned start, rendered by `NewGameView` for `classSelect`'s reason. */
   | 'quickstart'
   /** The class selector, rendered by `NewGameView` so the roster survives it. */

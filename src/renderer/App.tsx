@@ -7,6 +7,7 @@ import { ModalHost } from './components/ModalHost'
 import { ErrorModal } from './components/ErrorModal'
 import { FatalErrorScreen } from './components/FatalErrorScreen'
 import { ManageCharactersView } from './views/ManageCharactersView'
+import { BreakView } from './views/BreakView'
 import { GameView } from './views/GameView'
 import { MainMenu } from './views/MainMenu'
 import { NewGameView } from './views/NewGameView'
@@ -146,6 +147,7 @@ function App(): JSX.Element {
       {view === 'manageCharacters' && <ManageCharactersView />}
       {/* `quickstart` and `classSelect` both render from inside `NewGameView`. */}
       {(view === 'newGame' || view === 'quickstart' || view === 'classSelect') && <NewGameView />}
+      {view === 'break' && <BreakView />}
       {view === 'game' && <GameView key={gameLoads} />}
 
       {/* Written before the portal host, so a modal opened during a crossing — the reader's

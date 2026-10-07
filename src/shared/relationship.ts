@@ -491,11 +491,9 @@ export function applyEvent(flags: CharFlags, event: RelationshipEvent): CharFlag
  * memories the two biggest of them leave behind, and the dates dating starting and ending
  * leave on her.
  */
-export function foldRelationshipEvents(
-  info: CharInfo,
-  events: readonly RelationshipEvent[],
-  date: number
-): CharInfo {
+export function foldRelationshipEvents<
+  T extends Pick<CharInfo, 'flags' | 'memories' | 'datingSince' | 'brokeUpOn' | 'leftFor'>
+>(info: T, events: readonly RelationshipEvent[], date: number): T {
   const before = info.flags ?? emptyFlags()
   let flags = before
   for (const event of events) flags = applyEvent(flags, event)
@@ -513,7 +511,7 @@ export function foldRelationshipEvents(
     milestones.push({ date, type: 'hated', desc: 'things ended between the reader and her' })
   }
 
-  const folded: CharInfo = {
+  const folded: T = {
     ...info,
     flags,
     // Every memory is kept, the milestones after the rest.

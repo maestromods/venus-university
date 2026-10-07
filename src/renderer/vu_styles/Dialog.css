@@ -84,5 +84,14 @@
 }
 
 .vu-dialog-foot {
+  flex-wrap: wrap;
+  row-gap: 14px;
   margin-top: 10px;
+}
+
+/* An answer keeps its words on one line: three answers too wide for the panel take a second
+   row, the primary alone on it, rather than each folding its label to fit. */
+.vu-dialog-foot > button {
+  flex: none;
+  white-space: nowrap;
 }

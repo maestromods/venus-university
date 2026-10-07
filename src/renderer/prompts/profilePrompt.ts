@@ -20,12 +20,16 @@ import {
 } from '@shared/locations'
 import { fallbackHandleOf } from '@shared/feed'
 import { appError } from '@shared/errors'
+import { yearLabel } from '@shared/classes'
+import { seasonWords } from '@shared/term'
 import {
   clamp,
   intField,
   rosterCastLines,
   type ClassGenDraft,
-  type ClassGenReply
+  type ClassGenReply,
+  type ReturningStudent,
+  type ReturningStudents
 } from './classPrompt'
 import { keyPattern, loreEntryById } from './lorebook'
 import { objectSchema } from './schema'
@@ -68,14 +72,29 @@ interface CharProfileDraft {
   meal: string
   /** Her social handle, repaired to `fallbackHandleOf` when unusable. */
   handle: string
-  /** What she posted over the winter break, nought to {@link MAX_WINTER_POSTS}; upperclassmen only. */
+  /**
+   * What she posted over the break before the semester — winter's before a spring, summer's
+   * before a fall — nought to {@link MAX_WINTER_POSTS}; upperclassmen only.
+   */
   winterPosts: string[]
-  /** What she does with spring break, as one short phrase; whether she goes is the save's to settle. */
+  /**
+   * What she does with the week off after midterms, as one short phrase; whether she goes is
+   * the save's to settle.
+   */
   springBreakPlans: string
 }
 
-/** The most winter-break posts one character may arrive with. */
+/** The most break posts one character may arrive with. */
 const MAX_WINTER_POSTS = 3
+
+/** What a returning student's entry in the cast block says is already settled about her. */
+function returningNote(student: ReturningStudent): string {
+  const handle = student.handle ? `, and posts as "${student.handle}"` : ''
+  const job = student.job
+    ? `, and still works at ${student.job.jobId} (${student.job.shifts} ${student.job.shifts === 1 ? 'shift' : 'shifts'} a week)`
+    : ''
+  return `RETURNING STUDENT: she is year ${student.year} (${yearLabel(student.year)}) this semester, lives in ${student.dorm}${handle}${job}. Keep all of these.`
+}
 
 /** The validated shape every consumer reads: profiles keyed by charKey. */
 export interface ProfileGenDraft {
@@ -117,8 +136,17 @@ function invalid(detail: string): never {
 }
 
 /** Builds the student-profile request. */
-export function buildProfilePrompt(roster: readonly Character[]): StructuredRequest {
-  const { keys, cast } = rosterCastLines(roster)
+export function buildProfilePrompt(
+  roster: readonly Character[],
+  returning: ReturningStudents = {}
+): StructuredRequest {
+  const { keys, cast } = rosterCastLines(
+    roster,
+    Object.fromEntries(
+      Object.entries(returning).map(([key, student]) => [key, returningNote(student)])
+    )
+  )
+  const words = seasonWords()
 
   const system = [
     'You are a university student affairs office profiling enrolled students.',
@@ -168,11 +196,11 @@ export function buildProfilePrompt(roster: readonly Character[]): StructuredRequ
     '',
     'SOCIAL MEDIA',
     'handle: the username she posts under. some examples: "GinaHayes", "gina.hayes", "ginahayes12", "gina_says_hay", "gina_hayes", "ghayes", "gina.h".',
-    `winterPosts: nought to ${MAX_WINTER_POSTS} short status updates she posted over the winter break, oldest first. Keep these casual, using lowercase and/or emoji if it suits her. Don't address them to anyone, like other students or the reader.`,
+    `winterPosts: nought to ${MAX_WINTER_POSTS} short status updates she posted over the ${words.priorBreak}, oldest first. Keep these casual, using lowercase and/or emoji if it suits her. Don't address them to anyone, like other students or the reader.`,
     'First-year students get no posts, leave the array empty. Everyone else gets at least one.',
     '',
-    'SPRING BREAK',
-    'springBreakPlans: what she does with the week off in March, as one short phrase in the infinitive, ending in a full stop: "Go home to Russia to see her parents.", "Drive down to her aunt\'s place on the coast with her roommate."',
+    words.midBreak.toUpperCase(),
+    `springBreakPlans: what she does with the week off in ${words.midBreakMonth}, as one short phrase in the infinitive, ending in a full stop: "Go home to Russia to see her parents.", "Drive down to her aunt\'s place on the coast with her roommate."`,
     'All plans must include leaving campus and don\'t include other students or the reader.',
     '---',
     ''
@@ -290,7 +318,8 @@ function foldByKey(
 /** Validates a reply. */
 export function validateProfileDraft(
   reply: ProfileGenReply,
-  roster: readonly Character[]
+  roster: readonly Character[],
+  returning: ReturningStudents = {}
 ): ProfileGenDraft {
   const validKeys = new Set(roster.map((c) => charKeyOf(c.firstName, c.lastName)))
   const folded = foldByKey(reply, validKeys)
@@ -301,15 +330,24 @@ export function validateProfileDraft(
     const profile = folded[key]
     if (!profile) invalid(`${fullNameOf(character)} was left unprofiled.`)
 
-    const job = (profile.job ?? '').trim()
+    // What a returning student already is wins over whatever the model wrote for her.
+    const settled = returning[key]
+
+    // The job she held last semester is still hers, where its employer is still in the catalog.
+    const kept = settled?.job && jobDefOf(settled.job.jobId) ? settled.job : undefined
+    const job = kept ? kept.jobId : (profile.job ?? '').trim()
     const known = job !== '' && Boolean(jobDefOf(job))
     if (job !== '' && !known) {
       console.warn(`[profiles] ${key} was given the unknown employer "${job}"; leaving her jobless.`)
     }
-    const jobShifts = known ? clamp(profile.jobShifts, 0, MAX_NPC_SHIFTS, `${key} jobShifts`) : 0
+    const jobShifts = kept
+      ? clamp(kept.shifts, 1, MAX_NPC_SHIFTS, `${key} jobShifts`)
+      : known
+        ? clamp(profile.jobShifts, 0, MAX_NPC_SHIFTS, `${key} jobShifts`)
+        : 0
 
     // An unknown dorm is repaired to the fallback, like the job, not fatal.
-    const dorm = (profile.dorm ?? '').trim()
+    const dorm = settled?.dorm ?? (profile.dorm ?? '').trim()
     if (!isDorm(dorm)) {
       console.warn(`[profiles] ${key} was housed in the unknown dorm "${dorm}"; using ${FALLBACK_DORM}.`)
     }
@@ -350,8 +388,9 @@ export function validateProfileDraft(
     }
 
     // The handle and her winter posts are repaired, like the job, not fatal.
-    const year = clamp(profile.year, 1, 4, `${key} year`)
-    const rawHandle = typeof profile.handle === 'string' ? profile.handle.trim() : ''
+    const year = settled?.year ?? clamp(profile.year, 1, 4, `${key} year`)
+    const rawHandle =
+      settled?.handle ?? (typeof profile.handle === 'string' ? profile.handle.trim() : '')
     const handle = normalizeHandle(rawHandle)
     if (handle === '') {
       console.warn(`[profiles] ${key} was given the unusable handle "${rawHandle}"; deriving one.`)
@@ -370,7 +409,7 @@ export function validateProfileDraft(
     const springBreakPlans =
       typeof profile.springBreakPlans === 'string' ? profile.springBreakPlans.trim() : ''
     if (springBreakPlans === '') {
-      console.warn(`[profiles] ${key} was given no spring break plans.`)
+      console.warn(`[profiles] ${key} was given no ${seasonWords().midBreak} plans.`)
     }
 
     characters[key] = {

@@ -34,6 +34,7 @@ import { ENDING_IMAGE_MODEL_ID } from '@shared/providers'
 import { assertProfilePicture } from '@shared/profilePicture'
 import { assertSafePlaythroughId } from '@shared/saveRules'
 import { storedEndpointKeyFor } from '@shared/settingsRules'
+import { activeSeason } from '@shared/term'
 import {
   MAX_LOG_RECORD_CHARS,
   type AppError,
@@ -59,6 +60,7 @@ import {
 } from './backgrounds'
 import * as chars from './chars'
 import * as photos from './db/photos'
+import * as breaks from './db/break'
 import * as saves from './db/saves'
 import { readGrabBags, writeGrabBags } from './db/grabbags'
 import { readModSwitches, writeModSwitches } from './mods'
@@ -111,7 +113,7 @@ async function generateEndingArt(
   const bytes = base64ToBytes(sheet)
   assertEndingRequest(friendCount, bytes)
 
-  const art = await generateImage(endingPicturePrompt(friendCount), {
+  const art = await generateImage(endingPicturePrompt(friendCount, activeSeason()), {
     model: ENDING_IMAGE_MODEL_ID,
     imageSize: ENDING_PICTURE_SIZE,
     sources: [{ bytes, mimeType: LINEUP_MIME_TYPE }],
@@ -172,6 +174,10 @@ export function buildApi(): VenusUniversityApi {
         ),
       generateOccasions: <T,>(request: StructuredRequest, group: string) =>
         result('generate the occasions', () =>
+          runAbortable(group, (signal) => completeStructured<T>(request, signal))
+        ),
+      generateBreak: <T,>(request: StructuredRequest, group: string) =>
+        result('generate the break', () =>
           runAbortable(group, (signal) => completeStructured<T>(request, signal))
         ),
       generateQuiz: <T,>(request: StructuredRequest) =>
@@ -311,6 +317,11 @@ export function buildApi(): VenusUniversityApi {
       enroll: (draft) => result('save the class registration', () => saves.writeEnrollment(draft)),
       enrollment: (playthroughId) =>
         result('read the class registration', () => saves.readEnrollment(playthroughId)),
+      break: (playthroughId) => result('read the break', () => breaks.readBreak(playthroughId)),
+      writeBreak: (playthroughId, draft) =>
+        result('save the break', () => breaks.writeBreak(playthroughId, draft)),
+      removeBreak: (playthroughId) =>
+        result('remove the break', () => breaks.removeBreak(playthroughId)),
       create: (playthrough, draft, playthroughId) =>
         result('start the playthrough', () =>
           saves.createPlaythrough(playthrough, draft, playthroughId)

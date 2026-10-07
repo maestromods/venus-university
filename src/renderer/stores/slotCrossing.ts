@@ -1,8 +1,11 @@
+import { setActiveTerm, termIndexOf } from '@shared/term'
 import type { GameSave, Occasion, PlaythroughRecord, TimeSlot } from '@shared/types'
 import type { Weather } from '@shared/weather'
 import { nextSlot, slotHalf } from '../prompts/gameDate'
 import { GOODBYES_SPLASH, isEpilogueNight } from '../prompts/graduation'
-import { GRADUATION_DATE, occasionsAt, SUMMER_VACATION } from '../prompts/occasions'
+import { GRADUATION_DATE, occasionsAt } from '../prompts/occasions'
+import { windDownOccasion } from '../prompts/termCalendar'
+import { fallGoodbyesSplash } from '../prompts/termEnd'
 import { slotWeather } from '../prompts/weather'
 import type { ScreenTheme } from '../views/clockTheme'
 import {
@@ -36,15 +39,15 @@ function saveTheme(save: GameSave): ScreenTheme {
 
 /**
  * What the curtain announces the goodbye menu with: the epilogue's own words in place of a
- * date, over the evening summer vacation has started in.
+ * date, over the evening the break after the semester has started in.
  */
 function goodbyesStamp(): SlotStamp {
   return {
     date: GRADUATION_DATE,
     time: 1,
-    occasion: SUMMER_VACATION.title,
+    occasion: windDownOccasion().title,
     weather: 'clear',
-    words: GOODBYES_SPLASH
+    words: fallGoodbyesSplash() ?? GOODBYES_SPLASH
   }
 }
 
@@ -72,6 +75,9 @@ export function entryCrossing(
   save: GameSave,
   record: PlaythroughRecord
 ): CrossingOptions {
+  // The splash is dated before the game it announces is entered, so the calendar it is read
+  // against is named here first.
+  setActiveTerm(termIndexOf(record))
   const splash = save.graduationSeen
     ? goodbyesStamp()
     : slotStampOf(

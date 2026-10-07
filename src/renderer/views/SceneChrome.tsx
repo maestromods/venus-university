@@ -53,6 +53,8 @@ export interface SceneChromeProps {
   /** The slot's own half of the day, not the hour the screen is being read at. */
   theme: ScreenTheme
   date: number
+  /** What the date card reads where the scene is not on a day of the semester. */
+  stamp?: { week: number; figure: string; weekday: string }
   night: boolean
   /** The sky over the slot, which the stamp's mark is drawn as wherever it is not clear. */
   weather: Weather
@@ -135,7 +137,8 @@ export interface SceneChromeProps {
 
 /** The scene's chrome: the stamp, the rail, the box and the row under it. */
 export function SceneChrome(props: SceneChromeProps): JSX.Element {
-  const { theme, date, night, weather, covered, hidden, shown, rowShown, quiz, interject } = props
+  const { theme, date, stamp, night, weather, covered, hidden, shown, rowShown, quiz, interject } =
+    props
   // What the stamp wears where the sun or the crescent would be.
   const markKind = halfMarkKindOf(weather, night)
 
@@ -296,10 +299,12 @@ export function SceneChrome(props: SceneChromeProps): JSX.Element {
         <div className="vu-scene-week">
           WK
           <br />
-          <span>{String(weekOf(date) + 1).padStart(2, '0')}</span>
+          <span>{String(stamp?.week ?? weekOf(date) + 1).padStart(2, '0')}</span>
         </div>
-        <div className="vu-scene-figure">{formatNumericGameDate(date)}</div>
-        <div className="vu-scene-weekday">{formatWeekday(date).slice(0, 3).toUpperCase()}</div>
+        <div className="vu-scene-figure">{stamp?.figure ?? formatNumericGameDate(date)}</div>
+        <div className="vu-scene-weekday">
+          {stamp?.weekday ?? formatWeekday(date).slice(0, 3).toUpperCase()}
+        </div>
         <div className={night ? 'vu-scene-half vu-scene-half--night' : 'vu-scene-half'}>
           <span>{night ? 'NIGHT' : 'DAY'}</span>
           {/* Two elements because they are two transforms: the stamp carries the jump and the
