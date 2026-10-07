@@ -95,6 +95,10 @@ optionGroups: [{ id: 'loader', label: 'Loading animation', hint: 'The animation 
 
 ## How Continuing Semesters uses it
 
+Its entry in `MODS` is `CONTINUING_SEMESTERS_MOD` from `src/shared/continuingSemestersMod.ts`,
+so its name, text and options live with the mod and `mods.ts` only lists it. That is the
+convention: each mod keeps its own entry in a file of its own.
+
 It is `anytime`. Off, the ending screen and Load Game stop offering the next semester (two
 checks: `GameView.tsx`, `LoadGameModal.tsx`). A semester or a break already started keeps
 working, because the code is still there. It has three options: one skips the break between
