@@ -67,6 +67,7 @@ import {
 } from '@shared/types'
 import { useBunnyboardStore } from './bunnyboardStore'
 import { useGameStore } from './gameStore'
+import { afterDmReply } from '../mods/hooks'
 import { prefetchHangoutScene, startHangoutScene } from './loop/hooks'
 import { createRetryGate } from './retryGate'
 import { createTextExtractor } from './textingStream'
@@ -581,6 +582,8 @@ async function runReply(
     deliver(charId, chatMessage('system', `${character.firstName} blocked you.`))
     return
   }
+
+  afterDmReply({ charId, character, reply: data })
 
   // A scene already owns the screen: the verdict could only be discarded.
   if (sceneActiveOf(useGameStore.getState())) return

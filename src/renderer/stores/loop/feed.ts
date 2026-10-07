@@ -1,4 +1,5 @@
 import { rollPostLikes } from '@shared/feed'
+import { fileFeedPost, postLikes, postVisible } from '../../mods/hooks'
 import { npcFriendsOf } from '@shared/npcRelationships'
 import type { EndingPostsResponse, FeedExtras, SlotIntroResponse, TimeSlot } from '@shared/types'
 import { bunnybotFirstPostTexts, FRIENDS_INTRO_SLOT } from '../../prompts/bunnybot'
@@ -24,8 +25,10 @@ import { deliverBunnybotNow } from '../textingLoop'
  * Files the status updates the slot's opening came back with, picks the one stranger's post the
  * feed surfaces for the slot, and fills a feed too thin to read with more of them.
  */
-export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
+export async function deliverSlotPosts(posts: SlotIntroResponse['posts']): Promise<void> {
   const fresh: TeaserCandidate[] = []
+  // Strangers' posts a mod marked as worth showing first: the teaser is drawn from these first.
+  const featured: TeaserCandidate[] = []
 
   for (const post of posts ?? []) {
     const game = useGameStore.getState()
@@ -34,24 +37,41 @@ export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
     const text = post.text?.trim()
     if (!text) continue
     const id = crypto.randomUUID()
-    game.appendFeedPost(charId, {
-      id,
-      text,
-      date: game.date,
-      time: game.time,
-      likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
-    })
+    // Handed to the mods before it is filed: they may add to it, or file it themselves later.
+    const filing = await fileFeedPost(
+      {
+        charId,
+        post: {
+          id,
+          text,
+          date: game.date,
+          time: game.time,
+          likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
+        },
+        reply: post,
+        held: false,
+        featured: false
+      },
+      { nudge: nudgeFirstContactPost }
+    )
     // A stranger's post is a teaser candidate; blocked counts as contact, since the flag is
     // masked rather than cleared.
     const flags = game.charInfo[charId]?.flags
-    if (!flags?.gaveContactInfo) fresh.push({ charId, postId: id })
+    const candidates = filing.featured ? featured : fresh
+    if (filing.held) {
+      if (!flags?.gaveContactInfo) candidates.push({ charId, postId: id })
+      continue
+    }
+
+    game.appendFeedPost(charId, filing.post)
+    if (!flags?.gaveContactInfo) candidates.push({ charId, postId: id })
     else if (!flags.blocked) nudgeFirstContactPost(charId)
   }
 
   // Replaced every slot, whether or not one was drawn: a teaser is never held over.
   const game = useGameStore.getState()
   if (!game.feedExtras) return
-  const teaser = pickTeaser(fresh)
+  const teaser = pickTeaser(featured.length > 0 ? featured : fresh)
 
   // What the tab would show as it stands, and everything it could be filled out with: any post
   // by anybody he cannot text, the teaser's own excepted since it is on the feed already.
@@ -60,7 +80,7 @@ export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
     game.charInfo[charId]?.flags?.gaveContactInfo
       ? []
       : (game.charInfo[charId]?.feed ?? [])
-          .filter((post) => post.id !== teaser?.postId)
+          .filter((post) => post.id !== teaser?.postId && postVisible(post))
           .map((post) => ({ charId, post }))
   )
   const fill = pickFeedFill({
@@ -98,12 +118,13 @@ export function deliverEndingPosts(
     if (!stamp) continue
     const text = post.text?.trim()
     if (!text) continue
+    const friends = npcFriendsOf(game.npcRelationships, charId, game.chars).length
     game.appendFeedPost(charId, {
       id: crypto.randomUUID(),
       text,
       date: stamp.date,
       time: stamp.time,
-      likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
+      likes: postLikes({ kind: 'ending', author: charId, friends }, () => rollPostLikes(friends))
     })
     filed++
   }
@@ -151,7 +172,12 @@ export function rollFeedExtrasIfNewSlot(): void {
     date: game.date,
     time: game.time,
     teaser: null,
-    randomPost: { ...student, likes: rollPostLikes(0) }
+    randomPost: {
+      ...student,
+      likes: postLikes({ kind: 'stranger', author: student.handle, friends: 0 }, () =>
+        rollPostLikes(0)
+      )
+    }
   })
 }
 

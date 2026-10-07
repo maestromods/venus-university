@@ -1,3 +1,4 @@
+import { characterFromDraft, promptFields, promptLines, promptRequired } from '../mods/hooks'
 import { SUBJECT_TAGS } from '@shared/characterRules'
 import { EMOTIONS } from '@shared/emotions'
 import {
@@ -277,6 +278,7 @@ export function buildCharacterPrompt(
     `"${ROOM_PROMPT_PREFIX}..."`,
     'Write ONLY the continuation of that sentence as roomPrompt. Include furnishings, the color palette, the general mood and lighting.',
     '',
+    ...promptLines('character', {}),
     'POSE',
     'How does she usually stand? That tells us a lot about her.',
     'Read the options below carefully, then pick the one that suits her best.',
@@ -334,6 +336,7 @@ export function buildCharacterPrompt(
       'outfit',
       'peOutfit',
       'swimOutfit',
+      ...promptRequired('character'),
       'pose',
       'expressions',
       'roomPrompt',
@@ -410,6 +413,7 @@ export function buildCharacterPrompt(
       outfit: stringArray(),
       peOutfit: stringArray(),
       swimOutfit: stringArray(),
+      ...promptFields('character'),
       pose: enumField(poseKeys),
       // Free-form so a tag can carry a raised weight.
       expressions: {
@@ -538,6 +542,7 @@ export function draftToCharacter(
     outfit: cleanTags(draft.outfit),
     peOutfit: cleanTags(draft.peOutfit),
     swimOutfit: cleanTags(draft.swimOutfit),
+    ...characterFromDraft(draft as unknown as Record<string, unknown>, { baseAppearance }),
     pose,
     expressionTags,
     roomPrompt: (draft.roomPrompt ?? '').trim()

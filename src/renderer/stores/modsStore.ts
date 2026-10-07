@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   CONTINUING_SEMESTERS,
   modOn,
+  MODS,
   NO_SWITCHES,
   optionOn,
   withMod,
@@ -10,6 +11,7 @@ import {
 } from '@shared/mods'
 import { setSeniorsGraduate } from '@shared/term'
 import type { PlaythroughRecord } from '@shared/types'
+import { setHookRules } from '../mods/hooks'
 import { useUiStore } from './uiStore'
 
 interface ModsStoreState {
@@ -78,6 +80,11 @@ function tellSharedRules(switches: ModSwitches): void {
 }
 tellSharedRules(useModsStore.getState().switches)
 useModsStore.subscribe((state) => tellSharedRules(state.switches))
+// The game's hooks ask only the mods that are on, in the order the list names them.
+setHookRules({
+  isOn: (modId) => modOn(useModsStore.getState().switches, modId),
+  order: (modId) => MODS.findIndex((mod) => mod.id === modId)
+})
 
 /** Whether a mod is on, for code outside a component; see `modOn` for what a record changes. */
 export function modIsOn(id: string, record?: Pick<PlaythroughRecord, 'mods'> | null): boolean {

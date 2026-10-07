@@ -91,6 +91,8 @@ optionGroups: [{ id: 'loader', label: 'Loading animation', hint: 'The animation 
 | `src/main/services/modsService.ts` | Reads and writes `data/mods.json`. |
 | `src/renderer/stores/modsStore.ts` | The switches in the renderer, and the hooks. |
 | `src/renderer/views/ModsModal.tsx` | The Mods screen. |
+| `src/renderer/mods/hooks.ts` | The hook points (below). |
+| `src/renderer/mods/index.ts` | Registers every mod's hooks at boot. |
 | `test/mods.test.ts` | The rules, tested against a list with every shape of mod. |
 
 ## How Continuing Semesters uses it
@@ -108,6 +110,78 @@ Load Game offer off alone.
 The seniors option shows how a rule in shared code reads a switch without holding any: the
 rule keeps a flag (`setSeniorsGraduate` in `shared/term.ts`), and `modsStore.ts` sets it at
 boot and whenever a switch moves.
+
+## Hook points
+
+A switch decides whether a mod acts. Hook points decide **where** it acts without editing the
+game there. At each place mods commonly add to, the game asks once, in one line of its own
+file; a mod answers from its own files. Two mods adding to the same place then never touch the
+same lines, and neither touches the game's code at that place.
+
+Everything is in `src/renderer/mods/hooks.ts`. The game's side, at each place:
+
+```ts
+...promptLines('dm', { character, info, state })   // in textingPrompt.ts
+afterDmReply({ charId, character, reply: data })    // in textingLoop.ts
+```
+
+A mod's side, once, in its own file:
+
+```ts
+registerHooks(PHOTO_FEATURE, {
+  prompts: { dm: { lines: (ctx) => photoLines(ctx.character, ctx.info, ctx.state) } },
+  afterDmReply: ({ charId, character, reply }) => void sendPhoto(charId, character, reply)
+})
+```
+
+and one line in `src/renderer/mods/index.ts` (`import './photoFeature'`), which `App.tsx`
+imports at boot.
+
+### The rules
+
+- **Only mods that are on are asked.** The mods store hands the hooks its switches
+  (`setHookRules`), so a mod that is off is never called and the game runs as it would without
+  it. A mod rarely needs to check its own switch at a hook.
+- **Mods are asked in the order `MODS` lists them**, whatever order they registered in.
+- **Adding to the game, not replacing it.** Lines, fields and events from every mod are all
+  used. Where only one answer can win (likes), the first mod that answers decides and the game's
+  own roll is the fallback.
+
+### The hook points
+
+| Hook | Where the game asks | What a mod can do |
+| --- | --- | --- |
+| `prompts.dm` | `textingPrompt.ts` | Add lines to her DM prompt, and fields to its reply |
+| `prompts['slot-posts']` | `slotIntroPrompt.ts` | Add lines about status posts, and fields to each post |
+| `prompts.character` | `characterPrompt.ts` | Add lines and fields to character generation |
+| `dmHistoryNote` | `textingPrompt.ts` | Add a note after a DM in the history the prompt quotes |
+| `characterFromDraft` | `characterPrompt.ts` | Fill fields of a generated character from the reply |
+| `afterDmReply` | `textingLoop.ts` | Act after her reply in a DM has landed |
+| `playerActs` | `gameLoop.ts` (`submitAction`), `loop/hangouts.ts` | Act when the reader commits to something |
+| `gameEntered` | `gameLoop.ts` (`enterGame`) | Act when a game is entered, new or loaded |
+| `fileFeedPost` | `loop/feed.ts` | Change a slot post before it is filed, or file it later itself (`held`) |
+| `postLikes` | `loop/feed.ts`, `NewGameView.tsx` | Decide likes on ending, stranger and winter posts |
+| `postVisible` | `feedView.ts`, `loop/feed.ts`, `ContactPage.tsx` | Keep a post off the feed for now |
+
+A hook point is added where mods actually meet, not ahead of need. Once mods use one, it stays
+as it is: renaming it or changing what it passes breaks them. A change that is needed goes in
+as a new hook beside the old one.
+
+### Not covered yet
+
+- Screens: a mod's own panels, menu entries and editor fields.
+- Main process: IPC, protocols, services, settings and character rules.
+- Saves: a mod's own fields in a save, and what carries into the next semester.
+
+Both are still direct edits, as before.
+
+### Tests
+
+`test/modHooks.test.ts`: only mods that are on are asked, in list order; likes fall back to the
+game's own; a post a mod holds is not passed on.
+
+The hook points are naudh1r's design, lifted from his Photo Feature branch, which is the first
+mod on them.
 
 ## Not decided yet
 

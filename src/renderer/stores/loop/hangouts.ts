@@ -2,6 +2,7 @@ import type { Character } from '@shared/types'
 import { buildScenePrompt } from '../../prompts/scenePrompt'
 import { SETTING } from '../../prompts/setting'
 import { useGameStore } from '../gameStore'
+import { playerActs } from '../../mods/hooks'
 import { coverSceneOpening } from '../slotCrossing'
 import { plannedWith } from '../textingLoop'
 import { castCharactersOf, nameOf } from './cast'
@@ -129,6 +130,8 @@ export async function startHangoutScene(
   game.setAwaitingInput(false)
   // Raised before the classify call, so one flag covers the whole in-flight window.
   game.setBusy(true)
+  // Begin never passes through `submitAction`, so it tells the mods itself.
+  playerActs()
   loopState.turnStartedAt = performance.now()
   game.setStreaming(true)
   game.setWaitingForLine(true)
