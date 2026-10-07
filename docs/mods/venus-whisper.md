@@ -7,9 +7,12 @@ character profiles, Bunnyboard Updates, and Meanwhile's spectator conversations.
 ## Playing
 
 - Enable **The Venus Whisper** in Mods. It works with every other optional mod off.
-- Select **Read today's issue** at a stable scene/landing. It writes one issue for that
-  in-game day from current/previous-day public material. Reading an existing issue is free.
-  Skipped days are not backfilled, and nothing generates automatically in the background.
+- One issue arrives automatically each **in-game Wednesday**, while the game is running,
+  even with Bunnyboard closed. It uses the past week's public material as of Wednesday
+  morning. An unread dot on the Whisper tab stays until you read all unread issues.
+  Reading saved issues makes no AI call. Delivery waits for a safe save checkpoint.
+- Enabling the mod or loading a save later in the week catches up only the latest Wednesday;
+  it does not generate an entire missed backlog. No issue arrives before the first Wednesday.
 - The byline is anonymous. NPC comments use their regular names, handles and profile pictures.
 - Player comments use the player's Bunnyboard profile name and a name-derived handle (for
   example, Sam Rowe becomes `@sam_rowe`). The base game has no separately editable player
@@ -26,14 +29,18 @@ character profiles, Bunnyboard Updates, and Meanwhile's spectator conversations.
   reveal starts, so closing the viewer does not lose completed replies.
 - If a reply request fails, the player's comment stays saved. **Get replies** retries the
   unanswered comment. A successful batch is not generated twice.
-- Discussions remain open today and the next day. Older issues are readable archives.
+- Weekly discussions stay open until the following Wednesday (or the semester ends).
+  Older issues remain readable archives. Existing daily editions keep their old two-day window.
 - **Delete issue**, followed by **Confirm delete issue**, deletes that issue and discussion
-  from the active save. It will not be generated again that day. Earlier game saves retain
+  from the active save. It will not be generated again that week. Earlier game saves retain
   their own copies, following the normal save/rewind rules.
 
-Writing an issue and its initial comments uses up to two calls to the configured writer.
+Automatic delivery of an issue and its initial comments uses up to two calls to the configured writer.
 A player comment uses at most one reply call. There are no image-generation calls or new
-remote services. A quiet day produces a short editorial rather than invented named events.
+remote services. A quiet week produces a short editorial rather than invented named events.
+Provider failures retry at most once per new in-game clock slot; **Retry delivery** retries
+explicitly. A published issue survives a failed initial-comment request; **Get replies**
+can finish its discussion without regenerating the article.
 
 ## The secret columnist
 
@@ -65,8 +72,11 @@ save or code can discover the stored identity. No reveal mechanic is implemented
 
 ## Evidence and roleplay
 
-Sources are limited to up to ten snippets from known characters' recent public posts and
-the game's public NPC encounter summaries. Held/pending photo posts, future posts, private
+The editor selects one supported lead from known characters' public posts and the game's
+public NPC encounter summaries, then sends at most six relevant snippets. The prompt asks
+for a scandalous, mischievous column about one specific person and incident, with at most
+one other central figure. It discourages ensemble roundups and gives the previous issue's
+subjects a small selection penalty to encourage variety. Held/pending photo posts, future posts, private
 room visits, private DMs, scene transcripts, character notes, relationship memories, SQLite
 recall, and Meanwhile's generated dialogue are excluded before the writing request.
 
@@ -75,8 +85,8 @@ event. Commenters know only the public thread and their supplied personality, no
 events behind it. Player comments are public statements by the reader, not commands to
 change the world's facts.
 
-Scenes and both normal/regenerated DMs can receive at most two relevant issues from today
-and yesterday, with selected recent comments. The excerpt is capped at 6,500 characters,
+Scenes and both normal/regenerated DMs can receive at most two relevant issues whose
+discussion windows are still open, with selected recent comments. The excerpt is capped at 6,500 characters,
 plus a short attribution instruction. The secret identity is never included. The prompt
 labels it unreliable public gossip, permits natural reactions when relevant, and grants no
 firsthand knowledge or automatic relationship changes. Publication itself does not award
@@ -90,6 +100,7 @@ to what the reader subsequently does in a scene.
 | `src/shared/venusWhisper.ts` | Types, optional save augmentation, normalizer, identity selection, public sources, commenter selection, validation, carryover and bounded recall. Pure functions take randomness as an argument. |
 | `src/renderer/prompts/venusWhisperPrompt.ts` | Separate editorial and unprivileged public-comment requests; bounded JSON schemas. |
 | `src/renderer/stores/venusWhisper.ts` | Publication/comment actions, cancellation and stale-game checks. No component calls the writer directly. |
+| `src/renderer/stores/whisperDelivery.ts`, `views/GameView.tsx` | Game-lifetime Wednesday delivery, cancellation, retry backoff and checkpoint waiting, independent of Bunnyboard. |
 | `src/renderer/stores/loop/saves.ts` | `writeWhisper` uses the existing serialized autosave lane and current scene checkpoint. Visible state changes only after a successful write. |
 | `src/renderer/views/VenusWhisperModal.tsx` | Archive, article, comment thread, replies, mentions, typing presentation, retry and delete. |
 | `src/renderer/vu_styles/VenusWhisper.css` | Game palette/font roles, bounded panel and internal scrollers; native hover/motion presets. |
@@ -101,15 +112,18 @@ to what the reader subsequently does in a scene.
 | `src/renderer/stores/textingLoop.ts`, `prompts/textingPrompt.ts` | Same public recall for normal and regenerated texts. |
 | `src/renderer/views/BunnyboardModal.tsx`, `VenusWhisperModal.tsx` | Optional rail tab and embedded newsletter page, independent of character profiles and Updates. |
 | `test/venusWhisper.test.ts` | Identity persistence, repeated term rollover, bounded imports, privacy boundaries, duplicate prevention, failed writes and stale requests. |
+| `test/whisperDelivery.test.ts` | Wednesday scheduling with the phone closed, catch-up, upgrades, read status, save failure, cancellation and safe delayed delivery. |
 
 ## Bunnyboard navigation
 
 Whisper and Meanwhile each have their own rail tab and shared outline icon in the page header.
 Neither occupies the Game menu. The phone owns dismissal and theme; changing tabs unmounts
-the page, cancels unfinished requests and typing timers, and keeps already saved replies.
+the page, cancels its unfinished comment requests and typing timers, and keeps already saved replies.
+Scheduled delivery continues when the phone closes or changes tabs. The unread dot clears
+only after opening an issue and successfully saving its read status.
 Disabling the selected feature returns to Chats. The archive and article scroll separately;
 the composer stays visible below the article. The rail contracts to the native five destinations
-when both features are off. No newsletter save fields or SQLite integration change.
+when both features are off. No SQLite integration is required.
 
 ## Save format and integration
 
@@ -118,13 +132,18 @@ when both features are off. No newsletter save fields or SQLite integration chan
 augmentation, and does not increase the required native save schema. The normalizer copies
 only recognized fields, caps articles at 2,400 characters, comments at 600, discussions at
 40 comments, public profiles at 128, and the archive/deletion list at 1,000 entries each. This covers the normal
-four-year course with room for its daily publications; exceeding the cap retains newer entries.
+four-year course with room for its weekly publications and older daily editions; exceeding the cap retains newer entries.
+
+New issues add optional `weekly: true` and `read: false` fields without changing the format
+version. Legacy issues lacking those fields count as already read and retain their two-day
+discussion window. An existing or deleted daily issue within the current Wednesday week
+counts as that week's edition, preventing duplicates when upgrading.
 
 Each issue's stable key is `whisper:<termIndex>:<dayIndex>`. Original zero-based semester and
 day stamps stay on it across a break. They are displayed as human-readable semester/day
 numbers. They do not need the date rebasing used by native memories. Comment IDs and reply
 links are scoped to an issue; a normalizer drops duplicate IDs and invalid parent links.
-Current/previous-day gates compare both semester and day, so an old day-zero issue cannot
+Discussion and delivery gates compare both semester and day, so an old day-zero issue cannot
 become today's issue in a new semester.
 
 Turning the mod off retains the saved identity/archive and disables its tab, generation and
@@ -149,6 +168,9 @@ new-game isolation; malformed archive/thread data; private/future/held material 
 ordinary author comments without privileged prompt fields; repeat publication/reply guards;
 closing, loading, time changes and switching off while a response is outstanding; disk failure;
 and switching off without erasing data. The native save-field inventory includes the new field.
+Delivery can finish generating while a scene is busy, then waits to persist into the live
+checkpoint without rolling back its date or money. Loading another save, leaving the game,
+or disabling the mod cancels the job. Advancing the clock alone does not waste its response.
 
 UI checks use synthetic saves and a stubbed writer, avoiding API charges or real private saves.
 Exercise day and night at 1920×1080, 2560×1440, 1280×720 and 1440×1080, including all seven Bunnyboard rail tiles and each mod enabled alone. Check publication, article scrolling, tags, direct replies, pauses, the older-term

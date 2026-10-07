@@ -1,12 +1,13 @@
+import { retryWhisperDelivery, useWhisperDelivery } from '../stores/whisperDelivery'
 import { WhisperIcon } from '../components/BunnyboardFeatureIcons'
 import '../vu_styles/BunnyboardFeature.css'
 import { useEffect, useRef, useState, type JSX } from 'react'
 import { motion } from 'motion/react'
-import { VENUS_WHISPER_MOD, WHISPER_COMMENTS, WHISPER_TEXT, whisperIssueId, whisperPeople, whisperPlayerHandle } from '@shared/venusWhisper'
+import { VENUS_WHISPER_MOD, WHISPER_COMMENTS, WHISPER_TEXT, whisperWednesday, whisperDiscussionOpen, whisperPeople, whisperPlayerHandle } from '@shared/venusWhisper'
 import { useGameStore } from '../stores/gameStore'
 import { useModOn } from '../stores/modsStore'
 import { profileUrl } from '../stores/characterStore'
-import { commentOnWhisper, dismissWhisper, publishWhisper, replyOnWhisper, useWhisperActivity, whisperReady } from '../stores/venusWhisper'
+import { commentOnWhisper, dismissWhisper, markWhisperRead, replyOnWhisper, useWhisperActivity, whisperReady } from '../stores/venusWhisper'
 import { breatheMark, gestures, lift, press, quietLift, quietPress } from './motion'
 import '../vu_styles/VenusWhisper.css'
 
@@ -14,6 +15,9 @@ import '../vu_styles/VenusWhisper.css'
 export function VenusWhisperPage(): JSX.Element | null {
   const game = useGameStore(s => s), on = useModOn(VENUS_WHISPER_MOD)
   const backgroundBusy = useWhisperActivity(s => s.working)
+  const delivery = useWhisperDelivery(s => s)
+  const readAlive = useRef(true), readAttempt = useRef('')
+  useEffect(() => { readAlive.current = true; return () => { readAlive.current = false } }, [])
   const [selected, setSelected] = useState(''), [draft, setDraft] = useState(''), [replyTo, setReplyTo] = useState<string>()
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [deleting, setDeleting] = useState(false)
   const [hidden, setHidden] = useState<string[]>([]), [typing, setTyping] = useState('')
@@ -28,17 +32,24 @@ export function VenusWhisperPage(): JSX.Element | null {
     cancel(); setBusy(false); setError(''); setHidden([]); setTyping(''); setSelected(''); setDraft(''); setReplyTo(undefined)
     return cancel
   }, [game.playthroughId, game.loads, game.date, game.time, on])
-  if (!on) return null
   const state = game.exVenusWhisper
   const rows = state.issues.filter(i => i.term < game.termIndex || (i.term === game.termIndex && i.day <= game.date))
     .sort((a, b) => b.term - a.term || b.day - a.day)
   const issue = rows.find(i => i.id === selected) ?? rows[0]
-  const today = whisperIssueId(game.termIndex, game.date)
-  const published = rows.some(i => i.id === today) || state.dismissed.includes(today)
-  const activeIssue = !!issue && issue.term === game.termIndex && issue.day >= game.date - 1
+  const activeIssue = !!issue && whisperDiscussionOpen(issue, game.termIndex, game.date)
   const ready = !busy && !backgroundBusy && whisperReady(), people = whisperPeople(game)
   const target = issue?.comments.find(c => c.id === replyTo)
   const unanswered = issue?.comments.filter(c => c.player && !issue.answered.includes(c.id)).at(-1)
+  useEffect(() => {
+    if (!on || !ready || issue?.read !== false) return
+    const key = `${game.playthroughId}:${game.loads}:${game.date}:${game.time}:${issue.id}`
+    if (readAttempt.current === key) return
+    readAttempt.current = key
+    void markWhisperRead(issue.id, () => readAlive.current).catch(() => {
+      if (readAlive.current) setError('Read status could not be saved. Reopen this tab to retry.')
+    })
+  }, [on, ready, issue?.id, issue?.read, game.playthroughId, game.loads, game.date, game.time])
+  if (!on) return null
 
   /** Saved replies are revealed with short human pauses; closing never loses an already saved batch. */
   function reveal(ids: string[], done: () => void): void {
@@ -70,14 +81,6 @@ export function VenusWhisperPage(): JSX.Element | null {
     }
   }
 
-  async function publish(): Promise<void> {
-    await run(async (group, alive) => {
-      const id = await publishWhisper(group, alive)
-      if (alive()) setSelected(id)
-      return replyOnWhisper(id, undefined, group, alive)
-    }, 'Fetching today’s issue…')
-  }
-
   async function send(): Promise<void> {
     if (!issue) return
     await run(async (group, alive) => {
@@ -94,14 +97,16 @@ export function VenusWhisperPage(): JSX.Element | null {
       </header>
       <div className="vu-bb-feature-columns">
         <aside className="vu-bb-feature-list vu-whisper-rail">
-          <motion.button className="vu-btn vu-btn--primary vu-paper vu-btn--panel" disabled={published || !ready}
-            {...gestures(published || !ready, lift, press)} onClick={() => void publish()}>Read today’s issue</motion.button>
-          <p className="vu-whisper-note">One issue a day, written when you open it. New issues and replies use your configured AI.</p>
+          <strong className="vu-whisper-delivery">The Wednesday edition</strong>
+          <p className="vu-whisper-note">Delivered every in-game Wednesday, even when you don’t open Bunnyboard. New issues and replies use your configured AI.</p>
+          {delivery.delivering && <p className="vu-whisper-note" role="status">Delivering this week’s issue…</p>}
+          {delivery.error && <div><p className="vu-whisper-error" role="alert">{delivery.error}</p>
+            <motion.button className="vu-pill" disabled={!ready || whisperWednesday(game.date) === null} {...gestures(!ready, quietLift, quietPress)} onClick={retryWhisperDelivery}>Retry delivery</motion.button></div>}
           <span className="vu-bb-feature-label">The archive</span>
           <nav aria-label="Past issues" className="vu-whisper-archive">
             {rows.map(i => <motion.button key={i.id} className="vu-whisper-edition" aria-pressed={issue?.id === i.id}
               disabled={busy} {...gestures(busy, quietLift, quietPress)} onClick={() => { setSelected(i.id); setReplyTo(undefined); setDraft(''); setError(''); setDeleting(false) }}>
-              <span className="vu-whisper-meta">Semester {i.term + 1} · Day {i.day + 1}</span><strong>{i.title}</strong><span>{i.comments.length} comments</span>
+              <span className="vu-whisper-meta">Semester {i.term + 1} · Day {i.day + 1}</span><strong>{i.title}</strong>{i.read === false && <span className="vu-whisper-unread">Unread</span>}<span>{i.comments.length} comments</span>
             </motion.button>)}
             {!rows.length && <p className="vu-empty vu-empty--flush">The first edition is waiting to be written.</p>}
           </nav>
@@ -136,7 +141,7 @@ export function VenusWhisperPage(): JSX.Element | null {
                 {activeIssue && (unanswered || !issue.comments.some(c => !c.player)) && <motion.button className="vu-btn vu-btn--quiet" disabled={!ready}
                   {...gestures(!ready, quietLift, quietPress)} onClick={() => void run((g, a) => replyOnWhisper(issue.id, unanswered?.id, g, a), 'Someone is typing…')}>Get replies</motion.button>}
               </section>
-            </> : <div className="vu-whisper-welcome"><h2>A little bird told us.</h2><p>Public posts, chance encounters, and just enough speculation to start a conversation.</p><p>The columnist signs no name. Everyone else speaks for themselves.</p></div>}
+            </> : <div className="vu-whisper-welcome"><h2>Something to talk about.</h2><p>The next edition arrives on Wednesday.</p><p>Public posts, chance encounters, and just enough speculation to start a conversation.</p><p>The columnist signs no name. Everyone else speaks for themselves.</p></div>}
           </div>
           <div className="vu-whisper-status" role="status" aria-live="polite">{typing || (activeIssue ? 'Public conversation · keep it campus appropriate' : issue ? 'Archived issue · comments are closed' : 'Read an issue to join the conversation')}</div>
           {error && <p className="vu-whisper-error" role="alert">{error}</p>}

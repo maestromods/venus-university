@@ -28,6 +28,10 @@ export interface WhisperIssue {
   comments: WhisperComment[]
   /** Reader comments which have already received their generated batch. */
   answered: string[]
+  /** Weekly editions stay open until the next Wednesday; older daily issues keep their dates. */
+  weekly?: true
+  /** Absent on older issues, which are treated as already read. */
+  read?: boolean
 }
 export interface VenusWhisper {
   version: 1
@@ -59,6 +63,27 @@ declare module './types' {
 
 /** Semester-local days form stable keys without moving the archive's dates at each break. */
 export function whisperIssueId(term: number, day: number): string { return `whisper:${term}:${day}` }
+
+/** Every term starts on Monday. Deliver on Wednesday, then every seven game days. */
+export function whisperWednesday(day: number): number | null { return day < 2 ? null : day - (day - 2) % 7 }
+
+/** Legacy daily publications also occupy their week; upgrading never adds a duplicate edition. */
+export function whisperWeekOccupied(state: VenusWhisper, term: number, day: number): boolean {
+  const due = whisperWednesday(day)
+  if (due === null) return true
+  return state.issues.some(i => i.term === term && i.day >= due && i.day <= day) || state.dismissed.some(id => {
+    const [, t, d] = id.split(':')
+    return Number(t) === term && Number(d) >= due && Number(d) <= day
+  })
+}
+
+export function whisperDiscussionOpen(issue: WhisperIssue, term: number, day: number): boolean {
+  return issue.term === term && issue.day <= day && day < issue.day + (issue.weekly ? 7 : 2)
+}
+
+export function whisperHasUnread(state: VenusWhisper, term: number, day: number): boolean {
+  return state.issues.some(i => i.read === false && (i.term < term || (i.term === term && i.day <= day)))
+}
 
 /** Bunnyboard stores the reader's profile name, but has no separate reader handle field. */
 export function whisperPlayerHandle(firstName: string, lastName: string): string {
@@ -97,7 +122,8 @@ export function normalizeWhisper(value: unknown): VenusWhisper {
     const answered = ids(issue.answered).filter(id => comments.some(c => c.id === id && c.player))
     seen.add(issue.id)
     issues.push({ id: issue.id, term: issue.term, day: issue.day, title: issue.title, body: issue.body,
-      subjects: ids(issue.subjects), comments, answered })
+      subjects: ids(issue.subjects), comments, answered, ...(issue.weekly === true ? { weekly: true as const } : {}),
+      ...(typeof issue.read === 'boolean' ? { read: issue.read } : {}) })
   }
   const dismissed = Array.isArray(value.dismissed) ? [...new Set(value.dismissed.filter(id =>
     typeof id === 'string' && /^whisper:\d{1,6}:\d{1,6}$/.test(id)))].slice(-WHISPER_ISSUES) : []
@@ -138,25 +164,34 @@ export function whisperPeople(game: WhisperContext): WhisperPerson[] {
 }
 
 /** Collect only public material; no scenes, private DMs, memories, or spectator dialogue enter. */
-export function whisperSources(game: WhisperContext): WhisperSource[] {
+export function whisperSources(game: WhisperContext, days = 7): WhisperSource[] {
   const known = new Set(game.chars.filter(id => game.characters[id] && game.charInfo[id]?.nameKnown))
   const sources: WhisperSource[] = []
   for (const id of known) {
     const c = game.characters[id]
     for (const post of (game.charInfo[id].feed ?? []).slice(-30)) {
-      if (post.date < game.date - 1 || post.date > game.date || (post.date === game.date && post.time > game.time) ||
+      if (post.date < game.date - days + 1 || post.date > game.date || (post.date === game.date && post.time > game.time) ||
           post.photo?.held || post.photo?.pending || !post.text?.trim()) continue
       sources.push({ id: `post:${id}:${post.id}`, text: `${fullNameOf(c)} posted publicly: ${post.text.slice(0, 900)}`, subjects: [id] })
     }
   }
   for (const [pair, { encounter: e }] of Object.entries(game.npcRelationships)) {
     const people = pair.split('|')
-    if (!e || people.length !== 2 || !people.every(id => known.has(id)) || e.date > game.date || e.date < game.date - 1 || e.ref === 'room') continue
+    if (!e || people.length !== 2 || !people.every(id => known.has(id)) || e.date > game.date || e.date < game.date - days + 1 || e.ref === 'room') continue
     const where = e.kind === 'class' ? (game.classes[e.ref]?.name ?? e.ref) : e.kind === 'dorm' ? 'a dorm common area' : locationLabel(e.ref)
     sources.push({ id: `encounter:${pair}:${e.date}:${e.ref}`, subjects: people,
       text: `${people.map(id => fullNameOf(game.characters[id])).join(' and ')} ${e.positive ? 'got along' : 'argued'} at ${where}. No further details are established.` })
   }
-  return sources.slice(-10)
+  // Rank the whole eligible pool locally; only the selected six snippets reach the writer.
+  return sources
+}
+
+/** One evidence-backed spotlight, avoiding the last lead when equally supported alternatives exist. */
+export function whisperSpotlight(sources: readonly WhisperSource[], previous: readonly string[] = []): { focus?: string; sources: WhisperSource[] } {
+  const scores = new Map<string, number>()
+  for (const source of sources) for (const id of source.subjects) scores.set(id, (scores.get(id) ?? 0) + 2)
+  const focus = [...scores].sort((a, b) => (b[1] - (previous.includes(b[0]) ? 1 : 0)) - (a[1] - (previous.includes(a[0]) ? 1 : 0)) || a[0].localeCompare(b[0]))[0]?.[0]
+  return { ...(focus ? { focus } : {}), sources: sources.filter(s => !focus || s.subjects.includes(focus)).slice(-6) }
 }
 
 /** Ordinary commenters, with an occasional appearance by the author, never a special public role. */
@@ -238,7 +273,7 @@ export function carryWhisper(value: unknown, term: number, day: number, known: R
 /** A bounded public excerpt, never the secret profile; claims stay attributed to the newsletter. */
 export function whisperRecall(state: VenusWhisper | undefined, term: number, day: number, cast: readonly string[]): string[] {
   if (!state || !cast.length) return []
-  const issues = state.issues.filter(i => i.term === term && i.day <= day && i.day >= day - 1 &&
+  const issues = state.issues.filter(i => whisperDiscussionOpen(i, term, day) &&
     (i.subjects.some(id => cast.includes(id)) || i.comments.some(c => cast.includes(c.person.id) || c.mentions.some(id => cast.includes(id)))))
     .sort((a, b) => b.day - a.day).slice(0, 2)
   if (!issues.length) return []

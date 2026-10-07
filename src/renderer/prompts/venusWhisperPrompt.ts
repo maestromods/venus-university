@@ -27,11 +27,11 @@ export function anonymousVoice(voice: string, names: readonly string[]): string 
   return result.slice(0, 1600)
 }
 
-/** One daily editorial, drawn from at most ten public snippets and no private game state. */
-export function buildWhisperIssue(sources: readonly WhisperSource[], voice: string): StructuredRequest {
+/** A weekly spotlight, bounded to six public snippets and no private game state. */
+export function buildWhisperIssue(sources: readonly WhisperSource[], voice: string, spotlight?: { name: string; handle: string }): StructuredRequest {
   return {
-    system: `${publicRules}\nWrite one anonymous campus gossip newsletter called The Venus Whisper. A witty, observant student writes it in a lightly theatrical editorial voice. Use the temperament only for subtle tone, never biography, recognizable phrases or clues to identity. 120–250 words, two or three short paragraphs, title at most 120 characters and body at most 2400. Prefer the interesting supplied observations, not a catalogue. Attribute public posts. You may name people already named in the sources. Include only source IDs actually used. If there is no material, write a short quiet-campus editorial without inventing named incidents. Return an empty comments array; reader comments are written separately.`,
-    user: JSON.stringify({ temperament: voice, publicSources: sources }),
+    system: `${publicRules}\nWrite one anonymous campus gossip newsletter called The Venus Whisper. A sharp, mischievous student writes a deliciously scandalous Wednesday column: theatrical intrigue, pointed social observation, plausible romantic tension, rivalry, jealousy, mixed signals or public hypocrisy when the evidence supports it. Make the headline specific and enticing. Center this entire issue on the spotlight individual and one incident or social question, with at most one other central figure. Do not write an ensemble roundup, a list of unrelated names, a bland recap or a puff piece. Escalate the wit and provocative interpretation, never fabricate the underlying facts. A sharp question is better than an unsupported accusation. Use the temperament only for subtle tone, never biography, recognizable phrases or clues to identity. 120–250 words, two or three short paragraphs, title at most 120 characters and body at most 2400. Prefer the interesting supplied observations, not a catalogue. Attribute public posts. You may name people already named in the sources. Include only source IDs actually used. If there is no material, write a short quiet-campus editorial without inventing named incidents. Return an empty comments array; reader comments are written separately.`,
+    user: JSON.stringify({ temperament: voice, spotlight, publicSources: sources }),
     schema: { name: 'venus_whisper_issue', schema: { type: 'object', additionalProperties: false,
       required: ['title', 'body', 'sources', 'comments'], properties: {
         title: { type: 'string', maxLength: 120 }, body: { type: 'string', maxLength: 2400 },

@@ -1148,3 +1148,7 @@
   height: 36px;
   overflow: hidden;
 }
+
+/* One unread edition is enough to mark the newspaper; its archive holds the individual states. */
+.vu-bb-unread-dot { position: absolute; top: -4px; right: -4px; width: 17px; height: 17px; border-radius: 50%; background: var(--vu-accent); border: 3px solid var(--vu-surface); }
+.vu-bb-tile--on .vu-bb-unread-dot { background: var(--vu-accent-ink); border-color: var(--vu-accent); }

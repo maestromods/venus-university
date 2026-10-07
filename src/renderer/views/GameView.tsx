@@ -1,3 +1,4 @@
+import { startWhisperDelivery } from '../stores/whisperDelivery'
 import { StoryMemoryModal } from './StoryMemoryModal'
 import { modIsOn } from '../stores/modsStore'
 import {
@@ -525,6 +526,7 @@ function InterruptEndingModal({
 
 /** Game View: renders `gameStore`; `gameLoop.ts` owns state changes. */
 export function GameView(): JSX.Element {
+  useEffect(() => startWhisperDelivery(), [])
   const plotTwistOn = useModOn(PLOT_TWIST_MOD)
   const bg = useGameStore((s) => s.bg)
   const time = useGameStore((s) => s.time)

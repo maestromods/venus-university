@@ -1,5 +1,5 @@
 import { MEANWHILE_MOD } from '@shared/meanwhile'
-import { VENUS_WHISPER_MOD } from '@shared/venusWhisper'
+import { VENUS_WHISPER_MOD, whisperHasUnread } from '@shared/venusWhisper'
 import { useModOn } from '../stores/modsStore'
 import { MeanwhileIcon, WhisperIcon } from '../components/BunnyboardFeatureIcons'
 import { MeanwhilePage } from './MeanwhileModal'
@@ -282,6 +282,7 @@ export function BunnyboardModal({
   onOpenJobs
 }: BunnyboardModalProps): JSX.Element | null {
   const storedTab = useBunnyboardStore((s) => s.tab)
+  const whisperUnread = useGameStore(s => whisperHasUnread(s.exVenusWhisper, s.termIndex, s.date))
   const meanwhileOn = useModOn(MEANWHILE_MOD), whisperOn = useModOn(VENUS_WHISPER_MOD)
   const tabs = TABS.filter(t => (t.id !== 'meanwhile' || meanwhileOn) && (t.id !== 'whisper' || whisperOn))
   const tab = tabs.some(t => t.id === storedTab) ? storedTab : 'chats'
@@ -364,7 +365,7 @@ export function BunnyboardModal({
                   style={tabs.length > 5 ? { marginLeft: (tabs.length - index - 1) * 7 } : undefined}
                   className={`vu-tile vu-bb-tile vu-paper${on ? ' vu-bb-tile--on' : ''}`}
                   type="button"
-                  aria-label={entry.word}
+                  aria-label={entry.id === 'whisper' && whisperUnread ? 'WHISPER · unread issues' : entry.word}
                   aria-pressed={on}
                   variants={dealtItem}
                   disabled={Boolean(armed)}
@@ -385,6 +386,7 @@ export function BunnyboardModal({
                   )}
                   <span className="vu-bb-tile-word">{entry.word}</span>
                   {badge > 0 && <span className="vu-tile-badge">{badge}</span>}
+                  {entry.id === 'whisper' && whisperUnread && <span className="vu-bb-unread-dot" aria-hidden="true"/>}
                 </motion.button>
               )
             })}

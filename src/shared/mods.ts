@@ -125,7 +125,7 @@ export const MODS: readonly ModDef[] = [
   {
     id: VENUS_WHISPER_MOD, name: 'The Venus Whisper', author: 'Maestro Leeds', version: '1.0.0',
     scope: 'anytime', defaultOn: true,
-    blurb: 'An anonymous campus gossip newsletter with one daily issue, public comments, replies and mentions.',
+    blurb: 'An anonymous Wednesday gossip column, delivered weekly with unread alerts, public comments, replies and mentions.',
     offNote: 'Keeps the secret columnist and archive, including across continued semesters. Stops new issues, comments and gossip context.'
   },
   {

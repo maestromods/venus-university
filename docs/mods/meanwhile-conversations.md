@@ -5,6 +5,13 @@ has a **Meanwhile** tab. Character profiles are unchanged. Select a recent encou
 to watch two NPCs talk, then use Previous and Next to read it. There is no player input,
 time advance, relationship reward, or new scene added to the player's history.
 
+Location IDs are translated to their actual background filenames (for example, Eastern
+Buffet uses `asian_food`). Installed City Life artwork is supported for `bowling_alley`,
+`roller_rink`, and `cat_cafe`, without requiring City Life for native locations. Encounters
+have no time/weather stamp, so the viewer uses day artwork. Missing art leaves a themed
+background; switching to valid art resets a failed image's visibility. Portraits refresh
+when their character assets become available. Generation displays **Loading their conversation…**.
+
 ## Where encounters come from
 
 The base game's NPC relationship system already records class, dorm, and hangout
@@ -40,6 +47,7 @@ will not update a different active game. No AI request is made when the mod is d
 | `src/renderer/stores/meanwhile.ts` | Generation, stale-request checks, replay reuse. |
 | `src/renderer/stores/loop/saves.ts` | `persistMeanwhileScene`, using the existing serialized save queue. |
 | `src/renderer/views/MeanwhileModal.tsx` | Embedded read-only Bunnyboard page, cancellation, retry, navigation. |
+| `src/renderer/views/meanwhileImages.ts` | Timetable/outing location-to-art mapping, native background resolution and optional City Life/custom art. |
 | `src/renderer/vu_styles/Meanwhile.css` | Native day/night paper palette, responsive layout. |
 | `src/renderer/views/BunnyboardModal.tsx`, `src/renderer/stores/bunnyboardStore.ts` | Optional rail tab and transient page routing. |
 | `src/preload/api.d.ts`, `index.ts`, `src/main/ipc.ts`, `src/web/bridge.ts` | Typed `completeMeanwhile` API, cancellation in desktop and browser builds. |

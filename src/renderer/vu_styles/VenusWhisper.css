@@ -38,3 +38,6 @@
 .vu-whisper-comment .vu-pill { font-size: 11px; padding: 5px 12px; }
 .vu-whisper-rail > div:last-child { display: flex; flex-wrap: wrap; gap: 8px; }
 .vu-whisper-rail > div:last-child .vu-btn { font-size: 13px; }
+
+.vu-whisper-delivery { font: 20px var(--font-display); color: var(--vu-accent); }
+.vu-whisper-unread { color: var(--vu-accent); font: 11px var(--font-mono); text-transform: uppercase; }

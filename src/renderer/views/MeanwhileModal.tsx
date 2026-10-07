@@ -7,9 +7,9 @@ import { fullNameOf } from '@shared/types'
 import { useGameStore } from '../stores/gameStore'
 import { useModOn } from '../stores/modsStore'
 import { generateMeanwhile, meanwhileReady } from '../stores/meanwhile'
-import { profileUrl } from '../stores/characterStore'
+import { profileUrl, useSpriteVersion } from '../stores/characterStore'
 import { formatShortGameDate } from '../prompts/gameDate'
-import { bgUrl } from './bgAssets'
+import { meanwhileBackgroundUrl } from './meanwhileImages'
 import { gestures, lift, press, quietLift, quietPress } from './motion'
 import '../vu_styles/Meanwhile.css'
 
@@ -23,8 +23,9 @@ export function MeanwhilePage(): JSX.Element | null {
     if (held) { held.active=false; void window.api.jobs.cancelGroup(held.group); ticket.current=null }
   }
   useEffect(() => { cancel(); setSelected(null); setBusy(false); setError(''); return cancel }, [game.loads,game.playthroughId,game.date,game.time,on])
-  if (!on) return null
   const rows=meanwhileEvents(game), line=selected?.lines[index]
+  const spriteVersion = useSpriteVersion(line?.speaker)
+  if (!on) return null
   const speaker=line?game.characters[line.speaker]:undefined
   async function watch(event: MeanwhileScene): Promise<void> {
     cancel(); setSelected(event); setIndex(0); setError(''); setBusy(false)
@@ -35,10 +36,7 @@ export function MeanwhilePage(): JSX.Element | null {
     } catch(e) { if(own.active)setError(e instanceof Error?e.message:'Could not write this conversation.') }
     finally { if(own.active)setBusy(false) }
   }
-  const key=selected?.kind==='class'?'classroom':selected?.kind==='dorm'?'lowrise_dorm_room':
-    ({btb_arcade:'arcade',green_hill_park:'park',cutetea:'bubble_tea',kendall_library:'library'}[selected?.ref??'']??selected?.ref)
-  // Native encounters carry a day, not a time slot. A neutral day illustration avoids inventing one.
-  const backdrop=key?bgUrl(key,'day',false):null
+  const backdrop = selected ? meanwhileBackgroundUrl(selected) : null
   return <section className="vu-bb-feature vu-meanwhile" aria-label="Meanwhile conversations">
       <header className="vu-bb-feature-heading">
         <div><span className="vu-bb-feature-label">Away from the spotlight</span><h1>Meanwhile…</h1><p>A little campus life, even when you’re not there.</p></div>
@@ -57,15 +55,15 @@ export function MeanwhilePage(): JSX.Element | null {
         </aside>
         <section className="vu-meanwhile-view" aria-label="Conversation viewer">
           <div className="vu-meanwhile-scene">
-            {backdrop&&<img className="vu-meanwhile-backdrop" src={backdrop} alt="" onError={e=>{e.currentTarget.style.visibility='hidden'}}/>}
+            {backdrop&&<img key={backdrop} className="vu-meanwhile-backdrop" src={backdrop} alt="" onError={e=>{e.currentTarget.style.visibility='hidden'}}/>}
             <div className="vu-meanwhile-story">
               <header className="vu-meanwhile-scene-heading">
                 <h2>{selected?.title??'Off the beaten path'}</h2>
                 <p>{selected?`${selected.where} · ${formatShortGameDate(selected.date)}`:'Choose an encounter to watch. Writing a new conversation uses your configured AI; replays use the saved copy.'}</p>
               </header>
-              {busy&&<p className="vu-meanwhile-message" role="status">Writing their conversation…</p>}
+              {busy&&<p className="vu-meanwhile-message" role="status">Loading their conversation…</p>}
               {error&&<div className="vu-meanwhile-message" role="alert"><p>{error}</p><motion.button className="vu-btn vu-btn--quiet" {...gestures(false,quietLift,quietPress)} onClick={()=>selected&&void watch(selected)}>Retry</motion.button></div>}
-              {line&&<div className="vu-meanwhile-line"><img src={profileUrl(line.speaker)} alt="" onError={e=>{e.currentTarget.style.visibility='hidden'}}/>
+              {line&&<div className="vu-meanwhile-line"><img key={`${line.speaker}:${spriteVersion}`} src={profileUrl(line.speaker, spriteVersion)} alt="" onError={e=>{e.currentTarget.style.visibility='hidden'}}/>
                 <div><strong>{speaker?fullNameOf(speaker):'Character'}</strong><p>{line.text}</p></div></div>}
             </div>
           </div>
