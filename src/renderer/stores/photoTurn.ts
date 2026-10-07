@@ -4,8 +4,7 @@ import type { ChatPhoto } from '@shared/photoTypes'
 import type { Character, TextingResponse } from '@shared/types'
 import { useGameStore } from './gameStore'
 import { RENDER_PATIENCE_MS } from './photoPost'
-import { canSendPhotos, photoNamesInSave, savePhotoState, setMessagePhoto } from './localPhotoStore'
-import { noNsfwImagesOf, useSettingsStore } from './settingsStore'
+import { canSendPhotos, noExplicitPhotos, photoNamesInSave, savePhotoState, setMessagePhoto } from './localPhotoStore'
 import { tellAboutDmPhotos } from './photoTipDelivery'
 
 /**
@@ -31,7 +30,7 @@ export async function sendPhoto(
       flags: info?.flags,
       affection: affectionFor(info, game.date, character),
       traits: character.traits,
-      noNsfwImages: noNsfwImagesOf(useSettingsStore.getState()),
+      noNsfwImages: noExplicitPhotos(),
       canRender: canSendPhotos()
     })
   })

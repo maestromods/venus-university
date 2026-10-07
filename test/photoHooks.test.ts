@@ -264,8 +264,13 @@ const HOOKS: readonly {
   },
   {
     file: 'src/renderer/views/AppSettingsModal.tsx',
-    needs: ['{!webBuild && photos && <PhotoLoaderField />}'],
+    needs: ['{!webBuild && photoMod && photos && <PhotoLoaderField />}'],
     why: 'the player cannot pick how a photo waits'
+  },
+  {
+    file: 'src/renderer/stores/textingLoop.ts',
+    needs: ['noNsfwImages: noExplicitPhotos()'],
+    why: 'her DMs ignore the explicit-photos option a mods screen can set'
   },
   {
     file: 'src/renderer/vu_styles/PhotoBubble.css',

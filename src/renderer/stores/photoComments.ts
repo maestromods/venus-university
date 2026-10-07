@@ -1,3 +1,5 @@
+import { rollPostLikes } from '@shared/feed'
+import { photoFeatureOn } from '@shared/photoSwitches'
 import { npcFriendsOf } from '@shared/npcRelationships'
 import { globalSlotOf } from '@shared/jobs'
 import type { PhotoTier } from '@shared/photoGate'
@@ -30,7 +32,8 @@ export function rollComments(
   photoTier: PhotoTier = 'none'
 ): PostComment[] {
   const lines = (written ?? []).map((text) => text.trim()).filter(Boolean)
-  if (lines.length === 0) return []
+  // Off, the mod writes no comments; a post files as the game alone would file it.
+  if (lines.length === 0 || !photoFeatureOn()) return []
 
   const game = useGameStore.getState()
   const reach = reachOf(game.playthroughId, charId, game.characters[charId])
@@ -60,6 +63,10 @@ export function rollComments(
  */
 export function postLikes(charId: string, photoTier: PhotoTier = 'none'): number {
   const game = useGameStore.getState()
+  // Off, likes are the game's own: her friends and a few more.
+  if (!photoFeatureOn()) {
+    return rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
+  }
   return rollAudienceLikes({
     reach: reachOf(game.playthroughId, charId, game.characters[charId]),
     friends: npcFriendsOf(game.npcRelationships, charId, game.chars).length,

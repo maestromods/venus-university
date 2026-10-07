@@ -1,4 +1,5 @@
 import { gateBody } from '@shared/characterBody'
+import { photoFeatureOn } from '@shared/photoSwitches'
 import type { Character } from '@shared/types'
 import { getSettings } from './services/settingsService'
 
@@ -8,5 +9,5 @@ import { getSettings } from './services/settingsService'
  * file holds, whether or not it is to be used.
  */
 export async function withBodySetting(character: Character): Promise<Character> {
-  return gateBody(character, (await getSettings()).bodyDetails === true)
+  return gateBody(character, photoFeatureOn() && (await getSettings()).bodyDetails === true)
 }

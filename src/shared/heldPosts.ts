@@ -1,3 +1,4 @@
+import { photoFeatureOn } from './photoSwitches'
 import type { SocialPost } from './types'
 
 /**
@@ -10,5 +11,7 @@ import type { SocialPost } from './types'
  * each ask this, and that is the whole of the rule.
  */
 export function postIsOut(post: SocialPost): boolean {
-  return post.photo?.held !== true
+  // Off, nothing will draw the picture it waits for, so it is read as the words it is; the save
+  // still holds it back, and with the mod on again it waits for its picture once more.
+  return post.photo?.held !== true || !photoFeatureOn()
 }

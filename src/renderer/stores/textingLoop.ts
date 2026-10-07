@@ -66,9 +66,8 @@ import {
 } from '@shared/types'
 import { useBunnyboardStore } from './bunnyboardStore'
 import { useGameStore } from './gameStore'
-import { canSendPhotos } from './localPhotoStore'
+import { canSendPhotos, noExplicitPhotos } from './localPhotoStore'
 import { sendPhoto } from './photoTurn'
-import { noNsfwImagesOf } from './settingsStore'
 import { prefetchHangoutScene, startHangoutScene } from './loop/hooks'
 import { createRetryGate } from './retryGate'
 import { createTextExtractor } from './textingStream'
@@ -485,7 +484,7 @@ export async function sendMessage(charId: string, text: string): Promise<void> {
         memoryBudget: memoryBudgetsOf(useSettingsStore.getState().settings ?? {}).one,
         // What she may photograph is settled in the brief from these two.
         canRenderImages: canSendPhotos(),
-        noNsfwImages: noNsfwImagesOf(useSettingsStore.getState())
+        noNsfwImages: noExplicitPhotos()
       },
       // The same reader block a scene gets, grades and all.
       readerBlockOf(game)
