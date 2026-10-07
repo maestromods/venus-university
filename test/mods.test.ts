@@ -32,6 +32,18 @@ const LIST: readonly ModDef[] = [
     defaultOn: true,
     requires: ['places'],
     options: [{ id: 'raises', label: 'Raises', hint: '', default: true }]
+  },
+  {
+    ...base,
+    id: 'look',
+    name: 'Look',
+    scope: 'anytime',
+    defaultOn: false,
+    options: [
+      { id: 'red', label: 'Red', hint: '', default: true, group: 'colour' },
+      { id: 'blue', label: 'Blue', hint: '', default: false, group: 'colour' },
+      { id: 'big', label: 'Big', hint: '', default: false }
+    ]
   }
 ]
 
@@ -134,5 +146,15 @@ describe('cleanSwitches', () => {
     for (const value of [null, undefined, 3, 'on', [], { on: [true] }]) {
       expect(cleanSwitches(value)).toEqual({ on: {}, options: {} })
     }
+  })
+})
+
+describe('a group of options', () => {
+  it('keeps one of a group on: picking one turns the others off', () => {
+    const blue = withOption(NO_SWITCHES, 'look', 'blue', true, LIST)
+    expect(optionOn(blue, 'look', 'blue', LIST)).toBe(true)
+    expect(optionOn(blue, 'look', 'red', LIST)).toBe(false)
+    expect(optionOn(blue, 'look', 'big', LIST)).toBe(false)
+    expect(withOption(blue, 'look', 'blue', false, LIST)).toBe(blue)
   })
 })

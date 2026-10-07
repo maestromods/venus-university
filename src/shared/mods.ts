@@ -28,6 +28,19 @@ export interface ModOption {
   /** What the other position does, in a line. */
   hint: string
   default: boolean
+  /**
+   * Options of one mod that share a group are one choice: one of them is on at a time. Turning
+   * one on turns the others off, and the one that is on stays on until another is picked. The
+   * Mods screen shows them together, under the group's own label and hint.
+   */
+  group?: string
+}
+
+/** What a group of options is, shown once above them. */
+export interface ModOptionGroup {
+  id: string
+  label: string
+  hint: string
 }
 
 export interface ModDef {
@@ -46,6 +59,8 @@ export interface ModDef {
   /** Mods this one cannot act without, by id. */
   requires?: readonly string[]
   options?: readonly ModOption[]
+  /** The groups its options name, by id. */
+  optionGroups?: readonly ModOptionGroup[]
 }
 
 /**
@@ -157,9 +172,22 @@ export function withOption(
   switches: ModSwitches,
   modId: string,
   optionId: string,
-  on: boolean
+  on: boolean,
+  mods: readonly ModDef[] = MODS
 ): ModSwitches {
-  return { ...switches, options: { ...switches.options, [optionKey(modId, optionId)]: on } }
+  const options = modById(modId, mods)?.options ?? []
+  const group = options.find((o) => o.id === optionId)?.group
+  if (!group) {
+    return { ...switches, options: { ...switches.options, [optionKey(modId, optionId)]: on } }
+  }
+  // One of a group is always picked: turning the picked one off picks nothing else.
+  if (!on) return switches
+  const picked = Object.fromEntries(
+    options
+      .filter((o) => o.group === group)
+      .map((o) => [optionKey(modId, o.id), o.id === optionId])
+  )
+  return { ...switches, options: { ...switches.options, ...picked } }
 }
 
 /**

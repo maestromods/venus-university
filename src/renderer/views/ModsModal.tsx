@@ -227,20 +227,51 @@ export function ModsModal({ theme, onClose, inGame = false, warn }: ModsModalPro
               <h4 className="vu-mods-label">Options</h4>
               {selected.options?.length ? (
                 <ul className="vu-mods-options">
-                  {selected.options.map((option) => (
-                    <li key={option.id} className="vu-mods-option">
-                      <span className="vu-mods-option-text">
-                        <span className="vu-mods-option-label">{option.label}</span>
-                        <span className="vu-mods-option-hint">{option.hint}</span>
-                      </span>
-                      <Switch
-                        id={`mods-option-${selected.id}-${option.id}`}
-                        label={option.label}
-                        on={optionOn(switches, selected.id, option.id)}
-                        onChange={(on) => request({ modId: selected.id, optionId: option.id, on })}
-                      />
-                    </li>
-                  ))}
+                  {selected.options.map((option, index, all) => {
+                    if (!option.group) {
+                      return (
+                        <li key={option.id} className="vu-mods-option">
+                          <span className="vu-mods-option-text">
+                            <span className="vu-mods-option-label">{option.label}</span>
+                            <span className="vu-mods-option-hint">{option.hint}</span>
+                          </span>
+                          <Switch
+                            id={`mods-option-${selected.id}-${option.id}`}
+                            label={option.label}
+                            on={optionOn(switches, selected.id, option.id)}
+                            onChange={(on) => request({ modId: selected.id, optionId: option.id, on })}
+                          />
+                        </li>
+                      )
+                    }
+                    // A group is drawn once, where its first option stands, with all of them.
+                    if (all.findIndex((o) => o.group === option.group) !== index) return null
+                    const group = selected.optionGroups?.find((g) => g.id === option.group)
+                    const members = all.filter((o) => o.group === option.group)
+                    return (
+                      <li key={`group-${option.group}`} className="vu-mods-option vu-mods-group">
+                        <span className="vu-mods-option-text">
+                          <span className="vu-mods-option-label">{group?.label ?? option.group}</span>
+                          {group?.hint && <span className="vu-mods-option-hint">{group.hint}</span>}
+                        </span>
+                        <ul className="vu-mods-group-list">
+                          {members.map((member) => (
+                            <li key={member.id} className="vu-mods-group-row">
+                              <span className="vu-mods-group-label">{member.label}</span>
+                              <Switch
+                                id={`mods-option-${selected.id}-${member.id}`}
+                                label={member.label}
+                                on={optionOn(switches, selected.id, member.id)}
+                                onChange={(on) =>
+                                  request({ modId: selected.id, optionId: member.id, on })
+                                }
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    )
+                  })}
                 </ul>
               ) : (
                 <p className="vu-mods-option-hint">This mod has no options.</p>
