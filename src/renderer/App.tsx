@@ -1,6 +1,7 @@
 import { useEffect, useState, type JSX } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { writerReady } from '@shared/settingsRules'
+import './mods'
 import { Crossing } from './components/Crossing'
 import { Cursor } from './components/Cursor'
 import { ModalHost } from './components/ModalHost'

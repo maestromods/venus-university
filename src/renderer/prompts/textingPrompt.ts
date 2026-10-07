@@ -38,6 +38,7 @@ import {
   whereaboutsLine,
   type NpcCompanions
 } from './npcRelationship'
+import { dmHistoryNotes, promptFields, promptLines, promptRequired } from '../mods/hooks'
 import { relationshipLines } from './relationship'
 import { weatherLines } from './weather'
 
@@ -123,7 +124,7 @@ function flatText(text: string): string {
 function messageStub(message: ChatMessage, firstName: string): string {
   if (message.sender === 'player') return `YOU: ${flatText(message.text)}`
   if (message.sender === 'system') return `SYSTEM: ${flatText(message.text)}`
-  return `${firstName.toUpperCase()}: ${flatText(message.text)}`
+  return `${firstName.toUpperCase()}: ${flatText(message.text)}${flatText(dmHistoryNotes(message))}`
 }
 
 /**
@@ -380,6 +381,7 @@ export function buildTextingPrompt(
     'Stay in her voice and keep it text-length: this is a phone thread, not prose.',
     ...meetUpLines(name, state.charLocation, state.charHaunt, state.time, away),
     '',
+    ...promptLines('dm', { character, info, state }),
     'BLOCKING',
     `Set "blocked" to true only if these texts have pushed ${name} to cut the reader off completely. She is done, and blocks him on Bunnyboard as her last text lands.`,
     'Her final messages should read like somebody who is about to do that.',
@@ -411,10 +413,11 @@ function textingSchema(): {
   name: string
   schema: Record<string, unknown>
 } {
-  return objectSchema('texting', ['messages', 'summary', 'blocked'], {
+  return objectSchema('texting', ['messages', 'summary', 'blocked', ...promptRequired('dm')], {
     messages: { type: 'array', items: { type: 'string' } },
     summary: { type: 'string' },
     // Required: an optional boolean drifts into never being considered.
-    blocked: { type: 'boolean' }
+    blocked: { type: 'boolean' },
+    ...promptFields('dm')
   })
 }

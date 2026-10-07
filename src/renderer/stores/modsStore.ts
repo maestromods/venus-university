@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   modOn,
+  MODS,
   NO_SWITCHES,
   optionOn,
   withMod,
@@ -8,6 +9,7 @@ import {
   type ModSwitches
 } from '@shared/mods'
 import type { PlaythroughRecord } from '@shared/types'
+import { setHookRules } from '../mods/hooks'
 import { useUiStore } from './uiStore'
 
 interface ModsStoreState {
@@ -59,6 +61,12 @@ export const useModsStore = create<ModsStoreState>((set, get) => {
     setOption: (modId, optionId, on) =>
       change((switches) => withOption(switches, modId, optionId, on))
   }
+})
+
+// The game's hooks ask only the mods that are on, in the order the list names them.
+setHookRules({
+  isOn: (modId) => modOn(useModsStore.getState().switches, modId),
+  order: (modId) => MODS.findIndex((mod) => mod.id === modId)
 })
 
 /** Whether a mod is on, for code outside a component; see `modOn` for what a record changes. */
