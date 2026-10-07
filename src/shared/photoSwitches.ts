@@ -128,9 +128,16 @@ export const PHOTO_FEATURE_MOD = {
     ...PHOTO_LOADERS.map((loader) => ({
       id: loaderOptionId(loader.value),
       label: loader.label,
-      hint: 'The animation shown while a photo is being made.',
+      hint: '',
       default: loader.value === 'bunny',
       group: 'loader'
     }))
+  ],
+  optionGroups: [
+    {
+      id: 'loader',
+      label: 'Loading animation',
+      hint: 'The animation shown while a photo is being made.'
+    }
   ]
 }

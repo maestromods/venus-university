@@ -268,6 +268,35 @@
   font: 500 13px var(--font-body);
 }
 
+/* A group of options of which one is on: its label and hint once, then a row for each. */
+.vu-mods-group {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 8px 2px 6px 14px;
+}
+
+.vu-mods-group-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vu-mods-group-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 0 2px 12px;
+}
+
+.vu-mods-group-label {
+  flex: 1;
+  color: var(--vu-text);
+  font: 600 14px var(--font-body);
+}
+
 /* What the two words on every row mean, once, under the list. */
 .vu-mods-legend {
   color: var(--vu-text-muted);

@@ -32,9 +32,17 @@ export interface ModOption {
   default: boolean
   /**
    * Options of one mod that share a group are one choice: one of them is on at a time. Turning
-   * one on turns the others off, and the one that is on stays on until another is picked.
+   * one on turns the others off, and the one that is on stays on until another is picked. The
+   * Mods screen shows them together, under the group's own label and hint.
    */
   group?: string
+}
+
+/** What a group of options is, shown once above them. */
+export interface ModOptionGroup {
+  id: string
+  label: string
+  hint: string
 }
 
 export interface ModDef {
@@ -53,6 +61,8 @@ export interface ModDef {
   /** Mods this one cannot act without, by id. */
   requires?: readonly string[]
   options?: readonly ModOption[]
+  /** The groups its options name, by id. */
+  optionGroups?: readonly ModOptionGroup[]
 }
 
 export const CONTINUING_SEMESTERS = 'continuing-semesters'
