@@ -60,6 +60,8 @@ import {
 } from '../stores/crossingStore'
 import { slotStampOf } from '../stores/slotCrossing'
 import { lockedIdsOf, spriteUrl, useCharacterStore, visibleOrderOf } from '../stores/characterStore'
+import { playthroughMods } from '@shared/mods'
+import { useModsStore } from '../stores/modsStore'
 import { useSaveStore } from '../stores/saveStore'
 import { useUiStore } from '../stores/uiStore'
 import { CharacterHeightModal } from './CharacterHeightModal'
@@ -686,8 +688,11 @@ export function NewGameView(): JSX.Element {
       })
     )
 
+    const startingMods = playthroughMods(useModsStore.getState().switches)
     const written = await useSaveStore.getState().createPlaythrough(
       {
+        // The per-playthrough mods this one starts with; none in a build that has none.
+        ...(startingMods.length > 0 ? { mods: startingMods } : {}),
         chars: roster.map((c) => c.charId),
         playerFirstName: playerName.first,
         playerLastName: playerName.last,

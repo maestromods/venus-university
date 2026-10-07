@@ -167,6 +167,11 @@ export function getGrabBagsPath(): string {
   return join(getDataPath(), 'grabbags.json')
 }
 
+/** `/data/mods.json` — the community mods' switches and options. */
+export function getModsPath(): string {
+  return join(getDataPath(), 'mods.json')
+}
+
 /** `/data/saves` — one folder per playthrough. */
 export function getSavesPath(): string {
   return join(getDataPath(), 'saves')

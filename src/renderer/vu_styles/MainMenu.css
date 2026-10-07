@@ -174,3 +174,12 @@
     height: 16px;
   }
 }
+
+/* The build's own line, under the version and a size smaller: it says what this build is in the
+   version line's voice, lower case included, and sits closer to it than the footer's gap. */
+.vu-menu-mod {
+  margin-top: -3px;
+  color: var(--vu-text-muted);
+  font: 700 12px var(--font-mono);
+  text-transform: lowercase;
+}

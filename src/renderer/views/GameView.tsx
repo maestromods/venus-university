@@ -146,6 +146,7 @@ import { ClassScheduleModal } from './ClassScheduleModal'
 import { EditPromptModal } from './EditPromptModal'
 import { FeedbackModal } from './FeedbackModal'
 import { GameMenuModal } from './GameMenuModal'
+import { ModsModal } from './ModsModal'
 import { LoadGameModal } from './LoadGameModal'
 import { MilestoneModal } from './MilestoneModal'
 import { RankUpModal } from './RankUpModal'
@@ -227,6 +228,7 @@ type OpenPanel =
   | { kind: 'loadGame' }
   | { kind: 'appSettings' }
   | { kind: 'controls' }
+  | { kind: 'mods' }
   | { kind: 'feedback' }
   | { kind: 'leaving' }
   | { kind: 'quitting' }
@@ -2372,6 +2374,8 @@ export function GameView(): JSX.Element {
             onLoadGame={() => setPanel({ kind: 'loadGame' })}
             onFeedback={() => setPanel({ kind: 'feedback' })}
             onSettings={() => setPanel({ kind: 'appSettings' })}
+            onMods={() => setPanel({ kind: 'mods' })}
+            modsWaiting={busy}
             onControls={() => setPanel({ kind: 'controls' })}
             onLeave={() => setPanel({ kind: 'leaving' })}
             // The browser has no window of its own to close, so it is offered no way out.
@@ -2392,6 +2396,12 @@ export function GameView(): JSX.Element {
             cannot reach the line behind it. */}
         {panel?.kind === 'appSettings' && (
           <AppSettingsModal key="app-settings" theme={half} onClose={closePanel} />
+        )}
+
+        {/* The community mods' switches, the same modal the Main Menu opens, as an arm of
+            `OpenPanel` for the reason Settings is. */}
+        {panel?.kind === 'mods' && (
+          <ModsModal key="mods" theme={half} onClose={closePanel} inGame />
         )}
 
         {/* The key list the menu opens, an arm of `OpenPanel` for the reason Settings is. */}

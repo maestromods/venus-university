@@ -13,6 +13,7 @@ import { NewGameView } from './views/NewGameView'
 import { SetupView } from './views/SetupView'
 import { AppSettingsModal } from './views/AppSettingsModal'
 import { CreditsModal } from './views/CreditsModal'
+import { ModsModal } from './views/ModsModal'
 import { DownloadModal } from './views/DownloadModal'
 import { FeedbackModal } from './views/FeedbackModal'
 import { LoadGameModal } from './views/LoadGameModal'
@@ -27,6 +28,7 @@ import { cancelCrossing, endCrossing } from './stores/crossingStore'
 import { useGameStore } from './stores/gameStore'
 import { useGrabBagStore } from './stores/grabBagStore'
 import { useSaveStore } from './stores/saveStore'
+import { useModsStore } from './stores/modsStore'
 import { useSettingsStore } from './stores/settingsStore'
 import { useSetupStore } from './stores/setupStore'
 import { useUiStore, type ViewName } from './stores/uiStore'
@@ -73,6 +75,9 @@ async function boot(): Promise<void> {
 
   // Non-fatal: a failed read leaves the grab bags running in memory for the session.
   await useGrabBagStore.getState().load()
+
+  // Non-fatal too: with no switches read, every community mod runs at its default.
+  await useModsStore.getState().load()
 
   // The graph opens as soon as the sliders it mixes against are in.
   useAudioStore.getState().start()
@@ -186,6 +191,7 @@ function AppModals(): JSX.Element {
       <AnimatePresence propagate>
         {modals.includes('settings') && <AppSettingsModal key="settings" theme={theme} />}
         {modals.includes('credits') && <CreditsModal key="credits" theme={theme} />}
+        {modals.includes('mods') && <ModsModal key="mods" theme={theme} />}
         {modals.includes('feedback') && <FeedbackModal key="feedback" theme={theme} />}
         {modals.includes('support') && <SupportModal key="support" theme={theme} />}
         {modals.includes('loadGame') && <LoadGameModal key="load-game" theme={theme} />}

@@ -11,6 +11,7 @@ import {
   type SaveDialogReturnValue
 } from 'electron'
 import { randomUUID } from 'crypto'
+import type { ModSwitches } from '@shared/mods'
 import type {
   AppError,
   Character,
@@ -159,6 +160,7 @@ import {
 import { generateRoomImage, writeRoomUpload } from './services/roomService'
 import { applySettingsPatch, getRendererSettings, getSettings } from './services/settingsService'
 import { getGrabBags, setGrabBags } from './services/grabBagService'
+import { getModSwitches, setModSwitches } from './services/modsService'
 import {
   getModelFolder,
   getSetupStatus,
@@ -274,6 +276,8 @@ export function registerIpcHandlers(): void {
   // The grab bags' set-aside keys, read once at boot and written behind every draw.
   handle('grabBags:get', () => getGrabBags())
   handle('grabBags:set', (_event, bags: GrabBags) => setGrabBags(bags))
+  handle('mods:get', () => getModSwitches())
+  handle('mods:set', (_event, switches: ModSwitches) => setModSwitches(switches))
   // The caller has already saved; main writes nothing on its way out.
   handle('app:quit', () => {
     app.quit()

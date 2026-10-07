@@ -1,0 +1,299 @@
+/* The Mods modal: the community mods in this build, a switch apiece, and the selected one's own
+   options beside the list. Derived from the shape grammar and from the panels already built.
+   Imported from the view module, never from index.css.
+
+   The veil, the sheet, the buttons, the rule and the foot are base.css's. */
+
+.vu-mods-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.vu-mods-build {
+  margin: 0;
+  color: var(--vu-accent);
+  font: 400 30px var(--font-display);
+}
+
+/* The bookkeeping voice: whose build this is under the name, and who wrote a mod under its own. */
+.vu-mods-about {
+  margin: 4px 0 0;
+  color: var(--vu-text-muted);
+  font: 700 12px var(--font-mono);
+}
+
+.vu-mods-count {
+  flex: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--vu-accent);
+  color: var(--vu-accent-ink);
+  font: 700 13px var(--font-mono);
+}
+
+/* The list and the selected mod's pane, side by side; each scrolls on its own. */
+.vu-mods-panes {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 22px;
+  min-height: 0;
+}
+
+.vu-mods-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0 6px 0 0;
+  overflow: hidden auto;
+  list-style: none;
+}
+
+.vu-mods-row {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding-right: 4px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: var(--vu-recessed);
+}
+
+.vu-mods-row[data-selected='true'] {
+  border-color: var(--vu-accent);
+  background: var(--vu-tint);
+}
+
+/* The half of a row that selects it: the mod's name over who wrote it. */
+.vu-mods-pick {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  min-height: 52px;
+  justify-content: center;
+  padding: 6px 10px 6px 16px;
+  border: 0;
+  background: none;
+  color: var(--vu-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.vu-mods-name {
+  font: 700 16px var(--font-body);
+}
+
+.vu-mods-meta {
+  color: var(--vu-text-muted);
+  font: 700 11px var(--font-mono);
+}
+
+/* On, off, or what it is waiting for. The word carries it; the colour only agrees. */
+.vu-mods-standing {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--vu-surface);
+  color: var(--vu-text-muted);
+  font: 700 11px var(--font-mono);
+  white-space: nowrap;
+}
+
+.vu-mods-standing[data-kind='on'] {
+  color: var(--vu-accent);
+}
+
+.vu-mods-standing[data-kind='needs'] {
+  background: var(--vu-warn-tint);
+  color: var(--vu-text);
+}
+
+/* The switch is a whole 44px target around a smaller track. */
+.vu-mods-switch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.vu-mods-switch:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.vu-mods-switch-track {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  border-radius: 13px;
+  background: var(--vu-text-muted);
+  transition: background 0.15s ease;
+}
+
+.vu-mods-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--vu-surface);
+  transition: left 0.15s ease;
+}
+
+.vu-mods-switch[aria-checked='true'] .vu-mods-switch-track {
+  background: var(--vu-accent);
+}
+
+.vu-mods-switch[aria-checked='true'] .vu-mods-switch-knob {
+  left: 23px;
+}
+
+.vu-mods-switch:focus-visible .vu-mods-switch-track,
+.vu-mods-pick:focus-visible {
+  outline: 3px solid var(--vu-highlight);
+  outline-offset: 2px;
+}
+
+.vu-mods-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  padding: 20px 22px;
+  border-radius: 18px;
+  background: var(--vu-recessed);
+  overflow: hidden auto;
+}
+
+.vu-mods-detail-name {
+  margin: 0;
+  color: var(--vu-text);
+  font: 400 26px var(--font-display);
+}
+
+.vu-mods-blurb {
+  margin: 0;
+  color: var(--vu-text-body);
+  font: 500 15px var(--font-body);
+  line-height: 1.5;
+}
+
+.vu-mods-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.vu-mods-tag {
+  padding: 4px 12px;
+  border: 1px solid var(--vu-border);
+  border-radius: 999px;
+  background: var(--vu-surface);
+  color: var(--vu-text);
+  font: 700 11px var(--font-mono);
+}
+
+.vu-mods-note {
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--vu-surface);
+  color: var(--vu-text-body);
+  font: 500 14px var(--font-body);
+  line-height: 1.45;
+}
+
+.vu-mods-note[data-kind='needs'] {
+  background: var(--vu-warn-tint);
+  color: var(--vu-text);
+}
+
+.vu-mods-label {
+  margin: 0;
+  color: var(--vu-text-muted);
+  font: 700 11px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vu-mods-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.vu-mods-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 2px 6px 14px;
+  border-radius: 12px;
+  background: var(--vu-surface);
+}
+
+.vu-mods-option-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.vu-mods-option-label {
+  color: var(--vu-text);
+  font: 700 15px var(--font-body);
+}
+
+.vu-mods-option-hint {
+  margin: 0;
+  color: var(--vu-text-muted);
+  font: 500 13px var(--font-body);
+}
+
+/* What the two words on every row mean, once, under the list. */
+.vu-mods-legend {
+  color: var(--vu-text-muted);
+  font: 500 13px var(--font-body);
+}
+
+.vu-mods-legend p {
+  margin: 2px 0;
+}
+
+.vu-mods-legend b {
+  color: var(--vu-text);
+  font: 700 12px var(--font-mono);
+}
+
+/* The Main Menu's count of the mods that are on, riding its Mods button. */
+.vu-menu-mods-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: var(--vu-accent);
+  color: var(--vu-accent-ink);
+  font: 700 12px var(--font-mono);
+}

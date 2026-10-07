@@ -20,6 +20,10 @@ const api: VenusUniversityApi = {
     get: () => ipcRenderer.invoke('grabBags:get'),
     set: (bags) => ipcRenderer.invoke('grabBags:set', bags)
   },
+  mods: {
+    get: () => ipcRenderer.invoke('mods:get'),
+    set: (switches) => ipcRenderer.invoke('mods:set', switches)
+  },
   app: {
     quit: () => ipcRenderer.invoke('app:quit')
   },

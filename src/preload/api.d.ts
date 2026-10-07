@@ -5,6 +5,7 @@ import type {
   CustomBackgroundListing
 } from '@shared/customBackgrounds'
 import type { PromptEdit } from '@shared/imagePrompt'
+import type { ModSwitches } from '@shared/mods'
 import type {
   PhotoEntry,
   PhotoMeta,
@@ -93,6 +94,12 @@ export interface VenusUniversityApi {
     get: () => Promise<Result<GrabBags>>
     /** Replaces every grab bag's set-aside keys. */
     set: (bags: GrabBags) => Promise<Result<void>>
+  }
+  mods: {
+    /** Which community mods are switched on, and their options (`shared/mods.ts`). */
+    get: () => Promise<Result<ModSwitches>>
+    /** Replaces every switch and option. */
+    set: (switches: ModSwitches) => Promise<Result<void>>
   }
   app: {
     /** Ends the app; main writes nothing, the caller has already saved. */

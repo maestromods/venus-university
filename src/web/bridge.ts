@@ -61,6 +61,7 @@ import * as chars from './chars'
 import * as photos from './db/photos'
 import * as saves from './db/saves'
 import { readGrabBags, writeGrabBags } from './db/grabbags'
+import { readModSwitches, writeModSwitches } from './mods'
 import { getPoseManifest, getQuickstart, readAudio } from './assets'
 import { offerDownload } from './download'
 import { emitter } from './emitter'
@@ -139,6 +140,10 @@ export function buildApi(): VenusUniversityApi {
     grabBags: {
       get: () => result('read the grab bags', readGrabBags),
       set: (bags) => result('save the grab bags', () => writeGrabBags(bags))
+    },
+    mods: {
+      get: () => result('read the mod switches', readModSwitches),
+      set: (switches) => result('save the mod switches', () => writeModSwitches(switches))
     },
     app: {
       // There is no window to close: the page is somebody else's tab.

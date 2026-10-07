@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { toAppError } from '@shared/errors'
+import { buildLine, modsOn } from '@shared/mods'
 import { writerReady } from '@shared/settingsRules'
 import { shuffle } from '@shared/shuffle'
 import type { Result } from '@shared/types'
@@ -23,6 +24,7 @@ import {
   type LoadedSave,
   type ResolvedEnrollment
 } from '../stores/saveStore'
+import { useModsStore } from '../stores/modsStore'
 import { useSettingsStore } from '../stores/settingsStore'
 import { useSetupStore } from '../stores/setupStore'
 import { useUiStore } from '../stores/uiStore'
@@ -101,6 +103,9 @@ export function MainMenu(): JSX.Element {
   )
 
   const crossing = useCrossingStore((s) => s.phase !== 'idle')
+
+  // The community mods' switches: how many are on rides the Mods button and the footer's line.
+  const modSwitches = useModsStore((s) => s.switches)
 
   const photoJobsRunning = usePhotoStore((s) => s.jobs.length > 0)
   const [quitConfirm, setQuitConfirm] = useState(false)
@@ -427,6 +432,17 @@ export function MainMenu(): JSX.Element {
           >
             Settings
           </motion.button>
+          {/* The community mods in this build, and how many of them are on. */}
+          <motion.button
+            id="menu-mods"
+            className="vu-btn vu-btn--quiet"
+            variants={dealtItem}
+            {...gestures(false, quietLift, quietPress)}
+            onClick={() => openModal('mods')}
+          >
+            Mods
+            <span className="vu-menu-mods-count">{modsOn(modSwitches).length}</span>
+          </motion.button>
           {/* Ungated and last. */}
           <motion.button
             id="menu-credits"
@@ -469,6 +485,8 @@ export function MainMenu(): JSX.Element {
             </button>
           )}
           <span className="vu-menu-version">{versionLine(__APP_VERSION__)}</span>
+          {/* Under the version, so a screenshot of the menu says whose build this is. */}
+          <span className="vu-menu-mod">{buildLine(modSwitches)}</span>
         </motion.div>
       </motion.aside>
 
