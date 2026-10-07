@@ -157,6 +157,8 @@ The independent [Meanwhile conversations port](docs/mods/meanwhile-conversations
 documents its menu, replay storage, generation boundary, and future memory integration.
 The standalone [Breakthrough port](docs/mods/breakthrough.md) documents its rules, save
 ownership, loop hooks, failure recovery, and future memory-index integration.
+The independent [Story Memory source mod](docs/mods/story-memory.md) documents its SQLite
+index, optional save data, editor, prompt budgets and integration with the other source ports.
 
 - The build's name and version (`BUILD` in `mods.ts`).
 - Whether `data/mods.json` goes into the game's own backup; it does not today.

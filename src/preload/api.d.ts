@@ -1,4 +1,5 @@
 import type { MeanwhileResponse } from '../shared/meanwhile'
+import type { StoryRecallRequest, StoryRecall } from '@shared/storyMemory'
 import type { ClassifierPromptRequest, ClassifierVerdict } from '@shared/classifier'
 import type {
   BgVariant,
@@ -73,6 +74,7 @@ export interface VenusUniversityApi {
   /** Which build the renderer is running in; the one thing on here that is not a call. */
   platform: 'desktop' | 'web'
   soundtracks: SoundtracksApi
+  storyMemory: { inspect: (payload: StoryRecallRequest) => Promise<Result<StoryRecall>> }
   assets: {
     /** Poses that have both a manifest entry and a skeleton PNG. */
     getPoseManifest: () => Promise<Result<PoseManifest>>

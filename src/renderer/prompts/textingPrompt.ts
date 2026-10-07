@@ -1,5 +1,6 @@
 import type { BreakthroughState } from '@shared/breakthrough'
 import { breakthroughContinuity } from './breakthroughPrompt'
+import { recallPayload, type StorySnapshot } from '@shared/storyMemory'
 import { affectionFor, dedupedMemoriesFor, emptyFlags } from '@shared/relationship'
 import { ROOM_LOCATION } from '@shared/locations'
 import type { NpcRelationshipMap } from '@shared/npcRelationships'
@@ -76,6 +77,7 @@ export interface TextingPromptState {
   historyLimit?: number
   /** Supplied only while the standalone Breakthrough mod is enabled. */
   breakthrough?: BreakthroughState
+  storyMemory?: StorySnapshot
   date: number
   time: TimeSlot
   /** The reader's accumulated stats, used for relationship requirement guidance. */
@@ -408,6 +410,7 @@ export function buildTextingPrompt(
   ].join('\n')
 
   return {
+    ...recallPayload(state.storyMemory, [character.charId], newMessage),
     system: TEXTING_PERSONA,
     user,
     schema: textingSchema(),

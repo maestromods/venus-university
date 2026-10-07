@@ -4,6 +4,7 @@ import { activePlotTwist, PLOT_TWIST_MOD } from '@shared/plotTwists'
 import { modIsOn } from '../modsStore'
 import { cityLifeBackgrounds } from '@shared/cityLife'
 import { BREAKTHROUGH_MOD } from '@shared/breakthrough'
+import { currentStorySnapshot } from '../storyMemory'
 import { globalSlotOf, slotFromId } from '@shared/jobs'
 import type { PlayerStats } from '@shared/playerStats'
 import { POSITIONS } from '@shared/positions'
@@ -341,6 +342,7 @@ export function promptState(): PromptState {
     : null
 
   return {
+    storyMemory: currentStorySnapshot(),
     playthroughId: game.playthroughId ?? 'unsaved',
     exPlotTwist: activePlotTwist(game.exPlotTwist, modIsOn(PLOT_TWIST_MOD)),
     breakthrough: modIsOn(BREAKTHROUGH_MOD) ? game.exBreakthrough : undefined,

@@ -120,7 +120,13 @@ export const MODS: readonly ModDef[] = [
     blurb: 'Build spirit with each character and spend a full bar for a strong, grounded narrative opportunity.',
     offNote: 'Keeps saved spirit and outcomes. Stops earning, activation, and extra continuity prompts.'
   },
-  SOUNDTRACK_DEF
+  SOUNDTRACK_DEF,
+  {
+    id: 'story-memory', name: 'Story Memory', author: 'maestromods', version: '1.0.0',
+    scope: 'anytime', defaultOn: true,
+    blurb: 'Remember lasting story developments and find relevant past encounters with a local SQLite index.',
+    offNote: 'Keeps facts and corrections in saves. Stops extraction and extra recall. Native character notes stay available.'
+  }
 ]
 
 /**

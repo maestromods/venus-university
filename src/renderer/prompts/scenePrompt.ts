@@ -1,4 +1,6 @@
 import { breakthroughContinuity } from './breakthroughPrompt'
+import { recallPayload, type StorySnapshot } from '@shared/storyMemory'
+import { withStoryExtraction } from './storyMemoryPrompt'
 import { SUBJECT_TAGS } from '@shared/characterRules'
 import { plotTwistBlock } from './plotTwist'
 import { slotFullLabel, yearLabel } from '@shared/classes'
@@ -150,6 +152,7 @@ export interface PromptState {
   exPlotTwist?: string
   /** Supplied only while the independent Breakthrough mod is enabled. */
   breakthrough?: import('@shared/breakthrough').BreakthroughState
+  storyMemory?: StorySnapshot
   /** The cloud-LLM cache key: the playthrough id, never the save's. */
   playthroughId: string
   date: number
@@ -1291,6 +1294,7 @@ function castScenePrompt(
   )
 
   return {
+    ...recallPayload(state.storyMemory, cast.map(c => c.charId), scan),
     system: systemPrompt(cast, state, setting),
     user: [
       ...whoBlock(cast, state, reader),
@@ -1459,6 +1463,7 @@ export function buildSoloPrompt(
       setting
     ].join('\n'),
     user,
+    ...recallPayload(state.storyMemory, [], action),
     // No `end_scene`: the scene is over by construction.
     schema: sceneSchema(state.backgrounds, [], state, true, false),
     // Constant, like the ledger's: nothing above the seam varies by save.
@@ -1837,7 +1842,7 @@ export function buildLedgerPrompt(
     ''
   ].join('\n')
 
-  return {
+  return withStoryExtraction({
     system: ledgerPersonaFor(state.lessNsfwText),
     user: `${preamble}\n${rest}`,
     schema: ledgerSchema(charKeys, rosterKeys, classScene, castStats),
@@ -1846,5 +1851,5 @@ export function buildLedgerPrompt(
     logFrom: preamble.length + 1,
     // The bookkeeping is judged better at high, whatever the setting says.
     minThinking: 'high'
-  }
+  }, state.storyMemory, charKeys)
 }

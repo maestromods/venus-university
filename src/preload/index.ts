@@ -18,6 +18,7 @@ const api: VenusUniversityApi = {
     read: key => ipcRenderer.invoke('soundtracks:read', key),
     cleanup: () => ipcRenderer.invoke('soundtracks:cleanup')
   },
+  storyMemory: { inspect: (payload) => ipcRenderer.invoke('storyMemory:inspect', payload) },
   assets: {
     getPoseManifest: () => ipcRenderer.invoke('assets:getPoseManifest'),
     getQuickstart: () => ipcRenderer.invoke('assets:getQuickstart'),

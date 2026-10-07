@@ -5,6 +5,7 @@ import {
   POST_PHOTO_SCHEMA_REQUIRED
 } from './photoBrief'
 import { canSendPhotos } from '../stores/localPhotoStore'
+import { recallPayload, type StorySnapshot } from '@shared/storyMemory'
 import { affectionFor, dedupedMemoriesFor, emptyFlags } from '@shared/relationship'
 import { DEFAULT_PLAYER_STATS, type PlayerStats } from '@shared/playerStats'
 import {
@@ -91,6 +92,7 @@ export interface IntroPoster {
 
 /** Everything the builder reads; assembled by the loop, which owns the store. */
 export interface SlotIntroInput {
+  storyMemory?: StorySnapshot
   /** The cloud-LLM cache key — the playthrough, exactly as the scene calls use it. */
   playthroughId: string
   /** Today, for weighting the askers' memories. */
@@ -492,6 +494,7 @@ export function buildSlotIntroPrompt(
       reader
     ].join('\n'),
     user,
+    ...recallPayload(input.storyMemory, [], input.recent.join(" ")),
     schema: SCHEMA,
     cacheKey: input.playthroughId,
     kind: 'slotIntro'

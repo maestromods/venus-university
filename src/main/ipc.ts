@@ -1,4 +1,6 @@
 import type { MeanwhileResponse } from '@shared/meanwhile'
+import { prepareStoryRequest, inspectStoryMemory } from './services/storyMemoryService'
+import type { StoryRecallRequest } from '@shared/storyMemory'
 import {
   app,
   BrowserWindow,
@@ -125,7 +127,7 @@ import {
 } from './services/comfyService'
 import { classifyCloud } from '@shared/llm/cloudClassifier'
 import { generatePhoto } from '@shared/llm/cloudImage'
-import { completeStructured, type StructuredRequest } from '@shared/llm/cloudLlm'
+import { completeStructured as completeCloudStructured, type StructuredRequest } from '@shared/llm/cloudLlm'
 import {
   listImageModels,
   listModels,
@@ -285,6 +287,7 @@ export function registerIpcHandlers(): void {
   // The grab bags' set-aside keys, read once at boot and written behind every draw.
   handle('grabBags:get', () => getGrabBags())
   handle('grabBags:set', (_event, bags: GrabBags) => setGrabBags(bags))
+  handle('storyMemory:inspect', (_event, payload: StoryRecallRequest) => inspectStoryMemory(payload))
   handle('mods:get', () => getModSwitches())
   handle('mods:set', (_event, switches: ModSwitches) => setModSwitches(switches))
   // The caller has already saved; main writes nothing on its way out.
@@ -867,4 +870,8 @@ export function registerIpcHandlers(): void {
 async function openFolder(path: string, message: string): Promise<void> {
   const failure = await shell.openPath(path)
   if (failure !== '') throw appError('OPEN_FOLDER_FAILED', message, failure)
+}
+
+async function completeStructured<T>(request: StructuredRequest, ...args: Parameters<typeof completeCloudStructured<T>> extends [unknown, ...infer R] ? R : never): Promise<T> {
+  return completeCloudStructured<T>(await prepareStoryRequest(request), ...args)
 }

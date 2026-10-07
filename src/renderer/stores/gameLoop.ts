@@ -2,6 +2,9 @@ import { GAME_OVER_SCENES, gameOverReasonOf, gameOverSceneOf } from '@shared/gam
 import { affectionFor } from '@shared/relationship'
 import { readerGraduatesNow } from '@shared/term'
 import { finishBreakthrough, rearmBreakthrough, settleSpirit, withBreakthrough } from './breakthrough'
+import { acceptStoryFacts } from '@shared/storyMemory'
+import { currentStorySnapshot } from './storyMemory'
+import { modIsOn } from './modsStore'
 import { earnLine, spendLine, spentOf } from '@shared/money'
 import {
   globalSlotOf,
@@ -829,6 +832,7 @@ async function fetchSlotIntro(
   // Built once and re-sent verbatim on retry; only a hand edit replaces it.
   let request = buildSlotIntroPrompt(
     {
+      storyMemory: currentStorySnapshot(),
       playthroughId: game.playthroughId ?? 'unsaved',
       date,
       time,
@@ -2567,6 +2571,15 @@ async function crossSlotBoundary(): Promise<void> {
   // Before the clock moves, so each text is stamped with the slot the scene ran in, and before
   // the boundary save, which records them.
   settleSpirit(game)
+  if (modIsOn('story-memory')) {
+    const live = useGameStore.getState()
+    useGameStore.setState({ exStoryMemory: acceptStoryFacts(live.exStoryMemory, ledger?.exStoryFacts, {
+      date: game.date, time: game.time,
+      cast: [...new Set([...game.cast, ...(loopState.closingCast ?? []).map(c => c.charId)])],
+      charKeyToId: game.charKeyToId,
+      transcript: [...live.sceneLog, ...live.pendingLines, ...live.currentSceneTranscript]
+    }) })
+  }
   for (const send of owedTexts) send()
 
   useGameStore.getState().advanceSlot()

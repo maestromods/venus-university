@@ -3,6 +3,7 @@ import { PLOT_TWIST_MOD, validatePlotTwist } from '@shared/plotTwists'
 import type { Conversation } from '@shared/types'
 import { withMeanwhile, type MeanwhileScene } from '@shared/meanwhile'
 import { reconcileBreakthrough } from '@shared/breakthrough'
+import { normalizeStoryMemory, type StoryMemory } from '@shared/storyMemory'
 import { gameOverReasonOf, type GameOverReason } from '@shared/gameOver'
 import { isGameOver, spentOf } from '@shared/money'
 import {
@@ -484,4 +485,28 @@ export async function persistMeanwhileScene(scene: MeanwhileScene, isCurrent: ()
     completed = true
   })
   if (!completed) throw Error('The game changed. Reopen Meanwhile to view saved conversations.')
+}
+
+/** The edit joins the game's write lane; disk succeeds before visible state is changed. */
+export async function writeStoryMemory(next: StoryMemory, expected: { playthroughId: string; loads: number; previous: StoryMemory }): Promise<void> {
+  const game = useGameStore.getState()
+  const fresh = (): boolean => {
+    const live = useGameStore.getState()
+    return live.playthroughId === expected.playthroughId && live.loads === expected.loads && live.exStoryMemory === expected.previous && modIsOn('story-memory')
+  }
+  if (!fresh() || manualSaveOffer() !== 'open' || game.sceneEnding) throw Error('Wait until narration and messages have finished before editing memory.')
+  const draft = manualSaveDraft() ?? { ...game.toGameSave(), scene: null }
+  const memory = normalizeStoryMemory(next)
+  let written = false
+  manualWriting = true
+  try {
+    await queueWrite(async () => {
+      if (!fresh()) return
+      const result = await window.api.saves.autosave(expected.playthroughId, { ...draft, exStoryMemory: memory })
+      if (!result.ok) throw Error(result.error.message)
+      written = true
+      if (fresh()) useGameStore.setState({ exStoryMemory: memory })
+    })
+    if (!written) throw Error('The playthrough changed. Reopen Story Memory to edit this save.')
+  } finally { manualWriting = false }
 }
