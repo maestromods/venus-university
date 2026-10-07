@@ -3,6 +3,7 @@ import { PHOTO_LOADERS, photoLoaderOf } from './photoLoader'
 import { loaderOptionId, PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSwitches'
 import type { PlaythroughRecord } from './types'
 import { PLAYTHROUGH_NAMES_MOD } from './playthroughNames'
+import { PLOT_TWIST_DEF } from './plotTwists'
 
 /**
  * The community mods built into this copy of the game, and the switches a player turns them on
@@ -87,7 +88,8 @@ export const MODS: readonly ModDef[] = [
     defaultOn: true,
     blurb: 'Give each saved playthrough a name from Load Game.',
     offNote: 'Names remain saved and travel with backups. Turn this on to display and edit them.'
-  }
+  },
+  PLOT_TWIST_DEF
 ]
 
 /**

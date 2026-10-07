@@ -32,6 +32,8 @@ export interface GameMenuModalProps {
   onSettings: () => void
   /** Opens the community mods' switches in the menu's place. Absent drops the entry. */
   onMods?: () => void
+  /** Absent when Plot Twist is off. Uses the native save gate, since edits are persisted. */
+  onPlotTwist?: () => void
   /** A reply is on its way: a rule is not changed under a turn already being written. */
   modsWaiting?: boolean
   /**
@@ -57,6 +59,7 @@ export function GameMenuModal({
   onFeedback,
   onSettings,
   onMods,
+  onPlotTwist,
   modsWaiting = false,
   onControls,
   onLeave,
@@ -137,6 +140,21 @@ export function GameMenuModal({
                 onClick={onMods}
               >
                 Mods
+              </motion.button>
+            </DeadNote>
+          )}
+          {onPlotTwist && (
+            <DeadNote note={saveOffer !== 'open' ? 'Wait for a safe save point' : null} align="center">
+              <motion.button
+                id="game-menu-plot-twist"
+                className="vu-btn vu-btn--outline vu-paper"
+                type="button"
+                variants={saveOffer !== 'open' ? dealtItemDead : dealtItem}
+                {...gestures(saveOffer !== 'open', lift, press)}
+                disabled={saveOffer !== 'open'}
+                onClick={onPlotTwist}
+              >
+                Plot Twist
               </motion.button>
             </DeadNote>
           )}

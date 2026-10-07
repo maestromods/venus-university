@@ -152,6 +152,8 @@ import { EditPromptModal } from './EditPromptModal'
 import { FeedbackModal } from './FeedbackModal'
 import { GameMenuModal } from './GameMenuModal'
 import { ModsModal } from './ModsModal'
+import { PlotTwistModal } from './PlotTwistModal'
+import { PLOT_TWIST_MOD } from '@shared/plotTwists'
 import { LoadGameModal } from './LoadGameModal'
 import { MilestoneModal } from './MilestoneModal'
 import { RankUpModal } from './RankUpModal'
@@ -234,6 +236,7 @@ type OpenPanel =
   | { kind: 'appSettings' }
   | { kind: 'controls' }
   | { kind: 'mods' }
+  | { kind: 'plotTwist' }
   | { kind: 'feedback' }
   | { kind: 'leaving' }
   | { kind: 'quitting' }
@@ -518,6 +521,7 @@ function InterruptEndingModal({
 
 /** Game View: renders `gameStore`; `gameLoop.ts` owns state changes. */
 export function GameView(): JSX.Element {
+  const plotTwistOn = useModOn(PLOT_TWIST_MOD)
   const bg = useGameStore((s) => s.bg)
   const time = useGameStore((s) => s.time)
   const date = useGameStore((s) => s.date)
@@ -2418,6 +2422,7 @@ export function GameView(): JSX.Element {
             onFeedback={() => setPanel({ kind: 'feedback' })}
             onSettings={() => setPanel({ kind: 'appSettings' })}
             onMods={() => setPanel({ kind: 'mods' })}
+            onPlotTwist={plotTwistOn ? () => setPanel({ kind: 'plotTwist' }) : undefined}
             modsWaiting={busy}
             onControls={() => setPanel({ kind: 'controls' })}
             onLeave={() => setPanel({ kind: 'leaving' })}
@@ -2428,6 +2433,10 @@ export function GameView(): JSX.Element {
 
         {panel?.kind === 'saveGame' && (
           <SaveGameModal key="save-game" theme={half} onClose={closePanel} />
+        )}
+
+        {panel?.kind === 'plotTwist' && (
+          <PlotTwistModal key="plot-twist" theme={half} onClose={closePanel} />
         )}
 
         {panel?.kind === 'loadGame' && (

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { savedPlotTwist } from '@shared/plotTwists'
 import {
   affectionFor,
   emptyFlags,
@@ -207,6 +208,8 @@ interface GameStoreState {
    * Persisted; blank where he wrote nothing.
    */
   bio: string
+  /** Save-owned story direction; serialized even when its mod is switched off. */
+  exPlotTwist: string
   /**
    * Lifetime counts about the reader — money earned, kisses, nights, shifts worked, moved only
    * in boundary passes so a replay credits each of them once — and the output tokens the cloud
@@ -1244,6 +1247,7 @@ const initialState = {
   stats: DEFAULT_PLAYER_STATS,
   money: STARTING_MONEY,
   bio: '',
+  exPlotTwist: '',
   tallies: emptyTallies(),
   charInfo: {} as Record<string, CharInfo>,
   classes: {} as Record<string, ClassEntry>,
@@ -1363,6 +1367,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       // Both are younger than the save format, so a playthrough started before them loads blank,
       // and a save written before a tally loads that tally at zero.
       bio: save.bio ?? '',
+      exPlotTwist: savedPlotTwist(save.exPlotTwist),
       tallies: { ...emptyTallies(), ...save.tallies },
       // The two halves rejoined; a save entry with no profile falls back to the blank one,
       // which is what a charId the record never knew about would land on.
@@ -2615,6 +2620,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       stats: state.stats,
       money: state.money,
       bio: state.bio,
+      exPlotTwist: state.exPlotTwist,
       tallies: state.tallies,
       date: state.date,
       time: state.time,

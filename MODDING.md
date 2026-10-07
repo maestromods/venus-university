@@ -10,6 +10,9 @@ worked examples.
 This source port adds Playthrough renaming to the framework on Venus University 0.3.0.
 Its `anytime` switch controls display and editing of custom names; names stay in storage and
 backups while off. The storage service also enforces the switch before writing a new name.
+This source port adds Plot Twist to the framework on Venus University 0.3.0. Its `anytime`
+switch controls the game-menu editor and future scene requests. Saved text is retained while
+off. See [the Plot Twist integration notes](docs/mods/plot-twist.md) for the save and prompt hooks.
 
 ## The three things a mod does
 

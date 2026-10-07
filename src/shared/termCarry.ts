@@ -263,6 +263,9 @@ const _SAVE_FIELDS: Record<keyof SaveDraft, 'carried' | 'fresh'> = {
   stats: 'carried',
   money: 'carried',
   bio: 'carried',
+  // Maestro's mods keep their own save fields. A continued semester starts each of them fresh
+  // until its author says what should carry.
+  exPlotTwist: 'fresh',
   tallies: 'carried',
   date: 'fresh',
   time: 'fresh',

@@ -1,4 +1,5 @@
 import { SUBJECT_TAGS } from '@shared/characterRules'
+import { plotTwistBlock } from './plotTwist'
 import { slotFullLabel, yearLabel } from '@shared/classes'
 import { dormClause } from '@shared/dorms'
 import { EMOTIONS } from '@shared/emotions'
@@ -144,6 +145,8 @@ export interface ProjectSceneContext {
 
 /** Everything the builders read out of `gameStore`. */
 export interface PromptState {
+  /** Already gated by the mod switch when the request's state is captured. */
+  exPlotTwist?: string
   /** The cloud-LLM cache key: the playthrough id, never the save's. */
   playthroughId: string
   date: number
@@ -1288,6 +1291,7 @@ function castScenePrompt(
     system: systemPrompt(cast, state, setting),
     user: [
       ...whoBlock(cast, state, reader),
+      ...plotTwistBlock(state.exPlotTwist),
       ...nowBlock(cast, state),
       ...classBlock(state),
       ...lore,
@@ -1420,6 +1424,7 @@ export function buildSoloPrompt(
   const user = [
     // With no cast, `nowBlock` is the date and semester lines.
     ...nowBlock([], state),
+    ...plotTwistBlock(state.exPlotTwist),
     ...lore,
     'READER',
     reader,

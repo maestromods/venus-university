@@ -1,5 +1,7 @@
 import { slotFullLabel } from '@shared/classes'
 import { graduatesNow, readerGraduatesNow } from '@shared/term'
+import { activePlotTwist, PLOT_TWIST_MOD } from '@shared/plotTwists'
+import { modIsOn } from '../modsStore'
 import { globalSlotOf, slotFromId } from '@shared/jobs'
 import type { PlayerStats } from '@shared/playerStats'
 import { POSITIONS } from '@shared/positions'
@@ -338,6 +340,7 @@ export function promptState(): PromptState {
 
   return {
     playthroughId: game.playthroughId ?? 'unsaved',
+    exPlotTwist: activePlotTwist(game.exPlotTwist, modIsOn(PLOT_TWIST_MOD)),
     date: game.date,
     time: game.time,
     backgrounds: loopState.trip
