@@ -50,6 +50,7 @@ import type { ClassifierPromptRequest } from '@shared/classifier'
 import type { PromptEdit } from '@shared/imagePrompt'
 import type { RoomVariant } from '@shared/room'
 import { appError, toAppError, truncate } from '@shared/errors'
+import { renamePlaythrough } from './services/playthroughNameService'
 import {
   getAvailablePoses,
   getQuickstart,
@@ -369,6 +370,7 @@ export function registerIpcHandlers(): void {
   )
 
   handle('saves:playthroughs', () => listPlaythroughs())
+  handle('saves:rename', (_event, id: string, name: string) => renamePlaythrough(id, name))
   handle('saves:list', (_event, playthroughId: string) => listSaves(playthroughId))
   handle('saves:enroll', (_event, draft: EnrollmentDraft) => writeEnrollment(draft))
   handle('saves:enrollment', (_event, playthroughId: string) => readEnrollment(playthroughId))

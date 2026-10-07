@@ -15,6 +15,8 @@ import {
 } from '@shared/types'
 import { ConfirmModal } from '../components/ConfirmModal'
 import { DeleteX } from '../components/DeleteX'
+import { PlaythroughRename } from '../components/PlaythroughRename'
+import { PLAYTHROUGH_NAMES_MOD } from '@shared/playthroughNames'
 import {
   SAVE_PAGE_CELLS,
   SavePagesGrid,
@@ -177,6 +179,7 @@ export function pageEntriesOf(saves: readonly ResolvedSave[], page: number): Sav
  * inside the one picked, a page at a time with its own load gate per save.
  */
 export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Element | null {
+  const namesOn = useModOn(PLAYTHROUGH_NAMES_MOD)
   const playthroughs = useSaveStore((s) => s.playthroughs)
   const characters = useSaveStore((s) => s.characters)
   const selected = useSaveStore((s) => s.selected)
@@ -244,7 +247,7 @@ export function LoadGameModal({ theme, onClose }: LoadGameModalProps): JSX.Eleme
 
   useEffect(() => {
     void loadPlaythroughs()
-  }, [loadPlaythroughs])
+  }, [loadPlaythroughs, namesOn])
 
   /**
    * One panel serves both levels, so it grows and shrinks rather than being replaced: the height
@@ -796,6 +799,7 @@ function PlaythroughRow({
   unloadable: string | null
 }): JSX.Element {
   const label = `Delete ${playthrough.label} and all of its saves`
+  const namesOn = useModOn(PLAYTHROUGH_NAMES_MOD)
   // Reframing a portrait re-cuts the file behind its URL, so the strip reads the version.
   const versions = useCharacterStore((state) => state.spriteVersion)
   const dead = Boolean(playthrough.enrolling && unloadable)
@@ -804,7 +808,7 @@ function PlaythroughRow({
 
   const body = (
     <>
-      <span className="vu-sticker vu-load-sticker">{playthrough.label}</span>
+      <span className="vu-sticker vu-load-sticker" title={playthrough.label}>{playthrough.label}</span>
 
       <span className="vu-load-headline">
         {unloadable
@@ -868,6 +872,7 @@ function PlaythroughRow({
       )}
 
       <DeleteX className="vu-x vu-load-x" hovered={hovered} label={label} onDelete={onDelete} />
+      {namesOn && <PlaythroughRename playthrough={playthrough} />}
     </motion.li>
   )
 }

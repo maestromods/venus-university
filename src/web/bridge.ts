@@ -313,6 +313,7 @@ export function buildApi(): VenusUniversityApi {
     },
     saves: {
       playthroughs: () => result('read the playthroughs', saves.listPlaythroughs),
+      rename: (id, name) => result('rename the playthrough', () => saves.renamePlaythrough(id, name)),
       list: (playthroughId) => result('read the saves', () => saves.listSaves(playthroughId)),
       read: (playthroughId, saveId) =>
         result('read the save', () => saves.readSave(playthroughId, saveId)),

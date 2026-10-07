@@ -7,6 +7,9 @@ always in the game, and a switch decides whether it acts. Players turn mods on a
 The frame alone, with no mods, is the `extracurriculars-core` branch: one commit on the game as
 Venus Dev released it. This branch adds Continuing Semesters and Photo Feature on top as the
 worked examples.
+This source port adds Playthrough renaming to the framework on Venus University 0.3.0.
+Its `anytime` switch controls display and editing of custom names; names stay in storage and
+backups while off. The storage service also enforces the switch before writing a new name.
 
 ## The three things a mod does
 

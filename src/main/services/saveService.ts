@@ -51,6 +51,10 @@ import {
   getSavesPath
 } from '../paths'
 import { readValidatedJson, writeAtomicJson } from './jsonFile'
+import { modOn } from '@shared/mods'
+import { PLAYTHROUGH_NAMES_MOD } from '@shared/playthroughNames'
+import { getModSwitches } from './modsService'
+import { readPlaythroughName } from './playthroughNameService'
 
 /** Saves, playthrough records and enrollments on disk; what each one must be is a shared rule. */
 
@@ -270,6 +274,7 @@ export async function playthroughIds(): Promise<string[]> {
  */
 export async function listPlaythroughs(): Promise<PlaythroughSummary[]> {
   const ids = await playthroughIds()
+  const namesOn = modOn(await getModSwitches(), PLAYTHROUGH_NAMES_MOD)
 
   const summaries: PlaythroughSummary[] = []
   for (const playthroughId of ids) {
@@ -278,7 +283,7 @@ export async function listPlaythroughs(): Promise<PlaythroughSummary[]> {
 
     const base = {
       playthroughId,
-      label: `Playthrough ${summaries.length + 1}`,
+      label: (namesOn ? await readPlaythroughName(playthroughId) : null) ?? `Playthrough ${summaries.length + 1}`,
       saveCount: groups.slots.length,
       manualCount: groups.manual.length,
       hasAutosave: groups.autosave

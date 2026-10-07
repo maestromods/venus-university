@@ -2,6 +2,7 @@ import { CONTINUING_SEMESTERS, CONTINUING_SEMESTERS_MOD } from './continuingSeme
 import { PHOTO_LOADERS, photoLoaderOf } from './photoLoader'
 import { loaderOptionId, PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSwitches'
 import type { PlaythroughRecord } from './types'
+import { PLAYTHROUGH_NAMES_MOD } from './playthroughNames'
 
 /**
  * The community mods built into this copy of the game, and the switches a player turns them on
@@ -76,6 +77,16 @@ export const MODS: readonly ModDef[] = [
     ...PHOTO_FEATURE_MOD,
     id: PHOTO_FEATURE,
     version: '1.1.3'
+  },
+  {
+    id: PLAYTHROUGH_NAMES_MOD,
+    name: 'Playthrough renaming',
+    author: 'Maestro Leeds',
+    version: '1.8.2',
+    scope: 'anytime',
+    defaultOn: true,
+    blurb: 'Give each saved playthrough a name from Load Game.',
+    offNote: 'Names remain saved and travel with backups. Turn this on to display and edit them.'
   }
 ]
 

@@ -309,6 +309,8 @@ export interface VenusUniversityApi {
   }
   saves: {
     playthroughs: () => Promise<Result<PlaythroughSummary[]>>
+    /** Changes the display name without changing the playthrough id or its saves. */
+    rename: (id: string, name: string) => Promise<Result<{ playthroughId: string; label: string }>>
     /** One playthrough's record and a summary of every save in its folder. */
     list: (playthroughId: string) => Promise<Result<PlaythroughListing>>
     /** One save with the record it is read against — everything loading it needs. */

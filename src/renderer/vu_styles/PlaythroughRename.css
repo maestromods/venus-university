@@ -1,0 +1,40 @@
+.vu-playthrough-rename {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 14px 0 20px;
+}
+
+.vu-playthrough-rename form {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.vu-playthrough-rename-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.vu-playthrough-rename .vu-btn {
+  font-size: 14px;
+}
+
+.vu-load-sticker {
+  max-width: calc(100% - 48px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.vu-load > .vu-tab {
+  max-width: calc(100% - 48px);
+}
+
+.vu-load > .vu-tab > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

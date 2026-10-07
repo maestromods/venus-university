@@ -1,5 +1,8 @@
 import { appError } from '@shared/errors'
 import { validateRecord } from '@shared/jsonValidate'
+import { modOn } from '@shared/mods'
+import { PLAYTHROUGH_NAMES_MOD, validatePlaythroughName } from '@shared/playthroughNames'
+import { readModSwitches } from '../mods'
 import {
   assertManualSlot,
   assertSafePlaythroughId,
@@ -152,6 +155,7 @@ async function newestSave(
  */
 export async function listPlaythroughs(): Promise<PlaythroughSummary[]> {
   const summaries: PlaythroughSummary[] = []
+  const namesOn = modOn(readModSwitches(), PLAYTHROUGH_NAMES_MOD)
 
   for (const playthroughId of await playthroughIds()) {
     const row = await rowOf(playthroughId)
@@ -162,7 +166,7 @@ export async function listPlaythroughs(): Promise<PlaythroughSummary[]> {
 
     const base = {
       playthroughId,
-      label: `Playthrough ${summaries.length + 1}`,
+      label: namesOn && row.exName ? row.exName : `Playthrough ${summaries.length + 1}`,
       saveCount: groups.slots.length,
       manualCount: groups.manual.length,
       hasAutosave: groups.autosave
@@ -323,12 +327,30 @@ export async function createPlaythrough(
   await storage('start the playthrough', async () => {
     const tx = (await database()).transaction(['playthroughs', 'saves'], 'readwrite')
     // Both puts are database requests, so the transaction is still open for the second.
-    void tx.objectStore('playthroughs').put({ record, enrollment: null, createdAt }, folder)
+    const previous = await tx.objectStore('playthroughs').get(folder)
+    void tx.objectStore('playthroughs').put({ ...previous, record, enrollment: null, createdAt }, folder)
     void tx.objectStore('saves').put(save, [folder, folder])
     await tx.done
   })
 
   return { record, save }
+}
+
+/** Changes an existing playthrough's name in one transaction, leaving every save unchanged. */
+export async function renamePlaythrough(id: string, value: unknown): Promise<{ playthroughId: string; label: string }> {
+  assertSafePlaythroughId(id)
+  if (!modOn(readModSwitches(), PLAYTHROUGH_NAMES_MOD)) {
+    throw appError('MOD_DISABLED', 'Turn on Playthrough renaming in Mods to change a name.')
+  }
+  const name = validatePlaythroughName(value)
+  await storage('rename the playthrough', async () => {
+    const tx = (await database()).transaction('playthroughs', 'readwrite')
+    const row = await tx.store.get(id)
+    if (!row) throw appError('PLAYTHROUGH_NOT_FOUND', 'That playthrough no longer exists.')
+    await tx.store.put({ ...row, exName: name }, id)
+    await tx.done
+  })
+  return { playthroughId: id, label: name }
 }
 
 /**

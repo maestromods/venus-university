@@ -1,3 +1,4 @@
+import { validateBackupPlaythroughNames } from '@shared/playthroughNames'
 import {
   BACKUP_NAME,
   BACKUP_READ,
@@ -181,6 +182,7 @@ export async function importBackup(): Promise<boolean> {
     BACKUP_NAME,
     BACKUP_READ
   )
+  validateBackupPlaythroughNames(record)
 
   // Everything the record says is checked before anything here is written. Remembered keys
   // stay, as do the switches this build fixes and whether it remembers keys at all.
