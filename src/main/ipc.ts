@@ -108,6 +108,7 @@ import {
 } from './services/characterTransferService'
 import { exportBackup, importBackup } from './services/backupService'
 import { exportLocalPhotos, importLocalPhotos } from './localPhotoBackup'
+import { soundtrackLibrary, pickSoundtrack } from './services/soundtrackService'
 import {
   addCustomBackground,
   listCustomBackgrounds,
@@ -329,6 +330,21 @@ export function registerIpcHandlers(): void {
 
   // The mix names a file; the renderer cannot read /assets, so the bytes come over the bridge.
   handle('assets:readAudio', (_event, file: string) => readAudio(file))
+  handle('soundtracks:list', () => soundtrackLibrary.list())
+  handle('soundtracks:read', (_event, key: string) => soundtrackLibrary.read(key))
+  handle('soundtracks:remove', (_event, key: string) => soundtrackLibrary.remove(key))
+  handle('soundtracks:loop', (_event, key: string, value: boolean) => soundtrackLibrary.loop(key, value))
+  handle('soundtracks:cleanup', () => soundtrackLibrary.cleanup())
+  handle('soundtracks:commit', (event, key: string, token: string, duration: number) =>
+    soundtrackLibrary.commit(key, token, duration, event.sender.id))
+  handle('soundtracks:pick', async event => {
+    soundtrackLibrary.cancelPick()
+    const picked = await showOpenDialogFor(event, {
+      title: 'Choose a replacement music track', properties: ['openFile'],
+      filters: [{ name: 'Music', extensions: ['mp3', 'ogg', 'wav'] }]
+    })
+    return picked.canceled || !picked.filePaths[0] ? null : pickSoundtrack(picked.filePaths[0], event.sender.id)
+  })
 
   // Unqueued; the streamed deltas are preview-only and the invoke result is the
   // authoritative one. `group` is the loop's own.

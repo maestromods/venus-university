@@ -66,6 +66,7 @@ import * as breaks from './db/break'
 import * as saves from './db/saves'
 import { readGrabBags, writeGrabBags } from './db/grabbags'
 import { readModSwitches, writeModSwitches } from './mods'
+import { soundtrackLibrary, pickSoundtrack } from './soundtracks'
 import { getPoseManifest, getQuickstart, readAudio } from './assets'
 import { offerDownload } from './download'
 import { emitter } from './emitter'
@@ -133,6 +134,15 @@ export function buildApi(): VenusUniversityApi {
   return {
     platform: 'web',
     ...photoBridge,
+    soundtracks: {
+      list: () => result('list custom soundtracks', () => soundtrackLibrary.list()),
+      pick: () => result('choose an audio file', pickSoundtrack),
+      commit: (key, token, duration) => result('save a custom soundtrack', () => soundtrackLibrary.commit(key, token, duration, 0)),
+      remove: key => result('restore the original soundtrack', () => soundtrackLibrary.remove(key)),
+      loop: (key, value) => result('set soundtrack looping', () => soundtrackLibrary.loop(key, value)),
+      read: key => result('read a custom soundtrack', () => soundtrackLibrary.read(key)),
+      cleanup: () => result('clean up imported music', () => soundtrackLibrary.cleanup())
+    },
     assets: {
       getPoseManifest: () => result('read the poses', getPoseManifest),
       getQuickstart: () => result('read the quickstart', getQuickstart),

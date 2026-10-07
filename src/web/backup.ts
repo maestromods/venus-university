@@ -42,6 +42,8 @@ import { revokeAll } from './images'
 import { buildPack, isShipped } from './packs'
 import { currentSettings, forgetSettings, rendererSettings, rowFor } from './settings'
 import { encodeJson, openArchive, packagedRel, pickFile, readJsonEntry, ZIP_TYPE } from './transfer'
+import { prepareSoundtrackSnapshot, SOUNDTRACK_BACKUP_DIR } from '@shared/soundtracks'
+import { soundtrackLibrary, soundtrackHash } from './soundtracks'
 
 /**
  * The player's whole browser storage as one zip. A browser's storage belongs to the host and
@@ -162,6 +164,9 @@ export async function exportBackup(): Promise<string> {
     return backup
   })
 
+  const music = await soundtrackLibrary.snapshot()
+  record.exMusic = music.map
+  for (const [file, bytes] of Object.entries(music.files)) files[SOUNDTRACK_BACKUP_DIR + '/' + file] = bytes
   files[BACKUP_NAME] = encodeJson(record)
   return offerDownload(backupName(), buildPack(files), ZIP_TYPE)
 }
@@ -183,6 +188,9 @@ export async function importBackup(): Promise<boolean> {
     BACKUP_READ
   )
   validateBackupPlaythroughNames(record)
+
+  const music = await prepareSoundtrackSnapshot(record.exMusic,
+    async file => entries[SOUNDTRACK_BACKUP_DIR + '/' + file], soundtrackHash)
 
   // Everything the record says is checked before anything here is written. Remembered keys
   // stay, as do the switches this build fixes and whether it remembers keys at all.
@@ -206,7 +214,7 @@ export async function importBackup(): Promise<boolean> {
   // would put a file where this build never looks for one.
   const updatedAt = Date.now()
 
-  await storage('restore the backup', async () => {
+  await soundtrackLibrary.exclusive(() => storage('restore the backup', async () => {
     const db = await database()
     const tx = db.transaction(
       [
@@ -219,7 +227,9 @@ export async function importBackup(): Promise<boolean> {
         'photos',
         'characters',
         'charFiles',
-        'backgrounds'
+        'backgrounds',
+        'soundtrackMeta',
+        'soundtrackFiles'
       ],
       'readwrite'
     )
@@ -227,6 +237,12 @@ export async function importBackup(): Promise<boolean> {
     // stays open across all of them.
     void tx.objectStore('settings').put(settings, 'settings')
     void tx.objectStore('grabbags').put(record.grabbags, 'grabbags')
+    if (music) {
+      void tx.objectStore('soundtrackMeta').put(music.map, 'tracks')
+      for (const [file, bytes] of Object.entries(music.files)) {
+        void tx.objectStore('soundtrackFiles').put(new Blob([new Uint8Array(bytes)]), file)
+      }
+    }
 
     const playthroughs = tx.objectStore('playthroughs')
     void playthroughs.clear()
@@ -298,7 +314,7 @@ export async function importBackup(): Promise<boolean> {
     }
 
     await tx.done
-  })
+  }))
 
   forgetSettings()
   forgetRels()

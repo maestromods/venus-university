@@ -9,6 +9,15 @@ import { photoApi } from './photoApi'
 const api: VenusUniversityApi = {
   platform: 'desktop',
   ...photoApi,
+  soundtracks: {
+    list: () => ipcRenderer.invoke('soundtracks:list'),
+    pick: () => ipcRenderer.invoke('soundtracks:pick'),
+    commit: (key, token, duration) => ipcRenderer.invoke('soundtracks:commit', key, token, duration),
+    remove: key => ipcRenderer.invoke('soundtracks:remove', key),
+    loop: (key, value) => ipcRenderer.invoke('soundtracks:loop', key, value),
+    read: key => ipcRenderer.invoke('soundtracks:read', key),
+    cleanup: () => ipcRenderer.invoke('soundtracks:cleanup')
+  },
   assets: {
     getPoseManifest: () => ipcRenderer.invoke('assets:getPoseManifest'),
     getQuickstart: () => ipcRenderer.invoke('assets:getQuickstart'),

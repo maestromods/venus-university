@@ -4,6 +4,7 @@ import type { BackupPlaythrough } from '@shared/backup'
 import type { BgVariant, CustomBackground } from '@shared/customBackgrounds'
 import { appError, messageOf } from '@shared/errors'
 import type { PhotoMeta } from '@shared/photos'
+import type { SoundtrackMap } from '@shared/soundtracks'
 import type { Character, GameSave, GrabBags, Settings } from '@shared/types'
 
 /**
@@ -43,6 +44,8 @@ export interface StoredBackground {
  * playthrough and write time, so the newest of one playthrough is found without reading the rest.
  */
 export interface VenusUniversityDb extends DBSchema {
+  soundtrackMeta: { key: 'tracks'; value: SoundtrackMap }
+  soundtrackFiles: { key: string; value: Blob }
   settings: { key: 'settings'; value: StoredSettings }
   grabbags: { key: 'grabbags'; value: GrabBags }
   playthroughs: { key: string; value: PlaythroughRow }
@@ -62,6 +65,8 @@ export interface VenusUniversityDb extends DBSchema {
  * what is missing, so a database already here gains it and keeps everything it holds.
  */
 const STORES = [
+  'soundtrackMeta',
+  'soundtrackFiles',
   'settings',
   'grabbags',
   'playthroughs',
@@ -75,7 +80,7 @@ const STORES = [
   'backgrounds'
 ] as const
 
-const DB_VERSION = 5
+const DB_VERSION = 6
 
 let opened: Promise<IDBPDatabase<VenusUniversityDb>> | null = null
 

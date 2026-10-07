@@ -7,6 +7,7 @@ import type { PlaythroughRecord } from './types'
 import { PLAYTHROUGH_NAMES_MOD } from './playthroughNames'
 import { PLOT_TWIST_DEF } from './plotTwists'
 import { TEXT_REGENERATION_MOD } from './textRegeneration'
+import { SOUNDTRACK_DEF } from './soundtracks'
 
 /**
  * The community mods built into this copy of the game, and the switches a player turns them on
@@ -118,7 +119,8 @@ export const MODS: readonly ModDef[] = [
     scope: 'anytime', defaultOn: true,
     blurb: 'Build spirit with each character and spend a full bar for a strong, grounded narrative opportunity.',
     offNote: 'Keeps saved spirit and outcomes. Stops earning, activation, and extra continuity prompts.'
-  }
+  },
+  SOUNDTRACK_DEF
 ]
 
 /**

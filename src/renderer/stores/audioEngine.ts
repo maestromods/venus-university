@@ -1,3 +1,6 @@
+import { isSoundtrackKey, type SoundtrackKey } from '@shared/soundtracks'
+import { clearSoundtrackAudio, customSoundtrackBuffer } from './soundtrackAudio'
+import { useSoundtrackStore } from './soundtrackStore'
 import SignalsmithStretch, { type StretchNode } from 'signalsmith-stretch'
 import { AUDIO_FILES, AUDIO_GROUPS, busGain, dbToGain } from '@shared/audio'
 import type { AudioFile, AudioGroup, AudioKey, Treatment, Volumes } from '@shared/audio'
@@ -33,11 +36,13 @@ const SNIPPET_CUT_S = 0.06
 /** On a treatment's filters Q is decibels of resonance at the corner, and the default of 1 whistles. */
 const FILTER_Q = 0.7
 
+const replacementBuffers = new WeakSet<AudioBuffer>()
 let ctx: AudioContext | null = null
 let buses: Record<AudioGroup, GainNode> | null = null
 
 /** One sounding thing: its source, the two gains under it, and the clock its end is on. */
 interface Layer {
+  replacement?: boolean
   key: AudioKey
   semitones: number
   /** Null where the file could not be read: the channel holds the key and plays nothing. */
@@ -198,12 +203,12 @@ export function playOneShot(key: AudioKey, semitones = 0): void {
  * seconds: in over its attack, out over its last stretch, and unhooked at the end. Whatever was
  * playing is retired first, so only one snippet is ever sounding.
  */
-export function playSnippet(key: AudioKey, semitones: number, seconds: number): void {
+export function playSnippet(key: AudioKey, semitones: number, seconds: number, ready?: AudioBuffer): void {
   stopSnippet()
   const token = ++snippetToken
 
   void (async () => {
-    const buffer = await bufferFor(key)
+    const buffer = ready ?? await bufferFor(key)
     if (!buffer || !ctx || !buses || snippetToken !== token) return
 
     const file: AudioFile = AUDIO_FILES[key]
@@ -239,6 +244,31 @@ export function playSnippet(key: AudioKey, semitones: number, seconds: number): 
       }, seconds * 1000)
     )
   })()
+}
+
+/** Preview loading is cancelled by closing the panel, choosing another cue or switching the mod. */
+export async function previewSoundtrack(key: SoundtrackKey): Promise<void> {
+  start()
+  stopSnippet()
+  const token = snippetToken
+  await ctx!.resume()
+  const buffer = await bufferFor(key)
+  if (token !== snippetToken) return
+  if (!buffer) throw Error('This track could not be loaded.')
+  playSnippet(key, 0, 10, buffer)
+}
+
+/** Re-enter only music cues; native effects and their clocks are left alone. */
+export function refreshSoundtracks(keys?: SoundtrackKey[]): void {
+  clearSoundtrackAudio(keys)
+  stopSnippet()
+  for (const channel of ['music', 'ambience'] as const) {
+    const state = channels[channel]
+    const wanted = state.wanted
+    if (!wanted.key || !isSoundtrackKey(wanted.key) || (keys && !keys.includes(wanted.key))) continue
+    state.wanted = { key: null, semitones: 0 }
+    apply(channel, { ...wanted, fade: 0.35 })
+  }
 }
 
 /** Takes the snippet away, whether it is playing or still loading. */
@@ -314,6 +344,8 @@ async function begin(
   }
 
   const file: AudioFile = AUDIO_FILES[key]
+  const replacement = replacementBuffers.has(buffer)
+  const loop = replacement && isSoundtrackKey(key) ? useSoundtrackStore.getState().map[key]?.loop !== false : file.loop
   const trim = ctx.createGain()
   trim.gain.value = dbToGain(file.trimDb)
   const fadeGain = ctx.createGain()
@@ -325,6 +357,7 @@ async function begin(
   const chain = file.treatment ? treatmentChain(file.treatment, trim) : { input: trim, nodes: [] }
 
   const layer: Layer = {
+    replacement,
     key,
     semitones,
     source: null,
@@ -337,7 +370,7 @@ async function begin(
   const source =
     channel === 'breath'
       ? await pitchedSource(buffer, semitones, chain.input)
-      : loopingSource(buffer, key, chain.input, file.treatment ? Math.random() * buffer.duration : 0)
+      : loopingSource(buffer, key, chain.input, file.treatment && loop ? Math.random() * buffer.duration : 0, loop)
 
   // Building a pitched source awaits the worklet, which the channel can outrun.
   if (state.token !== token || !source) {
@@ -353,7 +386,7 @@ async function begin(
   state.live = layer
   ramp(fadeGain.gain, 1, fade)
 
-  if (!file.loop) armEnd(channel, layer, source, buffer.duration)
+  if (!loop) armEnd(channel, layer, source, buffer.duration)
 }
 
 /**
@@ -446,12 +479,13 @@ function loopingSource(
   buffer: AudioBuffer,
   key: AudioKey,
   into: AudioNode,
-  offset = 0
+  offset = 0,
+  loop = AUDIO_FILES[key].loop
 ): AudioBufferSourceNode | null {
   if (!ctx) return null
   const source = ctx.createBufferSource()
   source.buffer = buffer
-  source.loop = AUDIO_FILES[key].loop
+  source.loop = loop
   source.connect(into)
   source.start(0, offset)
   return source
@@ -493,7 +527,7 @@ function armEnd(
   source: AudioBufferSourceNode | StretchNode,
   duration: number
 ): void {
-  layer.endingTimer = setTimeout(
+  if (!layer.replacement) layer.endingTimer = setTimeout(
     () => {
       if (channels[channel].live === layer) endingCb?.(channel, layer.key)
     },
@@ -505,10 +539,11 @@ function armEnd(
     const state = channels[channel]
     if (state.live !== layer) return
     state.live = null
-    state.wanted = { key: null, semitones: 0 }
+    // Keep a finished replacement claimed until this cue is left: store updates must not restart it.
+    if (!layer.replacement) state.wanted = { key: null, semitones: 0 }
     if (layer.endingTimer !== null) clearTimeout(layer.endingTimer)
     teardown(layer, channel)
-    report(channel, layer.key)
+    if (!layer.replacement) report(channel, layer.key)
   }
 }
 
@@ -522,7 +557,7 @@ function retire(channel: AudioChannel, fade: number): void {
 
   if (!layer.source || !layer.fade || !ctx) {
     teardown(layer, channel)
-    report(channel, layer.key)
+    if (!layer.replacement) report(channel, layer.key)
     return
   }
 
@@ -538,7 +573,7 @@ function retire(channel: AudioChannel, fade: number): void {
     teardown(layer, channel)
   }, fade * 1000 + 50)
 
-  report(channel, layer.key)
+  if (!layer.replacement) report(channel, layer.key)
 }
 
 /** Stops and unhooks one source, whichever of the two kinds it is. */
@@ -580,7 +615,15 @@ function ramp(param: AudioParam, target: number, seconds: number): void {
 }
 
 /** The decoded buffer for one key, decoding it once however many callers ask at once. */
-function bufferFor(key: AudioKey): Promise<AudioBuffer | null> {
+async function bufferFor(key: AudioKey): Promise<AudioBuffer | null> {
+  if (ctx) {
+    const custom = await customSoundtrackBuffer(key, ctx)
+    if (custom) { replacementBuffers.add(custom); return custom }
+  }
+  return originalBufferFor(key)
+}
+
+function originalBufferFor(key: AudioKey): Promise<AudioBuffer | null> {
   const cached = decodedByKey.get(key)
   if (cached) return Promise.resolve(cached)
   let load = decodeLoads.get(key)

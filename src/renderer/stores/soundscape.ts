@@ -60,6 +60,8 @@ export interface SoundFacts {
   menuTheme: DayHalf
   titleStarted: boolean
   titleDone: boolean
+  /** A replacement title follows menu visits, independently of the one-time stock intro. */
+  customTitle?: boolean
   /** What the music channel is on now, which is what a scene opening's cover decides by. */
   music: AudioKey | null
   crossing: { phase: CrossingPhase; splash: boolean; waited: boolean }
@@ -151,6 +153,11 @@ function noCg(): Pick<Soundscape, 'act' | 'breath'> {
  * reaches, not the Main Menu alone.
  */
 function menuMix(facts: SoundFacts): Soundscape {
+  if (facts.customTitle) return {
+    music: { key: 'title', fade: TITLE_IN },
+    ambience: { key: null, fade: MENU_AMBIENCE_OUT },
+    ...noCg()
+  }
   if (!facts.titleDone) {
     const first = facts.view === 'mainMenu' && !facts.titleStarted
     return {

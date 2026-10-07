@@ -51,6 +51,12 @@ function inGame(over: Partial<NonNullable<SoundFacts['game']>> = {}): SoundFacts
 }
 
 describe('the title theme', () => {
+  it('requests an enabled replacement again on menu visits, then returns to the native rule when off', () => {
+    const done = facts({ titleStarted: true, titleDone: true })
+    expect(soundscapeOf({ ...done, customTitle: true }).music).toEqual({ key: 'title', fade: .5 })
+    expect(soundscapeOf({ ...done, customTitle: true }).ambience).toEqual({ key: null, fade: 1.5 })
+    expect(soundscapeOf({ ...done, customTitle: false }).music).toEqual({ key: null, fade: 30 })
+  })
   it('plays on the first Main Menu and is never asked for again', () => {
     expect(soundscapeOf(facts()).music).toEqual({ key: 'title', fade: 0.5 })
 

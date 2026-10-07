@@ -17,6 +17,9 @@ This source port adds [Text Regeneration](docs/mods/text-regeneration.md) to the
 on Venus University's 0.3.0 source. It runs independently of the other community mods.
 This source port adds [City Life](docs/mods/city-life.md) to the framework on Venus
 University's 0.3.0 source. Locations and jobs have separate per-playthrough switches.
+This source port adds **Custom soundtracks**, an independent `anytime` mod for local audio
+replacements. Players open it from Settings and can turn it off without losing their choices.
+See [the source guide](docs/mods/custom-soundtracks.md) for storage, playback, backup and porting details.
 
 ## The three things a mod does
 
