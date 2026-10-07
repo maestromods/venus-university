@@ -33,6 +33,12 @@
   font: 700 13px var(--font-mono);
 }
 
+/* As tall as a sheet may be, whichever mod is picked: the window keeps its size, and a pane with
+   more in it than fits scrolls instead. */
+.vu-mods {
+  height: calc(100% - 100px);
+}
+
 /* The list and the selected mod's pane, side by side; each scrolls on its own. */
 .vu-mods-panes {
   display: grid;
