@@ -76,6 +76,8 @@ export function postLikes(charId: string, photoTier: PhotoTier = 'none'): number
 
 /** The likes on the slot's random student's post: one of the four thousand, with no roster friends. */
 export function strangerLikes(handle: string): number {
+  // Off, the game's own roll for a stranger: nobody she is close to, and a handful more.
+  if (!photoFeatureOn()) return rollPostLikes(0)
   const game = useGameStore.getState()
   return rollAudienceLikes({
     reach: reachOf(game.playthroughId, handle, undefined),
