@@ -7,7 +7,7 @@ import { formatMoney } from '@shared/money'
 import {
   classSlotForShift,
   globalSlotOf,
-  JOB_CATALOG,
+  availableJobs,
   jobDefOf,
   MAX_RAISES,
   MAX_STRIKES,
@@ -256,7 +256,7 @@ function BoardView({ onClose }: { onClose: () => void }): JSX.Element {
   const date = useGameStore((s) => s.date)
   const time = useGameStore((s) => s.time)
 
-  const open = JOB_CATALOG.filter((def) => !jobsClosed.includes(def.id))
+  const open = availableJobs().filter((def) => !jobsClosed.includes(def.id))
   const [selectedId, setSelectedId] = useState<string | null>(open[0]?.id ?? null)
   const [shifts, setShifts] = useState<ShiftSlot[]>([])
 

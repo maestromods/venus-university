@@ -1,3 +1,5 @@
+import { locationAvailable } from '@shared/cityLife'
+import { CITY_LIFE_LORE } from './cityLifeLore'
 /**
  * The lorebook: world detail injected only when a turn actually mentions it. Entries are
  * authored here only — Venus University and Veridan are already always-on in `setting.ts` —
@@ -31,6 +33,7 @@ export interface LoreEntry {
 }
 
 export const LOREBOOK: readonly LoreEntry[] = [
+  ...CITY_LIFE_LORE,
   {
     keys: ['VSA', 'student association', 'CAPC', 'SEB', 'student organization', 'student government'],
     text: `The VSA is a student association split into two powerful wings: The CAPC and the SEB. Thorne personally allows it to rival even the administration's authority. The CAPC (Campus Aesthetics and Planning Committee) manages the massive budget for interior design, seasonal decorations, and indoor plant life. The Student Engagement Board (SEB), which is responsible for organizing the university's relentless schedule of social events, mixers, and forums.`
@@ -230,6 +233,11 @@ function entryPattern(entry: LoreEntry): RegExp {
 /** One pattern per entry, positionally parallel to `LOREBOOK`, built once at module load. */
 const PATTERNS: readonly RegExp[] = LOREBOOK.map(entryPattern)
 
+/** What an opening may introduce, restricted to the current playthrough's locations. */
+export function availableLore(): readonly LoreEntry[] {
+  return LOREBOOK.filter(entry => !entry.id || locationAvailable(entry.id))
+}
+
 /**
  * The narration from the first sentence naming `entry`'s place to the end of it — what's
  * actually happening there often lands in a later sentence — or null where nothing names it.
@@ -243,7 +251,7 @@ export function rumorSentenceFor(entry: LoreEntry, lines: readonly string[]): st
 
 /** The entries `scanned` triggers, in declaration order; exact on word boundaries, so `bar` cannot pull in a barn. */
 function matchLore(scanned: string): LoreEntry[] {
-  return LOREBOOK.filter((_, index) => PATTERNS[index].test(scanned))
+  return LOREBOOK.filter((entry, index) => (!entry.id || locationAvailable(entry.id)) && PATTERNS[index].test(scanned))
 }
 
 /** The sentence that says a described character is not here. */

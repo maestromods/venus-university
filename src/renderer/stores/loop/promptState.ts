@@ -1,3 +1,4 @@
+import { cityLifeBackgrounds } from '@shared/cityLife'
 import { SENIOR_YEAR, slotFullLabel } from '@shared/classes'
 import { globalSlotOf, slotFromId } from '@shared/jobs'
 import type { PlayerStats } from '@shared/playerStats'
@@ -307,7 +308,7 @@ export function promptState(): PromptState {
     playthroughId: game.playthroughId ?? 'unsaved',
     date: game.date,
     time: game.time,
-    backgrounds: useAssetStore.getState().backgrounds,
+    backgrounds: cityLifeBackgrounds(useAssetStore.getState().backgrounds),
     charInfo: game.charInfo,
     npcRelationships: game.npcRelationships,
     // Everyone the scene is not carrying — `game.cast`, not the departed-filtered list, or a

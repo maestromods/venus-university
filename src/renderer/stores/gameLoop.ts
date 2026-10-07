@@ -64,7 +64,7 @@ import {
 import {
   ambientLoreCharacters,
   characterLoreForIds,
-  LOREBOOK,
+  availableLore,
   loreKeyOf,
   RUMOR_PLACE_BAG,
   rumorSentenceFor
@@ -749,7 +749,7 @@ async function fetchSlotIntro(
   // about it can be banked.
   const rumorPlace =
     occasions.length === 0 && askers.length === 0
-      ? useGrabBagStore.getState().draw(RUMOR_PLACE_BAG, LOREBOOK, loreKeyOf)
+      ? useGrabBagStore.getState().draw(RUMOR_PLACE_BAG, availableLore(), loreKeyOf)
       : undefined
 
   // Built once and re-sent verbatim on retry; only a hand edit replaces it.

@@ -1,3 +1,5 @@
+import { CITY_LIFE_JOBS } from './cityLifeCatalog'
+import { jobAvailable } from './cityLife'
 import type { ClassSlot, JobState, ShiftSlot, TimeSlot } from './types'
 import { formatSlot, packSlot, WEEKDAY_NAMES } from './classes'
 import { isLocationOpen } from './locations'
@@ -166,6 +168,7 @@ export interface JobDef {
 
 /** Every opening in the game, in board order, which is pay order. */
 export const JOB_CATALOG: readonly JobDef[] = [
+  ...CITY_LIFE_JOBS,
   {
     id: 'fast_eats',
     title: 'Crew Member',
@@ -468,6 +471,11 @@ We're prioritizing people who can start immediately.`,
   }
 ]
 
+/** Openings a new assignment or application may choose, sorted by pay. */
+export function availableJobs(): readonly JobDef[] {
+  return JOB_CATALOG.filter(def => jobAvailable(def.id)).sort((a,b) => a.pay-b.pay)
+}
+
 /** The catalog entry for an id, or `undefined` for a job that no longer exists. */
 export function jobDefOf(jobId: string): JobDef | undefined {
   return JOB_CATALOG.find((def) => def.id === jobId)
@@ -486,7 +494,7 @@ export const CLOSURES_PER_JOB = 2
 /** Rolls each all-hours employer's two closed slots for a playthrough. */
 export function rollJobClosures(playerSchedule: Record<number, string>): Record<string, ShiftSlot[]> {
   const closures: Record<string, ShiftSlot[]> = {}
-  for (const def of JOB_CATALOG) {
+  for (const def of availableJobs()) {
     if (def.hours.length < SHIFT_SLOTS.length) continue
     const pool = def.hours.filter((slot) => {
       const classSlot = classSlotForShift(slot)

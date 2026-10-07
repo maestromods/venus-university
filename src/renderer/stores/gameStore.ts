@@ -187,6 +187,8 @@ function sceneKindFields(scene: SceneKind | null | undefined) {
 interface GameStoreState {
   /** The playthrough being played; every save this session writes goes into it. */
   playthroughId: string | null
+  /** Immutable mod choices read from the playthrough record, never duplicated into slot saves. */
+  playthroughMods: readonly string[]
   date: number
   time: TimeSlot
   /** charIds loaded into the current save. */
@@ -1233,6 +1235,7 @@ function nextLineFields(
 
 const initialState = {
   playthroughId: null,
+  playthroughMods: [] as readonly string[],
   date: 0,
   time: 0 as TimeSlot,
   chars: [] as string[],
@@ -1346,6 +1349,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ...initialState,
       loads: get().loads + 1,
       playthroughId: save.playthroughId,
+      playthroughMods: record.mods ?? [],
       date: save.date,
       time: save.time,
       chars: record.chars,

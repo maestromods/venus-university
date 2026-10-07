@@ -1,3 +1,4 @@
+import { availableLocationMenu, jobAvailable } from '@shared/cityLife'
 import {
   charKeyOf,
   fullNameOf,
@@ -8,7 +9,7 @@ import {
   type StructuredRequest
 } from '@shared/types'
 import { DORM_IDS, FALLBACK_DORM, isDorm, type DormId } from '@shared/dorms'
-import { JOB_CATALOG, jobDefOf } from '@shared/jobs'
+import { availableJobs, jobDefOf } from '@shared/jobs'
 import {
   ACTIVITY_LOCATIONS,
   FUN_LOCATIONS,
@@ -125,7 +126,7 @@ export function buildProfilePrompt(roster: readonly Character[]): StructuredRequ
     'You return a single JSON object matching the provided schema exactly.'
   ].join(' ')
 
-  const employers = JOB_CATALOG.map((def) => `${def.id} — ${def.employer}, ${def.title}: ${def.blurb}`)
+  const employers = availableJobs().map((def) => `${def.id} — ${def.employer}, ${def.title}: ${def.blurb}`)
 
   const preamble = [
     'FOR EACH STUDENT',
@@ -155,16 +156,16 @@ export function buildProfilePrompt(roster: readonly Character[]): StructuredRequ
     'meal: one place she eats out at, about once a week. An empty string for somebody who cooks for herself or eats in the dorm kitchens.',
     '',
     'STUDY LOCATIONS',
-    ...locationMenuLines(STUDY_LOCATIONS),
+    ...locationMenuLines(availableLocationMenu(STUDY_LOCATIONS)),
     '',
     'FUN LOCATIONS',
-    ...locationMenuLines(FUN_LOCATIONS),
+    ...locationMenuLines(availableLocationMenu(FUN_LOCATIONS)),
     '',
     'MEAL LOCATIONS',
-    ...locationMenuLines(MEAL_LOCATIONS),
+    ...locationMenuLines(availableLocationMenu(MEAL_LOCATIONS)),
     '',
     'ACTIVITY LOCATIONS',
-    ...locationMenuLines(ACTIVITY_LOCATIONS),
+    ...locationMenuLines(availableLocationMenu(ACTIVITY_LOCATIONS)),
     '',
     'SOCIAL MEDIA',
     'handle: the username she posts under. some examples: "GinaHayes", "gina.hayes", "ginahayes12", "gina_says_hay", "gina_hayes", "ghayes", "gina.h".',
@@ -210,23 +211,23 @@ export function buildProfilePrompt(roster: readonly Character[]): StructuredRequ
       classesTaken: intField(3, 6),
       // Closed like `job`: the dorm list is code, identical in every save.
       dorm: { type: 'string', enum: [...DORM_IDS] },
-      job: { type: 'string', enum: ['', ...JOB_CATALOG.map((def) => def.id)] },
+      job: { type: 'string', enum: ['', ...availableJobs().map((def) => def.id)] },
       jobShifts: intField(0, MAX_NPC_SHIFTS),
       homeSlots: intField(MIN_HOME_SLOTS, MAX_HOME_SLOTS),
       // Closed for `job`'s reason; `''` is legal in the two optional ones and is the ordinary answer.
-      study: { type: 'string', enum: ['', ...Object.keys(STUDY_LOCATIONS)] },
+      study: { type: 'string', enum: ['', ...Object.keys(availableLocationMenu(STUDY_LOCATIONS))] },
       fun: {
         type: 'array',
         maxItems: MAX_FUN_LOCATIONS,
-        items: { type: 'string', enum: [...Object.keys(FUN_LOCATIONS)] }
+        items: { type: 'string', enum: [...Object.keys(availableLocationMenu(FUN_LOCATIONS))] }
       },
       // Her own phrase, unlike the closed menus: the place it happens at rides `activityLocation`.
       activity: { type: 'string' },
       handle: { type: 'string' },
       winterPosts: { type: 'array', maxItems: MAX_WINTER_POSTS, items: { type: 'string' } },
       springBreakPlans: { type: 'string' },
-      activityLocation: { type: 'string', enum: ['', ...Object.keys(ACTIVITY_LOCATIONS)] },
-      meal: { type: 'string', enum: ['', ...Object.keys(MEAL_LOCATIONS)] }
+      activityLocation: { type: 'string', enum: ['', ...Object.keys(availableLocationMenu(ACTIVITY_LOCATIONS))] },
+      meal: { type: 'string', enum: ['', ...Object.keys(availableLocationMenu(MEAL_LOCATIONS))] }
     }
   }
 
@@ -302,7 +303,7 @@ export function validateProfileDraft(
     if (!profile) invalid(`${fullNameOf(character)} was left unprofiled.`)
 
     const job = (profile.job ?? '').trim()
-    const known = job !== '' && Boolean(jobDefOf(job))
+    const known = job !== '' && Boolean(jobDefOf(job)) && jobAvailable(job)
     if (job !== '' && !known) {
       console.warn(`[profiles] ${key} was given the unknown employer "${job}"; leaving her jobless.`)
     }
@@ -318,7 +319,7 @@ export function validateProfileDraft(
     const menuKey = (menu: Record<string, string>, value: unknown, field: string): string => {
       const raw = typeof value === 'string' ? value.trim() : ''
       if (raw === '') return ''
-      if (locationForKey(menu, raw) === null) {
+      if (locationForKey(availableLocationMenu(menu), raw) === null) {
         console.warn(`[profiles] ${key} ${field} was the unknown location "${raw}"; dropping it.`)
         return ''
       }
