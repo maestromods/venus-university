@@ -3,6 +3,7 @@ import {
   explicitPhotosAllowed,
   photoSwitches,
   photosVisible,
+  setPhotoSwitches,
   subscribePhotoSwitches,
   type PhotoSwitches
 } from '@shared/photoSwitches'
@@ -25,4 +26,15 @@ export function usePhotosVisible(): boolean {
 export function useExplicitBlocked(): boolean {
   const noNsfw = useSettingsStore(noNsfwImagesOf)
   return !explicitPhotosAllowed(noNsfw, usePhotoSwitches())
+}
+
+/**
+ * The switches from the developer console, for trying what a mods screen would do on a build that
+ * has none: `photoSwitches.set({ on: false })`, `photoSwitches.get()`. The console only opens in
+ * a development run, so a player never reaches it. Main keeps its own copy, so renders still draw
+ * body details from here; everything on screen and in the prompts follows.
+ */
+;(globalThis as { photoSwitches?: unknown }).photoSwitches = {
+  set: setPhotoSwitches,
+  get: photoSwitches
 }
