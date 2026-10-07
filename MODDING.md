@@ -4,22 +4,26 @@ This branch is a proposal for how the community mods share one build: every mod'
 always in the game, and a switch decides whether it acts. Players turn mods on and off from
 **Mods** on the main menu; nothing is chosen at install time.
 
-The frame alone, with no mods, is the `extracurriculars-core` branch: one commit on the game as
-Venus Dev released it. This branch adds Continuing Semesters and Photo Feature on top as the
-worked examples.
-This source port adds Playthrough renaming to the framework on Venus University 0.3.0.
-Its `anytime` switch controls display and editing of custom names; names stay in storage and
-backups while off. The storage service also enforces the switch before writing a new name.
-This source port adds Plot Twist to the framework on Venus University 0.3.0. Its `anytime`
-switch controls the game-menu editor and future scene requests. Saved text is retained while
-off. See [the Plot Twist integration notes](docs/mods/plot-twist.md) for the save and prompt hooks.
-This source port adds [Text Regeneration](docs/mods/text-regeneration.md) to the framework
-on Venus University's 0.3.0 source. It runs independently of the other community mods.
-This source port adds [City Life](docs/mods/city-life.md) to the framework on Venus
-University's 0.3.0 source. Locations and jobs have separate per-playthrough switches.
-This source port adds **Custom soundtracks**, an independent `anytime` mod for local audio
-replacements. Players open it from Settings and can turn it off without losing their choices.
-See [the source guide](docs/mods/custom-soundtracks.md) for storage, playback, backup and porting details.
+The frame alone, with no mods, is the `extracurriculars-core` branch, on the game as Venus Dev
+released it. This branch is every mod together:
+
+| Mod | Author | Switch | Notes |
+| --- | --- | --- | --- |
+| Continuing Semesters | morrowkiln | any time | below |
+| Photo Feature | naudh1r | any time | below |
+| Playthrough renaming | Maestro | any time | names stay in storage and backups while off |
+| Plot Twist | Maestro | any time | [notes](docs/mods/plot-twist.md) |
+| Text Regeneration | Maestro | any time | [notes](docs/mods/text-regeneration.md) |
+| Meanwhile conversations | Maestro | any time | [notes](docs/mods/meanwhile-conversations.md) |
+| City Life locations | Maestro | per playthrough | [notes](docs/mods/city-life.md) |
+| City Life jobs | Maestro | per playthrough, needs locations | [notes](docs/mods/city-life.md) |
+| Breakthrough | Maestro | any time | [notes](docs/mods/breakthrough.md) |
+| Custom soundtracks | Maestro | any time | [notes](docs/mods/custom-soundtracks.md) |
+| Story Memory | Maestro | any time | [notes](docs/mods/story-memory.md) |
+
+Maestro's mods each came in as their own pull request on the frame and are merged here as he
+wrote them. Each keeps its own save fields; a continued semester starts those fresh
+(`src/shared/termCarry.ts`) until their author says what should carry.
 
 ## The three things a mod does
 
