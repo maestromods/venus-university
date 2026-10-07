@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import {
   CONTINUING_SEMESTERS,
+  MODS,
   modOn,
   NO_SWITCHES,
   optionOn,
@@ -10,6 +11,7 @@ import {
   type ModSwitches
 } from '@shared/mods'
 import { setPhotoSwitches } from '@shared/photoSwitches'
+import { setHookRules } from '../mods/hooks'
 import { setSeniorsGraduate } from '@shared/term'
 import type { PlaythroughRecord } from '@shared/types'
 import { useUiStore } from './uiStore'
@@ -81,6 +83,12 @@ function tellSharedRules(switches: ModSwitches): void {
   setPhotoSwitches(photoSwitchesOf(switches))
 }
 tellSharedRules(useModsStore.getState().switches)
+
+// The game's hooks ask only the mods that are on, in the order the list names them.
+setHookRules({
+  isOn: (modId) => modOn(useModsStore.getState().switches, modId),
+  order: (modId) => MODS.findIndex((mod) => mod.id === modId)
+})
 useModsStore.subscribe((state) => tellSharedRules(state.switches))
 
 /** Whether a mod is on, for code outside a component; see `modOn` for what a record changes. */

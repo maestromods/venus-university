@@ -62,12 +62,12 @@ const HOOKS: readonly {
   },
   {
     file: 'src/renderer/stores/loop/feed.ts',
-    needs: ['pickTeaser(freshPhotos.length > 0 ? freshPhotos : fresh)'],
+    needs: ['pickTeaser(featured.length > 0 ? featured : fresh)'],
     why: "a stranger's photo post is never the slot's teaser, and her picture is drawn for nobody"
   },
   {
     file: 'src/renderer/stores/feedView.ts',
-    needs: ['if (!post || !postIsOut(post)) continue'],
+    needs: ['if (!post || !postVisible(post)) continue'],
     why: 'a teaser with a picture shows before the picture exists'
   },
   {
@@ -164,52 +164,46 @@ const HOOKS: readonly {
   },
   {
     file: 'src/renderer/stores/textingLoop.ts',
-    needs: ['sendPhoto(charId, character, data)', 'canRenderImages:', 'noNsfwImages:'],
-    why: 'she is never asked for a photo, and never sends one, without these'
+    needs: ['afterDmReply({ charId, character, reply: data })'],
+    why: 'she never sends the photo she offered'
   },
   {
     file: 'src/renderer/stores/gameLoop.ts',
-    needs: ['settlePendingPhotos()', 'await deliverSlotPosts('],
+    needs: ['gameEntered()', 'await deliverSlotPosts('],
     why: 'a picture that outlived its save is never found, and posts are never filed'
   },
   {
     file: 'src/renderer/stores/gameLoop.ts',
     within: 'export async function submitAction(',
-    needs: ['startHeldPostPhoto()'],
+    needs: ['playerActs()'],
     why: "every choice goes through here; without it a post's picture is never drawn and the post never appears"
   },
   {
     file: 'src/renderer/stores/loop/hangouts.ts',
     within: 'export async function startHangoutScene(',
-    needs: ['startHeldPostPhoto()'],
+    needs: ['playerActs()'],
     why: "Begin on a hangout skips submitAction; without it that slot's photo posts never appear"
   },
   {
     file: 'src/renderer/stores/loop/feed.ts',
-    needs: [
-      'preparePostPhoto(',
-      'holdPostPhoto(',
-      'rollComments(',
-      'postLikes(',
-      'strangerLikes('
-    ],
+    needs: ['fileFeedPost(', "postLikes({ kind: 'ending'", "postLikes({ kind: 'stranger'"],
     why: 'a post carries no picture and no replies, and its likes ignore her following, without these'
   },
   {
     file: 'src/renderer/stores/loop/feed.ts',
     within: 'export async function deliverSlotPosts(',
-    needs: ['postIsOut(post)'],
+    needs: ['postVisible(post)'],
     why: 'a post still waiting for its picture is used to fill out the feed before it exists'
   },
   {
     file: 'src/renderer/stores/feedView.ts',
     within: 'export function contactFeedPosts(',
-    needs: ['.filter(postIsOut)'],
+    needs: ['.filter(postVisible)'],
     why: 'a post still waiting for its picture shows on the Updates tab before it exists'
   },
   {
     file: 'src/renderer/views/ContactPage.tsx',
-    needs: ['.filter(postIsOut)'],
+    needs: ['.filter(postVisible)'],
     why: 'a post still waiting for its picture shows on her page before it exists'
   },
   {
@@ -219,22 +213,32 @@ const HOOKS: readonly {
   },
   {
     file: 'src/renderer/views/NewGameView.tsx',
-    needs: ['rollAudienceLikes(', 'reachOf('],
+    needs: ["postLikes(\n        { kind: 'winter'"],
     why: 'her winter posts are liked by her roster friends alone, not by her following'
   },
   {
     file: 'src/renderer/prompts/textingPrompt.ts',
-    needs: ['photoLines(', 'photoStub(', 'PHOTO_SCHEMA_FIELDS', 'PHOTO_SCHEMA_REQUIRED'],
+    needs: [
+      "promptLines('dm',",
+      "promptFields('dm')",
+      "promptRequired('dm')",
+      'dmHistoryNotes(message)'
+    ],
     why: 'she is not told she may send one, and has no field to answer in'
   },
   {
     file: 'src/renderer/prompts/slotIntroPrompt.ts',
-    needs: ['postPhotoLines(', 'postCommentLines(', 'POST_PHOTO_SCHEMA_FIELD'],
+    needs: ["promptLines('slot-posts',", "promptFields('slot-posts')", "promptRequired('slot-posts')"],
     why: 'a post is never asked for a picture or for what the crowd said'
   },
   {
     file: 'src/renderer/prompts/characterPrompt.ts',
-    needs: ['bodyBriefLines()', 'bodySchemaRequired()', 'bodySchemaFields()', 'bodyOfDraft('],
+    needs: [
+      "promptLines('character',",
+      "promptRequired('character')",
+      "promptFields('character')",
+      'characterFromDraft('
+    ],
     why: 'a character is written without a body while the switch is on'
   },
   {
@@ -268,9 +272,19 @@ const HOOKS: readonly {
     why: 'what the player set in Settings before the Mods screen is lost'
   },
   {
-    file: 'src/renderer/stores/textingLoop.ts',
-    needs: ['noNsfwImages: noExplicitPhotos()'],
-    why: 'her DMs ignore the explicit-photos option a mods screen can set'
+    file: 'src/renderer/mods/index.ts',
+    needs: ["import './photoFeature'"],
+    why: 'the mod is never registered, so the game asks it nothing'
+  },
+  {
+    file: 'src/renderer/App.tsx',
+    needs: ["import './mods'"],
+    why: 'no mod is registered at boot'
+  },
+  {
+    file: 'src/renderer/stores/modsStore.ts',
+    needs: ['setHookRules('],
+    why: 'the hooks ask every mod, switched off or not'
   },
   {
     file: 'src/renderer/vu_styles/PhotoBubble.css',

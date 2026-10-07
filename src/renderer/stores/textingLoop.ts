@@ -67,8 +67,7 @@ import {
 } from '@shared/types'
 import { useBunnyboardStore } from './bunnyboardStore'
 import { useGameStore } from './gameStore'
-import { canSendPhotos, noExplicitPhotos } from './localPhotoStore'
-import { sendPhoto } from './photoTurn'
+import { afterDmReply } from '../mods/hooks'
 import { prefetchHangoutScene, startHangoutScene } from './loop/hooks'
 import { createRetryGate } from './retryGate'
 import { createTextExtractor } from './textingStream'
@@ -482,10 +481,7 @@ export async function sendMessage(charId: string, text: string): Promise<void> {
         charHaunt: charStandingHauntNow(charId),
         // The one absence a thread survives, so her block has to say it.
         springBreakAway: game.springBreakAway,
-        memoryBudget: memoryBudgetsOf(useSettingsStore.getState().settings ?? {}).one,
-        // What she may photograph is settled in the brief from these two.
-        canRenderImages: canSendPhotos(),
-        noNsfwImages: noExplicitPhotos()
+        memoryBudget: memoryBudgetsOf(useSettingsStore.getState().settings ?? {}).one
       },
       // The same reader block a scene gets, grades and all.
       readerBlockOf(game)
@@ -587,9 +583,7 @@ async function runReply(
     return
   }
 
-  // Her picture, if she offered one and the save will have it. Started here and left to finish
-  // on its own: a render is half a minute, and her words have already landed.
-  void sendPhoto(charId, character, data)
+  afterDmReply({ charId, character, reply: data })
 
   // A scene already owns the screen: the verdict could only be discarded.
   if (sceneActiveOf(useGameStore.getState())) return

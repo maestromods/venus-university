@@ -18,8 +18,7 @@ import { rollSemesterWeather } from '@shared/weather'
 import { initialFlags } from '@shared/relationship'
 import { npcFriendsOf, rollInitialNpcRelationships } from '@shared/npcRelationships'
 import { rollPostLikes } from '@shared/feed'
-import { photoFeatureOn } from '@shared/photoSwitches'
-import { reachOf, rollAudienceLikes } from '@shared/postAudience'
+import { postLikes } from '../mods/hooks'
 import { andList } from '@shared/sentences'
 import { shuffle } from '@shared/shuffle'
 import {
@@ -133,7 +132,7 @@ const WINTER_LAST_DAY = -6
 function dealWinterPosts(
   texts: readonly string[],
   friends: number,
-  reach: number,
+  author: { character: Character; playthroughId: string | null },
   window = { first: WINTER_FIRST_DAY, last: WINTER_LAST_DAY }
 ): SocialPost[] {
   const slots = new Set<number>()
@@ -151,10 +150,10 @@ function dealWinterPosts(
       date: Math.floor(slot / 2),
       // `%` keeps the dividend's sign and every slot is negative, so the remainder is floored into 0/1.
       time: (((slot % 2) + 2) % 2) as TimeSlot,
-      // Photo Feature's roll while it is on, the game's own otherwise.
-      likes: photoFeatureOn()
-        ? rollAudienceLikes({ reach, friends, photoTier: 'none' })
-        : rollPostLikes(friends)
+      likes: postLikes(
+        { kind: 'winter', author: author.character.charId, friends, ...author },
+        () => rollPostLikes(friends)
+      )
     }))
 }
 
@@ -749,10 +748,14 @@ export function NewGameView(): JSX.Element {
           c.charId,
           roster.map((entry) => entry.charId)
         ).length
-        const reach = reachOf(playthroughId, c.charId, c)
         return [
           c.charId,
-          dealWinterPosts(assignment?.winterPosts ?? [], friends, reach, postWindow)
+          dealWinterPosts(
+            assignment?.winterPosts ?? [],
+            friends,
+            { character: c, playthroughId },
+            postWindow
+          )
         ] as const
       })
     )
