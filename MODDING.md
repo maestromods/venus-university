@@ -5,7 +5,8 @@ always in the game, and a switch decides whether it acts. Players turn mods on a
 **Mods** on the main menu; nothing is chosen at install time.
 
 The frame alone, with no mods, is the `extracurriculars-core` branch: one commit on the game as
-Venus Dev released it. This branch adds Continuing Semesters on top as the worked example.
+Venus Dev released it. This branch adds Continuing Semesters and Photo Feature on top as the
+worked examples.
 
 ## The three things a mod does
 
@@ -26,6 +27,20 @@ Venus Dev released it. This branch adds Continuing Semesters on top as the worke
 ```
 
 That is all the Mods screen, the main menu's count and the log need.
+
+Options that are one choice among several share a `group`, and the mod names the group in
+`optionGroups`. One option of a group is on at a time: turning one on turns the others off, and
+the one that is on stays on until another is picked. The Mods screen shows a group as one box,
+with the group's label and hint once and a row for each choice. They are still plain on/off
+values in `data/mods.json`.
+
+```ts
+options: [
+  { id: 'loader-bunny', label: 'Bunny hop', hint: '', default: true, group: 'loader' },
+  { id: 'loader-dots', label: 'Typing dots', hint: '', default: false, group: 'loader' }
+],
+optionGroups: [{ id: 'loader', label: 'Loading animation', hint: 'The animation shown while…' }]
+```
 
 **2. Ask before acting**, wherever the mod would do something:
 
@@ -70,7 +85,7 @@ switch is left as the player set it.
 
 | File | What it is |
 | --- | --- |
-| `src/shared/mods.ts` | The list, the switches' shape and every rule above. No dependencies. |
+| `src/shared/mods.ts` | The list, the switches' shape and every rule above. |
 | `src/main/services/modsService.ts` | Reads and writes `data/mods.json`. |
 | `src/renderer/stores/modsStore.ts` | The switches in the renderer, and the hooks. |
 | `src/renderer/views/ModsModal.tsx` | The Mods screen. |
@@ -87,6 +102,37 @@ Load Game offer off alone.
 The seniors option shows how a rule in shared code reads a switch without holding any: the
 rule keeps a flag (`setSeniorsGraduate` in `shared/term.ts`), and `modsStore.ts` sets it at
 boot and whenever a switch moves.
+
+## How Photo Feature uses it
+
+It is `anytime`, and it checks its own switch: the mod keeps its switches in
+`src/shared/photoSwitches.ts` and asks there wherever it acts, so the build only hands them
+over. That is three places:
+
+- `photoSwitchesOf(switches)` in `mods.ts` turns the Mods screen's switches into the mod's own.
+- `modsStore.ts` passes them to `setPhotoSwitches` at boot and whenever a switch moves.
+- `modsService.ts` does the same in main, when the switches are read or written. Main keeps its
+  own copy because body details are drawn there.
+
+Its entry in `MODS` is `PHOTO_FEATURE_MOD` from `photoSwitches.ts`, with the version added, so
+its name, text and options come from the mod.
+
+Off, nobody sends a new photo, posts get no new comments, body details are not used and likes
+are the game's own. Photos, galleries and comments already made are hidden, not deleted. Its
+options:
+
+- **Photo generation**: off, no new photos are made and characters are not told they can send
+  one. Photos already sent stay visible.
+- **Explicit photos**: off, nobody sends an undressed photo and ones already sent stay covered.
+  The game's own "No NSFW images" turns them off too.
+- **Loading animation**: a group of three, Bunny hop, Dot shimmer and Typing dots.
+
+These used to be in the game's Settings. `modsService.ts` carries a player's old choice over
+(`withPhotoSettingsCarried`) until the Mods screen stores its own.
+
+Option ids are written to disk, so they never change: `photos`, `explicit`, `loader-bunny`,
+`loader-shimmer`, `loader-dots`. `test/photoHooks.test.ts` fails if one of the three places
+above goes missing.
 
 ## Not decided yet
 
