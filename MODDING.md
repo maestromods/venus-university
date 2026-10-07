@@ -85,6 +85,9 @@ a setter, and set it from `modsStore.ts` at boot and whenever a switch moves
 
 ## Not decided yet
 
+The standalone [Breakthrough port](docs/mods/breakthrough.md) documents its rules, save
+ownership, loop hooks, failure recovery, and future memory-index integration.
+
 - The build's name and version (`BUILD` in `mods.ts`).
 - Whether `data/mods.json` goes into the game's own backup; it does not today.
 - How a mod that patches the built code, rather than the source, reads its switch.

@@ -1,3 +1,5 @@
+import type { BreakthroughState } from '@shared/breakthrough'
+import { breakthroughContinuity } from './breakthroughPrompt'
 import { affectionFor, dedupedMemoriesFor, emptyFlags } from '@shared/relationship'
 import { ROOM_LOCATION } from '@shared/locations'
 import type { NpcRelationshipMap } from '@shared/npcRelationships'
@@ -64,6 +66,8 @@ const TEXTING_PERSONA = [
 
 /** The prompt-facing slice of state a texting turn needs. */
 export interface TextingPromptState {
+  /** Supplied only while the standalone Breakthrough mod is enabled. */
+  breakthrough?: BreakthroughState
   date: number
   time: TimeSlot
   /** The reader's accumulated stats, used for relationship requirement guidance. */
@@ -368,6 +372,7 @@ export function buildTextingPrompt(
     ...whereSheIs(name, state.charLocation, state.charCompanions, state.charHaunt, state.time),
     '',
     ...lore,
+    ...(state.breakthrough ? [breakthroughContinuity(state.breakthrough,[character],state.date,state.time)] : []),
     ...(summary ? ['TEXTING SO FAR', '"' + summary + '"', ''] : []),
     'RECENT MESSAGES',
     "'''",

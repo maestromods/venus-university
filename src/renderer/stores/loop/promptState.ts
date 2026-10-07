@@ -1,3 +1,5 @@
+import { BREAKTHROUGH_MOD } from '@shared/breakthrough'
+import { modIsOn } from '../modsStore'
 import { SENIOR_YEAR, slotFullLabel } from '@shared/classes'
 import { globalSlotOf, slotFromId } from '@shared/jobs'
 import type { PlayerStats } from '@shared/playerStats'
@@ -305,6 +307,7 @@ export function promptState(): PromptState {
 
   return {
     playthroughId: game.playthroughId ?? 'unsaved',
+    breakthrough: modIsOn(BREAKTHROUGH_MOD) ? game.exBreakthrough : undefined,
     date: game.date,
     time: game.time,
     backgrounds: useAssetStore.getState().backgrounds,

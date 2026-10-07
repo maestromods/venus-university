@@ -1,3 +1,4 @@
+import { breakthroughContinuity } from './breakthroughPrompt'
 import { SUBJECT_TAGS } from '@shared/characterRules'
 import { slotFullLabel, yearLabel } from '@shared/classes'
 import { dormClause } from '@shared/dorms'
@@ -144,6 +145,8 @@ export interface ProjectSceneContext {
 
 /** Everything the builders read out of `gameStore`. */
 export interface PromptState {
+  /** Supplied only while the independent Breakthrough mod is enabled. */
+  breakthrough?: import('@shared/breakthrough').BreakthroughState
   /** The cloud-LLM cache key: the playthrough id, never the save's. */
   playthroughId: string
   date: number
@@ -1271,6 +1274,7 @@ function castScenePrompt(
       ...nowBlock(cast, state),
       ...classBlock(state),
       ...lore,
+      ...(state.breakthrough ? [breakthroughContinuity(state.breakthrough,cast,state.date,state.time)] : []),
       ...tail
     ].join('\n'),
     schema: sceneSchema(state.backgrounds, cast, state, hasSummary, hasEndScene),

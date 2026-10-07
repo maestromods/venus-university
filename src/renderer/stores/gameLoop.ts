@@ -1,3 +1,4 @@
+import { finishBreakthrough, rearmBreakthrough, settleSpirit, withBreakthrough } from './breakthrough'
 import { GAME_OVER_SCENES, gameOverReasonOf } from '@shared/gameOver'
 import { earnLine, spendLine, spentOf } from '@shared/money'
 import {
@@ -952,6 +953,7 @@ export function retryTurn(): void {
   game.setTurnError(null)
   // `failTurn` left this false; `submitAction` refuses to run without it.
   game.setAwaitingInput(true)
+  rearmBreakthrough(loopState.lastTurn.breakthrough)
   dispatchTurn(loopState.lastTurn)
 }
 
@@ -1053,6 +1055,7 @@ export async function submitAction(
   loopState.lastTurn = {
     scene: game.captureScene(),
     action: raw,
+    ...(game.exBreakthrough.pending ? { breakthrough: { ...game.exBreakthrough.pending } } : {}),
     ...(gift ? { gift } : {}),
     ...(preset ? { preset } : {}),
     ...(planId ? { planId } : {})
@@ -1113,7 +1116,7 @@ export async function submitAction(
   // A solo scene opens and closes in this one call, so it is never a continuation.
   const solo = !isContinuation && plan.cast.length === 0
 
-  const request = buildTurnRequest(plan.sceneAction, castCharacters, isContinuation, solo)
+  const request = withBreakthrough(buildTurnRequest(plan.sceneAction, castCharacters, isContinuation, solo), castCharacters, solo)
   // Only the call that opens a scene repairs a forgotten entrance.
   await runSceneTurn(
     streamScene(request, undefined, { forceShowSpeakers: !isContinuation && !solo }),
@@ -2129,6 +2132,7 @@ export function rewriteLine(at: number, text: string): boolean {
 
 /** Aborts the live scene call; the lines it already delivered stay where they are. */
 function abortSceneCall(): void {
+  finishBreakthrough(loopState.lastTurn?.breakthrough?.id, true)
   loopState.sceneCall = null
   void window.api.jobs.cancelGroup(SCENE_LLM_GROUP)
 }
@@ -2476,6 +2480,7 @@ async function crossSlotBoundary(): Promise<void> {
 
   // Before the clock moves, so each text is stamped with the slot the scene ran in, and before
   // the boundary save, which records them.
+  settleSpirit(game)
   for (const send of owedTexts) send()
 
   useGameStore.getState().advanceSlot()

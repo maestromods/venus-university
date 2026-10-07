@@ -49,10 +49,15 @@ export interface ModDef {
 }
 
 /**
- * Every mod in this build, in the order the Mods screen lists them. None yet: this is the
- * frame alone, on the game as Venus Dev released it. A mod adds itself here (see MODDING.md).
+ * Every mod in this build, in the order the Mods screen lists them.
+ * A mod adds itself here (see MODDING.md).
  */
-export const MODS: readonly ModDef[] = []
+export const MODS: readonly ModDef[] = [{
+  id: 'breakthrough', name: 'Breakthrough', author: 'maestromods', version: '1.0.0',
+  scope: 'anytime', defaultOn: true,
+  blurb: 'Build spirit with each character and spend a full bar for a strong, grounded narrative opportunity.',
+  offNote: 'Keeps saved spirit and outcomes. Stops earning, activation, and extra continuity prompts.'
+}]
 
 /**
  * What the player has set, as `data/mods.json` holds it. A mod or an option that is not in

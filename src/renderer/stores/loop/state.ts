@@ -1,3 +1,4 @@
+import type { BreakthroughPending } from '@shared/breakthrough'
 import type {
   BankedOpening,
   Character,
@@ -23,6 +24,8 @@ import type { MemoryAnswer } from './memoryEdit'
  * base the reply's autosave is composed onto.
  */
 export interface TurnSnapshot {
+  /** The paid intent, retained for a retry after its failed attempt refunded it. */
+  breakthrough?: BreakthroughPending
   scene: SceneState | null
   action: string
   /** The agreed hangout this turn is, so a retry replays it as one. */

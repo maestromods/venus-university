@@ -1503,6 +1503,7 @@ describe('toGameSave', () => {
       'droppedClasses',
       'endingArtWanted',
       'events',
+      'exBreakthrough',
       'expelled',
       'farewellsDone',
       'feedExtras',

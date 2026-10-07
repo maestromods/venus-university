@@ -1,3 +1,4 @@
+import { reconcileBreakthrough } from '@shared/breakthrough'
 import { toAppError } from '@shared/errors'
 import { gameOverReasonOf, type GameOverReason } from '@shared/gameOver'
 import { isGameOver, spentOf } from '@shared/money'
@@ -78,7 +79,10 @@ export function writeAutosave(scene: SceneState | null): Promise<void> {
     const game = useGameStore.getState()
     const playthroughId = game.playthroughId
     if (!playthroughId) return
-    const draft: SaveDraft = { ...game.toGameSave(), scene }
+    const draft: SaveDraft = { ...game.toGameSave(), scene,
+      // A leave write may rewind to an earlier decision point. Do not carry its discarded outcome.
+      exBreakthrough: reconcileBreakthrough(game.exBreakthrough, scene?.transcript ?? [], game.date, game.time)
+    }
 
     const thumbnail = scene ? await composeStageThumbnail(scene) : null
     const result = await window.api.saves.autosave(

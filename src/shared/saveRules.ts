@@ -48,6 +48,7 @@ const SAVE_REQUIRED: Record<
     | 'bio'
     | 'tallies'
     | 'thumbnail'
+    | 'exBreakthrough'
   >,
   true
 > = {

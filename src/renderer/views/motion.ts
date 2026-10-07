@@ -13,6 +13,17 @@ import {
 } from 'motion/react'
 import { CROSS_CHASE, CROSS_SECONDS } from '../stores/crossingStore'
 
+/** A paid Breakthrough gets one paper-card flourish; reduced motion holds the card still. */
+export const BREAKTHROUGH_SECONDS = 2.6
+export const breakthroughBannerMotion: TargetAndTransition = {
+  opacity: [0, 1, 1, 0], y: [25, 0, 0, -15], scale: [.9, 1, 1, 1], rotate: [-3, 0, 0, 0],
+  transition: { duration: BREAKTHROUGH_SECONDS, times: [0, .18, .75, 1] }
+}
+export const breakthroughHaloMotion: TargetAndTransition = {
+  opacity: [0, .5, 0], scale: [.65, 1, 1.3],
+  transition: { duration: BREAKTHROUGH_SECONDS, times: [0, .2, 1], ease: 'easeOut' }
+}
+
 /**
  * A hover's spring, thrown in proportion to how far it travels: motion's `velocity` applies to
  * every property in the target, so the kick is scaled to the rise it is paired with.
