@@ -152,6 +152,8 @@ or `modsService.ts` goes missing.
 
 The independent [Meanwhile conversations port](docs/mods/meanwhile-conversations.md)
 documents its menu, replay storage, generation boundary, and future memory integration.
+The standalone [Breakthrough port](docs/mods/breakthrough.md) documents its rules, save
+ownership, loop hooks, failure recovery, and future memory-index integration.
 
 - The build's name and version (`BUILD` in `mods.ts`).
 - Whether `data/mods.json` goes into the game's own backup; it does not today.

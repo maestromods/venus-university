@@ -1,3 +1,5 @@
+import type { BreakthroughState } from '@shared/breakthrough'
+import { breakthroughContinuity } from './breakthroughPrompt'
 import { affectionFor, dedupedMemoriesFor, emptyFlags } from '@shared/relationship'
 import { ROOM_LOCATION } from '@shared/locations'
 import type { NpcRelationshipMap } from '@shared/npcRelationships'
@@ -72,6 +74,8 @@ export const TEXTING_PERSONA = [
 export interface TextingPromptState {
   /** A bounded longer window for rebuilding a legacy reply without a pre-reply summary. */
   historyLimit?: number
+  /** Supplied only while the standalone Breakthrough mod is enabled. */
+  breakthrough?: BreakthroughState
   date: number
   time: TimeSlot
   /** The reader's accumulated stats, used for relationship requirement guidance. */
@@ -376,6 +380,7 @@ export function buildTextingPrompt(
     ...whereSheIs(name, state.charLocation, state.charCompanions, state.charHaunt, state.time),
     '',
     ...lore,
+    ...(state.breakthrough ? [breakthroughContinuity(state.breakthrough,[character],state.date,state.time)] : []),
     ...(summary ? ['TEXTING SO FAR', '"' + summary + '"', ''] : []),
     'RECENT MESSAGES',
     "'''",

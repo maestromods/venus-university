@@ -2,6 +2,7 @@ import { appError, toAppError } from '@shared/errors'
 import { PLOT_TWIST_MOD, validatePlotTwist } from '@shared/plotTwists'
 import type { Conversation } from '@shared/types'
 import { withMeanwhile, type MeanwhileScene } from '@shared/meanwhile'
+import { reconcileBreakthrough } from '@shared/breakthrough'
 import { gameOverReasonOf, type GameOverReason } from '@shared/gameOver'
 import { isGameOver, spentOf } from '@shared/money'
 import {
@@ -109,7 +110,10 @@ export function writeAutosave(scene: SceneState | null): Promise<void> {
     const game = useGameStore.getState()
     const playthroughId = game.playthroughId
     if (!playthroughId) return
-    const draft: SaveDraft = { ...game.toGameSave(), scene }
+    const draft: SaveDraft = { ...game.toGameSave(), scene,
+      // A leave write may rewind to an earlier decision point. Do not carry its discarded outcome.
+      exBreakthrough: reconcileBreakthrough(game.exBreakthrough, scene?.transcript ?? [], game.date, game.time)
+    }
 
     const thumbnail = scene ? await composeStageThumbnail(scene) : null
     const result = await window.api.saves.autosave(

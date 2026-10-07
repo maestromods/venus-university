@@ -62,6 +62,7 @@ import {
 } from '../stores/characterStore'
 import { LandingChrome, type LandingRow } from './LandingChrome'
 import { SceneChrome } from './SceneChrome'
+import { BreakthroughPanel, BreakthroughFlourish } from './BreakthroughPanel'
 import { DialogueBox } from './Dialogue'
 import {
   breatheCg,
@@ -1833,6 +1834,10 @@ export function GameView(): JSX.Element {
       {/* Click-to-advance: one full-bleed surface under the UI layer. It draws the plain
           arrow — the hand is the dialogue box's, which is the thing a click is *aimed* at. */}
       <div className="vu-stage-advance" onClick={onAdvanceClick} />
+
+      <BreakthroughPanel hidden={!sceneMode || cinematic || covered || uiHidden || !rowShown}
+        blocked={blocked || !!quizRow || (interjectRow ? interjectRow !== 'open' : !awaitingInput)} />
+      {!covered && !uiHidden && <BreakthroughFlourish />}
 
       {/* One chrome at a time over the shared stage — the scene, the landing (with the epilogue's
           goodbye menu), or the three game overs — each wearing the slot's own half of the day. */}

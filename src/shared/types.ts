@@ -1,4 +1,5 @@
 import type { MeanwhileStore } from './meanwhile'
+import type { BreakthroughState } from './breakthrough'
 /** Shared on-disk schema and IPC result types. */
 
 // Type-only, so the import cycles erase: most of these modules import back from here.
@@ -1187,6 +1188,8 @@ export type BunnybotHandover = 'contact' | 'haunt'
 export interface GameSave {
   /** Optional, noncanonical spectator conversations. */
   exNpcWatch?: MeanwhileStore
+  /** Optional, character-specific spirit and committed outcomes. */
+  exBreakthrough?: BreakthroughState
   schemaVersion: 12
   /**
    * The playthrough this save belongs to. Derived from the containing folder

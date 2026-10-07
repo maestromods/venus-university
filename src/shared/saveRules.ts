@@ -50,6 +50,7 @@ const SAVE_REQUIRED: Record<
     | 'exPlotTwist'
     | 'tallies'
     | 'thumbnail'
+    | 'exBreakthrough'
   >,
   true
 > = {

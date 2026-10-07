@@ -1,0 +1,31 @@
+.vu-breakthrough {
+  position: absolute; top: 24px; right: 28px; z-index: 4;
+  width: 340px; padding: 18px; border-radius: 18px 0 18px 18px;
+  color: var(--vu-text); font-family: var(--font-body);
+  --paper-face: var(--vu-surface); --paper-shadow: var(--vu-panel-shadow); --paper-offset: 7px 6px;
+}
+.vu-breakthrough-heading {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 0 0 12px; background: none; border: 0; color: inherit;
+  font: 20px var(--font-display); cursor: pointer;
+}
+.vu-breakthrough-heading small { font: 12px var(--font-mono); }
+.vu-breakthrough select, .vu-breakthrough textarea {
+  width: 100%; min-width: 0; border: 1px solid var(--vu-border); border-radius: 8px;
+  padding: 8px; color: var(--vu-text); background: var(--vu-recessed); font: 15px var(--font-body);
+}
+.vu-breakthrough-track { height: 9px; border-radius: 6px; background: var(--vu-recessed); margin-top: 12px; overflow: hidden; }
+.vu-breakthrough-track span { display: block; height: 100%; background: var(--vu-accent); }
+.vu-breakthrough-detail { padding-top: 8px; font-size: 15px; line-height: 1.5; max-height: 480px; overflow-y: auto; }
+.vu-breakthrough textarea { display: block; resize: vertical; max-height: 160px; margin-top: 8px; }
+.vu-breakthrough-detail .vu-btn { font-size: 18px; margin: 8px 0; }
+.vu-breakthrough [role='alert'] { color: var(--vu-accent); }
+.vu-breakthrough-flourish { position: absolute; inset: 0; z-index: 5; pointer-events: none; display: grid; place-items: center; color: var(--vu-text); }
+.vu-breakthrough-halo { position: absolute; width: 760px; height: 760px; border: 2px solid var(--vu-accent); border-radius: 50%; opacity: 0; }
+.vu-breakthrough-banner {
+  display: flex; flex-direction: column; gap: 12px; align-items: center; padding: 32px 75px;
+  border-radius: 70px 0 0 70px; --paper-face: var(--vu-surface); --paper-shadow: var(--vu-panel-shadow);
+  --paper-offset: 14px 12px; font: 19px var(--font-body); max-width: calc(100% - 100px); text-align: center; overflow-wrap: anywhere;
+}
+.vu-breakthrough-banner strong { font: 52px var(--font-display); }
+.vu-breakthrough-banner small { font: 16px var(--font-mono); }

@@ -112,7 +112,13 @@ export const MODS: readonly ModDef[] = [
   { id: CITY_LIFE_JOBS_MOD, name: 'City Life jobs', author: 'Maestro Leeds', version: '1.0.0',
     scope: 'playthrough', defaultOn: true, requires: [CITY_LIFE_LOCATIONS_MOD],
     blurb: 'Part-time jobs for the player and NPCs at the three City Life venues.',
-    offNote: 'Requires City Life locations. Existing playthroughs keep their jobs and schedules.' }
+    offNote: 'Requires City Life locations. Existing playthroughs keep their jobs and schedules.' },
+  {
+    id: 'breakthrough', name: 'Breakthrough', author: 'maestromods', version: '1.0.0',
+    scope: 'anytime', defaultOn: true,
+    blurb: 'Build spirit with each character and spend a full bar for a strong, grounded narrative opportunity.',
+    offNote: 'Keeps saved spirit and outcomes. Stops earning, activation, and extra continuity prompts.'
+  }
 ]
 
 /**
