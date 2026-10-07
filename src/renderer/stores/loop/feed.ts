@@ -1,4 +1,6 @@
-import { rollPostLikes } from '@shared/feed'
+import { postLikes, rollComments, strangerLikes } from '../photoComments'
+import { postIsOut } from '@shared/heldPosts'
+import { holdPostPhoto, preparePostPhoto } from '../photoPost'
 import { npcFriendsOf } from '@shared/npcRelationships'
 import type { EndingPostsResponse, FeedExtras, SlotIntroResponse, TimeSlot } from '@shared/types'
 import { bunnybotFirstPostTexts, FRIENDS_INTRO_SLOT } from '../../prompts/bunnybot'
@@ -24,8 +26,10 @@ import { deliverBunnybotNow } from '../textingLoop'
  * Files the status updates the slot's opening came back with, picks the one stranger's post the
  * feed surfaces for the slot, and fills a feed too thin to read with more of them.
  */
-export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
+export async function deliverSlotPosts(posts: SlotIntroResponse['posts']): Promise<void> {
   const fresh: TeaserCandidate[] = []
+  // Strangers' posts that came with a picture: the teaser is drawn from these first.
+  const freshPhotos: TeaserCandidate[] = []
 
   for (const post of posts ?? []) {
     const game = useGameStore.getState()
@@ -34,13 +38,32 @@ export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
     const text = post.text?.trim()
     if (!text) continue
     const id = crypto.randomUUID()
-    game.appendFeedPost(charId, {
+    // Read off the reply rather than the type, which declares the post's fields inline where
+    // nothing can be added to them from outside.
+    const extra = post as { image?: string; comments?: string[] }
+    // Awaited before anything is filed: the picture's name has to be in the post the slot save
+    // is about to write down.
+    const shot = await preparePostPhoto(charId, extra.image)
+    const comments = rollComments(charId, extra.comments, shot?.shot.tier)
+    const written = {
       id,
       text,
       date: game.date,
       time: game.time,
-      likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
-    })
+      likes: postLikes(charId, shot?.shot.tier),
+      // Left off entirely where nobody answered, rather than an empty array in every post.
+      ...(comments.length > 0 ? { comments } : {})
+    }
+
+    // A post she took a picture for is not filed until the picture exists; the render itself
+    // waits for the reader to commit to something. Both rules live in `photoPost`.
+    if (shot) {
+      holdPostPhoto(charId, written, shot, nudgeFirstContactPost)
+      if (!game.charInfo[charId]?.flags?.gaveContactInfo) freshPhotos.push({ charId, postId: id })
+      continue
+    }
+
+    game.appendFeedPost(charId, written)
     // A stranger's post is a teaser candidate; blocked counts as contact, since the flag is
     // masked rather than cleared.
     const flags = game.charInfo[charId]?.flags
@@ -51,7 +74,7 @@ export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
   // Replaced every slot, whether or not one was drawn: a teaser is never held over.
   const game = useGameStore.getState()
   if (!game.feedExtras) return
-  const teaser = pickTeaser(fresh)
+  const teaser = pickTeaser(freshPhotos.length > 0 ? freshPhotos : fresh)
 
   // What the tab would show as it stands, and everything it could be filled out with: any post
   // by anybody he cannot text, the teaser's own excepted since it is on the feed already.
@@ -60,7 +83,7 @@ export function deliverSlotPosts(posts: SlotIntroResponse['posts']): void {
     game.charInfo[charId]?.flags?.gaveContactInfo
       ? []
       : (game.charInfo[charId]?.feed ?? [])
-          .filter((post) => post.id !== teaser?.postId)
+          .filter((post) => post.id !== teaser?.postId && postIsOut(post))
           .map((post) => ({ charId, post }))
   )
   const fill = pickFeedFill({
@@ -103,7 +126,7 @@ export function deliverEndingPosts(
       text,
       date: stamp.date,
       time: stamp.time,
-      likes: rollPostLikes(npcFriendsOf(game.npcRelationships, charId, game.chars).length)
+      likes: postLikes(charId)
     })
     filed++
   }
@@ -151,7 +174,7 @@ export function rollFeedExtrasIfNewSlot(): void {
     date: game.date,
     time: game.time,
     teaser: null,
-    randomPost: { ...student, likes: rollPostLikes(0) }
+    randomPost: { ...student, likes: strangerLikes(student.handle) }
   })
 }
 

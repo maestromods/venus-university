@@ -22,8 +22,12 @@
 >   each of them remembers of the break is what happened in it, and you can reword it before the
 >   next semester starts. The break can also be skipped, which writes those memories for you as
 >   before.
-> - **It stands on its own.** It is built directly on Venus Dev's version and needs no other
->   mod.
+> - **This branch is the build with naudh1r's Photo Feature in it.** It is
+>   [`semester-0.3`](https://github.com/morrowkiln/venus-university/tree/semester-0.3) merged
+>   with [naudh1r](https://github.com/naudh1r/venus-university)'s Photo Feature 1.1.3 (their
+>   tag `v1.1.3`), plus the little that makes the two work together: photos and post comments
+>   carry into the next semester. It is the source of the download that goes on top of Photo
+>   Feature. Continuing Semesters by itself, with no other mod, is the `semester-0.3` branch.
 > - **Licences are unchanged.** The code, including these changes, is AGPL-3.0-only (`LICENSE`).
 >   Images, audio and video remain © Venus Dev, all rights reserved (`LICENSE-ASSETS.md`); they
 >   are here only so the game builds from source.

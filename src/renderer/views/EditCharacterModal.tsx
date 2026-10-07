@@ -1,3 +1,5 @@
+import { cleanBody, type CharacterBody } from '@shared/characterBody'
+import { BodyFieldsSection, bodyForm } from './bodyFields'
 import { useRef, useState, type CSSProperties, type JSX } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion } from 'motion/react'
@@ -27,8 +29,9 @@ import {
   cgSetDraft,
   expressionDraft,
   spriteDraft,
+  withRegenTags,
   type PromptEdit
-} from '@shared/imagePrompt'
+} from './bodyDrafts'
 import {
   CUSTOM_OUTFIT_NAME_MAX,
   CUSTOM_OUTFIT_SLOTS,
@@ -39,7 +42,7 @@ import {
 import { isStatKey, type StatKey } from '@shared/playerStats'
 import { POSITIONS } from '@shared/positions'
 import { ROOM_PROMPT_LEAD, ROOM_VARIANTS } from '@shared/room'
-import { withRegenTags, type PromptGroup } from '@shared/regenTags'
+import type { PromptGroup } from '@shared/regenTags'
 import { pictureKeySet } from '@shared/settingsRules'
 import { sfwWithholds } from '@shared/sfw'
 import { isGiftCategory } from '@shared/shop'
@@ -198,6 +201,8 @@ interface Form {
   outfit: string[]
   peOutfit: string[]
   swimOutfit: string[]
+  /** Her body, one pooled pick per field; empty where she is average. */
+  body: CharacterBody
   negativeTags: string[]
   roomPrompt: string
   height: number
@@ -227,6 +232,7 @@ function formOf(character: Character): Form {
     outfit: [...character.outfit],
     peOutfit: [...character.peOutfit],
     swimOutfit: [...character.swimOutfit],
+    body: bodyForm(character.body),
     negativeTags: [...(character.negativeTags ?? [])],
     roomPrompt: character.roomPrompt,
     height: character.height,
@@ -439,6 +445,7 @@ export function EditCharacterModal({
       outfit: form.outfit,
       peOutfit: form.peOutfit,
       swimOutfit: form.swimOutfit,
+      body: cleanBody(form.body),
       height: form.height,
       negativeTags: form.negativeTags,
       roomPrompt: form.roomPrompt,
@@ -1258,6 +1265,12 @@ export function EditCharacterModal({
                             />
                           </label>
                         ))}
+
+                        <BodyFieldsSection
+                          body={form.body}
+                          baseAppearance={form.baseAppearance}
+                          onChange={(body) => setForm((current) => ({ ...current, body }))}
+                        />
 
                         <label className="vu-field" htmlFor="edit-negative-tags">
                           <span className="vu-field-label">Additional Negative Prompts</span>
