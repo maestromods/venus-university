@@ -89,6 +89,8 @@ switch is left as the player set it.
 | `src/main/services/modsService.ts` | Reads and writes `data/mods.json`. |
 | `src/renderer/stores/modsStore.ts` | The switches in the renderer, and the hooks. |
 | `src/renderer/views/ModsModal.tsx` | The Mods screen. |
+| `src/renderer/mods/hooks.ts` | The hook points (below). |
+| `src/renderer/mods/index.ts` | Registers every mod's hooks at boot. |
 | `test/mods.test.ts` | The rules, tested against a list with every shape of mod. |
 | `src/renderer/mods/hooks.ts` | The hook points (prototype, below). |
 | `src/renderer/mods/index.ts` | Registers every mod's hooks at boot. |
@@ -140,7 +142,7 @@ Option ids are written to disk, so they never change: `photos`, `explicit`, `loa
 `loader-shimmer`, `loader-dots`. `test/photoHooks.test.ts` fails if the handover in `modsStore.ts`
 or `modsService.ts` goes missing.
 
-## Hook points (prototype)
+## Hook points
 
 A switch decides whether a mod acts. Hook points decide **where** it acts without editing the
 game there. At each place mods commonly add to, the game asks once, in one line of its own
@@ -210,8 +212,9 @@ an earlier session is settled only once the mod is on again.
 
 ### Not covered yet
 
-- Screens: the photo bubble, the gallery, the character editor's body fields.
-- Main process: IPC, image protocols, the ComfyUI service, settings and character rules.
+- Screens: a mod's own panels, menu entries and editor fields.
+- Main process: IPC, protocols, services, settings and character rules.
+- Saves: a mod's own fields in a save, and what carries into the next semester.
 
 Both are still direct edits, as before.
 
