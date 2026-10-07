@@ -1,3 +1,6 @@
+import { MEANWHILE_MOD } from '@shared/meanwhile'
+import { useModOn } from '../stores/modsStore'
+import { MeanwhileModal } from './MeanwhileModal'
 import {
   useEffect,
   useLayoutEffect,
@@ -219,6 +222,7 @@ function turnDismissLabel(error: AppError): string {
 /** What is open over the scene, if anything. */
 type OpenPanel =
   | { kind: 'calendar' }
+  | { kind: 'meanwhile' }
   | { kind: 'map' }
   | { kind: 'jobs' }
   | { kind: 'classes' }
@@ -625,6 +629,7 @@ export function GameView(): JSX.Element {
 
   const [action, setAction] = useState('')
   const [panel, setPanel] = useState<OpenPanel | null>(null)
+  const meanwhileOn = useModOn(MEANWHILE_MOD)
   const closePanel = (): void => setPanel(null)
   /**
    * The glyphs a gift threw off her, until the last of them has faded. Armed `waiting` when the
@@ -2423,6 +2428,7 @@ export function GameView(): JSX.Element {
             onSettings={() => setPanel({ kind: 'appSettings' })}
             onMods={() => setPanel({ kind: 'mods' })}
             onPlotTwist={plotTwistOn ? () => setPanel({ kind: 'plotTwist' }) : undefined}
+            onMeanwhile={meanwhileOn ? () => setPanel({ kind: 'meanwhile' }) : undefined}
             modsWaiting={busy}
             onControls={() => setPanel({ kind: 'controls' })}
             onLeave={() => setPanel({ kind: 'leaving' })}
@@ -2431,6 +2437,9 @@ export function GameView(): JSX.Element {
           />
         )}
 
+        {panel?.kind === 'meanwhile' && meanwhileOn && (
+          <MeanwhileModal key="meanwhile" theme={half} onClose={() => setPanel({kind:'settings'})} />
+        )}
         {panel?.kind === 'saveGame' && (
           <SaveGameModal key="save-game" theme={half} onClose={closePanel} />
         )}

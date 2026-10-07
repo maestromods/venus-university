@@ -1504,6 +1504,7 @@ describe('toGameSave', () => {
       'endingArtWanted',
       'events',
       'exPlotTwist',
+      'exNpcWatch',
       'expelled',
       'farewellsDone',
       'feedExtras',

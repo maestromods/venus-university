@@ -1,6 +1,7 @@
 import { appError, toAppError } from '@shared/errors'
 import { PLOT_TWIST_MOD, validatePlotTwist } from '@shared/plotTwists'
 import type { Conversation } from '@shared/types'
+import { withMeanwhile, type MeanwhileScene } from '@shared/meanwhile'
 import { gameOverReasonOf, type GameOverReason } from '@shared/gameOver'
 import { isGameOver, spentOf } from '@shared/money'
 import {
@@ -461,4 +462,20 @@ export async function writePlotTwist(value: string): Promise<Result<null>> {
     manualWriting = false
   }
   return outcome
+/** Cache a spectator scene without ever inserting it into canonical history or memories. */
+export async function persistMeanwhileScene(scene: MeanwhileScene, isCurrent: () => boolean): Promise<void> {
+  let completed = false
+  await queueWrite(async () => {
+    if (!isCurrent() || manualSaveOffer() !== 'open') return
+    const game = useGameStore.getState()
+    const draft = manualSaveDraft() ?? (!sceneActiveOf(game) ? { ...game.toGameSave(), scene: null } : null)
+    if (!draft || !game.playthroughId) throw Error('No safe save point is available yet.')
+    const next = withMeanwhile(game.exNpcWatch,scene)
+    const result = await window.api.saves.autosave(game.playthroughId,{ ...draft, exNpcWatch: next })
+    if (!result.ok) throw Error(result.error.message)
+    if (!isCurrent()) return
+    useGameStore.setState({ exNpcWatch: next })
+    completed = true
+  })
+  if (!completed) throw Error('The game changed. Reopen Meanwhile to view saved conversations.')
 }

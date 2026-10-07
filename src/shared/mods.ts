@@ -1,6 +1,7 @@
 import { CONTINUING_SEMESTERS, CONTINUING_SEMESTERS_MOD } from './continuingSemestersMod'
 import { PHOTO_LOADERS, photoLoaderOf } from './photoLoader'
 import { loaderOptionId, PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSwitches'
+import { MEANWHILE_MOD } from './meanwhile'
 import type { PlaythroughRecord } from './types'
 import { PLAYTHROUGH_NAMES_MOD } from './playthroughNames'
 import { PLOT_TWIST_DEF } from './plotTwists'
@@ -96,6 +97,12 @@ export const MODS: readonly ModDef[] = [
     scope: 'anytime', defaultOn: true,
     blurb: 'Regenerate the whole latest phone reply, including every message in it.',
     offNote: 'Existing messages and reply checkpoints stay saved. Regeneration uses your configured AI.'
+  },
+  {
+    id: MEANWHILE_MOD, name: 'Meanwhile conversations', author: 'Maestro Leeds', version: '1.0.0',
+    scope: 'anytime', defaultOn: true,
+    blurb: 'Watch optional two-NPC conversations from a dedicated Meanwhile menu.',
+    offNote: 'Saved replays stay in the playthrough. Watching changes no relationships, memories, or time.'
   }
 ]
 

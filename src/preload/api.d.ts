@@ -1,3 +1,4 @@
+import type { MeanwhileResponse } from '../shared/meanwhile'
 import type { ClassifierPromptRequest, ClassifierVerdict } from '@shared/classifier'
 import type {
   BgVariant,
@@ -167,6 +168,8 @@ export interface VenusUniversityApi {
       request: StructuredRequest,
       group: string
     ) => Promise<Result<EndingPostsResponse>>
+    /** Writes a bounded, noncanonical spectator conversation; never streams. */
+    completeMeanwhile: (request: StructuredRequest, group: string) => Promise<Result<MeanwhileResponse>>
     /** Sends a Bunnyboard texting turn; `group` enables cancellation. */
     completeTexting: (
       request: StructuredRequest,
