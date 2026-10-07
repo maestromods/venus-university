@@ -1,3 +1,4 @@
+import { recallPayload, type StorySnapshot } from '@shared/storyMemory'
 import { affectionFor, dedupedMemoriesFor, emptyFlags } from '@shared/relationship'
 import { ROOM_LOCATION } from '@shared/locations'
 import type { NpcRelationshipMap } from '@shared/npcRelationships'
@@ -64,6 +65,7 @@ const TEXTING_PERSONA = [
 
 /** The prompt-facing slice of state a texting turn needs. */
 export interface TextingPromptState {
+  storyMemory?: StorySnapshot
   date: number
   time: TimeSlot
   /** The reader's accumulated stats, used for relationship requirement guidance. */
@@ -394,6 +396,7 @@ export function buildTextingPrompt(
   ].join('\n')
 
   return {
+    ...recallPayload(state.storyMemory, [character.charId], newMessage),
     system: TEXTING_PERSONA,
     user,
     schema: textingSchema(),

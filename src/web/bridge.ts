@@ -1,3 +1,4 @@
+import { prepareStoryRequest, inspectStoryMemory } from './storyMemory'
 import type { ClassifierPromptRequest, ClassifierVerdict } from '@shared/classifier'
 import { base64ToBytes } from '@shared/base64'
 import { appError, toAppError } from '@shared/errors'
@@ -12,7 +13,7 @@ import { cancelGroup, cancelKeys, runAbortable } from '@shared/jobQueue'
 import { LINEUP_MIME_TYPE } from '@shared/lineup'
 import { classifyCloud } from '@shared/llm/cloudClassifier'
 import { generateImage, generatePhoto } from '@shared/llm/cloudImage'
-import { completeStructured, type StructuredRequest } from '@shared/llm/cloudLlm'
+import { completeStructured as completeCloudStructured, type StructuredRequest } from '@shared/llm/cloudLlm'
 import {
   listImageModels,
   listModels,
@@ -128,6 +129,7 @@ async function generateEndingArt(
 export function buildApi(): VenusUniversityApi {
   return {
     platform: 'web',
+    storyMemory: { inspect: (payload) => result('inspect story recall', () => inspectStoryMemory(payload)) },
     assets: {
       getPoseManifest: () => result('read the poses', getPoseManifest),
       getQuickstart: () => result('read the quickstart', getQuickstart),
@@ -477,4 +479,8 @@ export function buildApi(): VenusUniversityApi {
         result('read the background', () => readBackgroundImage(name, variant))
     }
   }
+}
+
+async function completeStructured<T>(request: StructuredRequest, ...args: Parameters<typeof completeCloudStructured<T>> extends [unknown, ...infer R] ? R : never): Promise<T> {
+  return completeCloudStructured<T>(await prepareStoryRequest(request), ...args)
 }

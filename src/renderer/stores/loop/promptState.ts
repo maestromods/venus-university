@@ -1,3 +1,4 @@
+import { currentStorySnapshot } from '../storyMemory'
 import { SENIOR_YEAR, slotFullLabel } from '@shared/classes'
 import { globalSlotOf, slotFromId } from '@shared/jobs'
 import type { PlayerStats } from '@shared/playerStats'
@@ -304,6 +305,7 @@ export function promptState(): PromptState {
     : null
 
   return {
+    storyMemory: currentStorySnapshot(),
     playthroughId: game.playthroughId ?? 'unsaved',
     date: game.date,
     time: game.time,

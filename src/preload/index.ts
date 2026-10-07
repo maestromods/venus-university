@@ -7,6 +7,7 @@ import type { VenusUniversityApi } from './api'
  */
 const api: VenusUniversityApi = {
   platform: 'desktop',
+  storyMemory: { inspect: (payload) => ipcRenderer.invoke('storyMemory:inspect', payload) },
   assets: {
     getPoseManifest: () => ipcRenderer.invoke('assets:getPoseManifest'),
     getQuickstart: () => ipcRenderer.invoke('assets:getQuickstart'),

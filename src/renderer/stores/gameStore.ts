@@ -1,3 +1,4 @@
+import { normalizeStoryMemory, type StoryMemory } from '@shared/storyMemory'
 import { create } from 'zustand'
 import {
   affectionFor,
@@ -221,6 +222,7 @@ interface GameStoreState {
    */
   playerSchedule: Record<number, string>
   /** The playthrough log — every finished scene's summary, by day and slot. Persisted. */
+  exStoryMemory: StoryMemory
   history: GameHistory
   /** The Bunnyboard app: conversations, friend requests and badges. Persisted. */
   bunnyboard: BunnyboardState
@@ -1245,6 +1247,7 @@ const initialState = {
   charInfo: {} as Record<string, CharInfo>,
   classes: {} as Record<string, ClassEntry>,
   playerSchedule: {} as Record<number, string>,
+  exStoryMemory: normalizeStoryMemory(undefined),
   history: {} as GameHistory,
   bunnyboard: emptyBunnyboard(),
   events: [] as CalendarEvent[],
@@ -1367,6 +1370,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       ),
       classes: record.classes,
       playerSchedule: save.playerSchedule,
+      exStoryMemory: normalizeStoryMemory(save.exStoryMemory),
       history: save.history,
       bunnyboard: save.bunnyboard,
       events: save.events,
@@ -2615,6 +2619,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
         Object.entries(state.charInfo).map(([charId, info]) => [charId, charStateOf(info)])
       ),
       playerSchedule: state.playerSchedule,
+      exStoryMemory: normalizeStoryMemory(state.exStoryMemory),
       history: state.history,
       bunnyboard: state.bunnyboard,
       events: state.events,

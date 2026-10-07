@@ -1,3 +1,5 @@
+import { recallPayload, type StorySnapshot } from '@shared/storyMemory'
+import { withStoryExtraction } from './storyMemoryPrompt'
 import { SUBJECT_TAGS } from '@shared/characterRules'
 import { slotFullLabel, yearLabel } from '@shared/classes'
 import { dormClause } from '@shared/dorms'
@@ -144,6 +146,7 @@ export interface ProjectSceneContext {
 
 /** Everything the builders read out of `gameStore`. */
 export interface PromptState {
+  storyMemory?: StorySnapshot
   /** The cloud-LLM cache key: the playthrough id, never the save's. */
   playthroughId: string
   date: number
@@ -1265,6 +1268,7 @@ function castScenePrompt(
   )
 
   return {
+    ...recallPayload(state.storyMemory, cast.map(c => c.charId), scan),
     system: systemPrompt(cast, state, setting),
     user: [
       ...whoBlock(cast, state, reader),
@@ -1430,6 +1434,7 @@ export function buildSoloPrompt(
       setting
     ].join('\n'),
     user,
+    ...recallPayload(state.storyMemory, [], action),
     // No `end_scene`: the scene is over by construction.
     schema: sceneSchema(state.backgrounds, [], state, true, false),
     // Constant, like the ledger's: nothing above the seam varies by save.
@@ -1808,7 +1813,7 @@ export function buildLedgerPrompt(
     ''
   ].join('\n')
 
-  return {
+  return withStoryExtraction({
     system: ledgerPersonaFor(state.lessNsfwText),
     user: `${preamble}\n${rest}`,
     schema: ledgerSchema(charKeys, rosterKeys, classScene, castStats),
@@ -1817,5 +1822,5 @@ export function buildLedgerPrompt(
     logFrom: preamble.length + 1,
     // The bookkeeping is judged better at high, whatever the setting says.
     minThinking: 'high'
-  }
+  }, state.storyMemory, charKeys)
 }

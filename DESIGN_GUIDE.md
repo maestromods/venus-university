@@ -152,6 +152,15 @@ Where a thing goes:
 
 ## 5. Prompts and the LLM
 
+- **Optional Story Memory** keeps lasting facts and recall corrections in `GameSave.exStoryMemory`.
+  An enabled ledger extracts candidates backed by generated scene evidence; the slot boundary
+  validates and files them. Pure builders attach a local snapshot, and the platform bridge
+  selects bounded recall before stripping that snapshot from the cloud request. The desktop's
+  per-playthrough SQLite file is a replaceable index of the active save, never an authority
+  over it. The browser and unavailable native indexes use the same save-based selector. The
+  dedicated Game-menu editor commits through the serialized save lane before changing visible
+  state. Off retains data and stops extraction/recall; native character notes are unchanged.
+
 - **Builders are pure** and return `{ system, user, schema, cacheKey }`; main attaches the key and sends. Arrays are joined with newlines, so one element is one line the model reads — no sentence is ever broken across two. A builder never draws from a grab bag: the caller draws the inspiration word or the rumor place and passes it in.
 - **The player may replace the cast-scene persona.** A stored one heads every cast scene call verbatim, whatever `lessNsfwText` says, and reaches no other call; the slot opening, the graduation posts, the ledgers, the solo scene and texting keep their own. Saved identical to the shipped text, it is stored as absent.
 - **Order is by rate of change, slowest first.** `system` is what never varies while a playthrough runs (persona, JSON rules, setting); `user` is everything else, cheapest-to-change last and the reader's action at the very end. Scene calls key their cache on the playthrough, never the save; one-shots key on a constant. A list that reaches a prompt is sorted, never shuffled, so the cached prefix holds. A `user` message that opens with a preamble fixed for its cacheKey marks where the preamble ends with `logFrom`, and the console log starts there; the system prompt is never logged.

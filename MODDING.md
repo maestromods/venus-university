@@ -85,6 +85,9 @@ a setter, and set it from `modsStore.ts` at boot and whenever a switch moves
 
 ## Not decided yet
 
+The independent [Story Memory source mod](docs/mods/story-memory.md) documents its SQLite
+index, optional save data, editor, prompt budgets and integration with the other source ports.
+
 - The build's name and version (`BUILD` in `mods.ts`).
 - Whether `data/mods.json` goes into the game's own backup; it does not today.
 - How a mod that patches the built code, rather than the source, reads its switch.
