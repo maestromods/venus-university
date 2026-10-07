@@ -8,7 +8,7 @@ import {
   type TimeSlot
 } from '@shared/types'
 import { seededRand } from '@shared/hash'
-import { postIsOut } from '@shared/heldPosts'
+import { postVisible } from '../mods/hooks'
 import { GRADUATION_DATE } from '../prompts/occasions'
 import { newestFirst } from './feedRolls'
 
@@ -39,7 +39,7 @@ export function contactFeedPosts(
 ): FeedPostEntry[] {
   return chars.flatMap((charId) =>
     isFeedContact(charInfo[charId])
-      ? (charInfo[charId]?.feed ?? []).filter(postIsOut).map((post) => ({ charId, post }))
+      ? (charInfo[charId]?.feed ?? []).filter(postVisible).map((post) => ({ charId, post }))
       : []
   )
 }
@@ -140,8 +140,8 @@ export function updatesFeed(input: {
     const character = characters[entry.charId]
     if (seen.has(entry.postId) || !character) continue
     const post = (charInfo[entry.charId]?.feed ?? []).find((one) => one.id === entry.postId)
-    // A teaser that came with a picture waits for it, as every post does.
-    if (!post || !postIsOut(post)) continue
+    // A teaser a mod is still holding back waits, as every post does.
+    if (!post || !postVisible(post)) continue
     seen.add(entry.postId)
     entries.push({
       kind: 'post',

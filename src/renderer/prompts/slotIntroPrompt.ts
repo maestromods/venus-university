@@ -1,10 +1,4 @@
-import {
-  postCommentLines,
-  postPhotoLines,
-  POST_PHOTO_SCHEMA_FIELD,
-  POST_PHOTO_SCHEMA_REQUIRED
-} from './photoBrief'
-import { canSendPhotos } from '../stores/localPhotoStore'
+import { promptFields, promptLines, promptRequired } from '../mods/hooks'
 import { recallPayload, type StorySnapshot } from '@shared/storyMemory'
 import { affectionFor, dedupedMemoriesFor, emptyFlags } from '@shared/relationship'
 import { DEFAULT_PLAYER_STATS, type PlayerStats } from '@shared/playerStats'
@@ -190,11 +184,11 @@ const SCHEMA = objectSchema('slot_intro', ['lines'], {
     items: {
       type: 'object',
       additionalProperties: false,
-      required: ['char', 'text', ...POST_PHOTO_SCHEMA_REQUIRED],
+      required: ['char', 'text', ...promptRequired('slot-posts')],
       properties: {
         char: { type: 'string' },
         text: { type: 'string' },
-        ...POST_PHOTO_SCHEMA_FIELD
+        ...promptFields('slot-posts')
       }
     }
   }
@@ -473,8 +467,7 @@ export function buildSlotIntroPrompt(
           '',
           'Then fill "posts", one entry per character under STATUS UPDATES. "char" is her key exactly as written there. "text" is the post itself: one or two short lines in her own voice, the way she would actually type it — lowercase, slang and emoji are fine if that is how she writes. It is a post to nobody in particular, about her hour: what she is doing, where she is, what kind of mood she is in, something small she noticed. She is NOT writing to the reader and must not address him, mention him, or refer to meeting anyone. No narration and no stage directions.',
           'The narration in "lines" must not mention these posts — the reader has not opened his phone yet.',
-          ...postPhotoLines(canSendPhotos()),
-          ...postCommentLines()
+          ...promptLines('slot-posts', {})
         ]
       : [
           // Refused out loud for "hangouts"'s reason.
