@@ -1,18 +1,17 @@
+import { WhisperIcon } from '../components/BunnyboardFeatureIcons'
+import '../vu_styles/BunnyboardFeature.css'
 import { useEffect, useRef, useState, type JSX } from 'react'
-import { createPortal } from 'react-dom'
 import { motion } from 'motion/react'
 import { VENUS_WHISPER_MOD, WHISPER_COMMENTS, WHISPER_TEXT, whisperIssueId, whisperPeople, whisperPlayerHandle } from '@shared/venusWhisper'
-import { TitleTab } from '../components/TitleTab'
-import { useModalShell } from '../components/useModalShell'
 import { useGameStore } from '../stores/gameStore'
 import { useModOn } from '../stores/modsStore'
 import { profileUrl } from '../stores/characterStore'
 import { commentOnWhisper, dismissWhisper, publishWhisper, replyOnWhisper, useWhisperActivity, whisperReady } from '../stores/venusWhisper'
-import { breatheMark, gestures, lift, press, quietLift, quietPress, panelUnderTab, veilIn } from './motion'
+import { breatheMark, gestures, lift, press, quietLift, quietPress } from './motion'
 import '../vu_styles/VenusWhisper.css'
 
 /** A separate reading room for the campus column and its one public discussion per issue. */
-export function VenusWhisperModal({ theme, onClose }: { theme: 'day' | 'night'; onClose: () => void }): JSX.Element | null {
+export function VenusWhisperPage(): JSX.Element | null {
   const game = useGameStore(s => s), on = useModOn(VENUS_WHISPER_MOD)
   const backgroundBusy = useWhisperActivity(s => s.working)
   const [selected, setSelected] = useState(''), [draft, setDraft] = useState(''), [replyTo, setReplyTo] = useState<string>()
@@ -29,9 +28,7 @@ export function VenusWhisperModal({ theme, onClose }: { theme: 'day' | 'night'; 
     cancel(); setBusy(false); setError(''); setHidden([]); setTyping(''); setSelected(''); setDraft(''); setReplyTo(undefined)
     return cancel
   }, [game.playthroughId, game.loads, game.date, game.time, on])
-  const close = (): void => { cancel(); onClose() }
-  const { host, overlayProps } = useModalShell(close)
-  if (!host || !on) return null
+  if (!on) return null
   const state = game.exVenusWhisper
   const rows = state.issues.filter(i => i.term < game.termIndex || (i.term === game.termIndex && i.day <= game.date))
     .sort((a, b) => b.term - a.term || b.day - a.day)
@@ -90,18 +87,17 @@ export function VenusWhisperModal({ theme, onClose }: { theme: 'day' | 'night'; 
     }, 'Someone is reading your comment…')
   }
 
-  return createPortal(<motion.div className="vu-veil" data-theme={theme} variants={veilIn} initial="hidden" animate="shown" exit="gone" {...overlayProps}>
-    <motion.section className="vu-whisper vu-paper" role="dialog" aria-modal="true" aria-label="The Venus Whisper" variants={panelUnderTab}>
-      <TitleTab>The Venus Whisper</TitleTab>
-      <header className="vu-whisper-header">
-        <div><span className="vu-whisper-meta">Campus correspondence</span><p>Everybody has a story. Somebody has a column.</p></div>
-        <motion.span className="vu-whisper-seal" animate={breatheMark} aria-hidden="true"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4zM8 8h8M8 12h3M8 16h8M15 12h1"/></svg></motion.span>
+  return <section className="vu-bb-feature vu-whisper" aria-label="The Venus Whisper">
+      <header className="vu-bb-feature-heading">
+        <div><span className="vu-whisper-meta">Campus correspondence</span><h1>The Venus Whisper</h1><p>Everybody has a story. Somebody has a column.</p></div>
+        <motion.span className="vu-bb-feature-seal" animate={breatheMark} aria-hidden="true"><WhisperIcon /></motion.span>
       </header>
-      <div className="vu-whisper-body">
-        <aside className="vu-whisper-rail">
+      <div className="vu-bb-feature-columns">
+        <aside className="vu-bb-feature-list vu-whisper-rail">
           <motion.button className="vu-btn vu-btn--primary vu-paper vu-btn--panel" disabled={published || !ready}
             {...gestures(published || !ready, lift, press)} onClick={() => void publish()}>Read today’s issue</motion.button>
           <p className="vu-whisper-note">One issue a day, written when you open it. New issues and replies use your configured AI.</p>
+          <span className="vu-bb-feature-label">The archive</span>
           <nav aria-label="Past issues" className="vu-whisper-archive">
             {rows.map(i => <motion.button key={i.id} className="vu-whisper-edition" aria-pressed={issue?.id === i.id}
               disabled={busy} {...gestures(busy, quietLift, quietPress)} onClick={() => { setSelected(i.id); setReplyTo(undefined); setDraft(''); setError(''); setDeleting(false) }}>
@@ -109,6 +105,11 @@ export function VenusWhisperModal({ theme, onClose }: { theme: 'day' | 'night'; 
             </motion.button>)}
             {!rows.length && <p className="vu-empty vu-empty--flush">The first edition is waiting to be written.</p>}
           </nav>
+        {issue && <div><motion.button className="vu-btn vu-btn--quiet" disabled={!ready} {...gestures(!ready, quietLift, quietPress)} onClick={() => {
+          if (!deleting) { setDeleting(true); return }
+          void run(async (_g, alive) => { await dismissWhisper(issue.id, alive); setSelected(''); return [] }, 'Filing the archive…')
+        }}>{deleting ? 'Confirm delete issue' : 'Delete issue'}</motion.button>
+        {deleting && <motion.button className="vu-pill" {...gestures(false, quietLift, quietPress)} onClick={() => setDeleting(false)}>Keep issue</motion.button>}</div>}
         </aside>
         <div className="vu-whisper-reading">
           <div className="vu-whisper-scroll">
@@ -154,14 +155,5 @@ export function VenusWhisperModal({ theme, onClose }: { theme: 'day' | 'night'; 
           </div>}
         </div>
       </div>
-      <footer className="vu-foot vu-whisper-foot">
-        {issue && <div><motion.button className="vu-btn vu-btn--quiet" disabled={!ready} {...gestures(!ready, quietLift, quietPress)} onClick={() => {
-          if (!deleting) { setDeleting(true); return }
-          void run(async (_g, alive) => { await dismissWhisper(issue.id, alive); setSelected(''); return [] }, 'Filing the archive…')
-        }}>{deleting ? 'Confirm delete issue' : 'Delete issue'}</motion.button>
-        {deleting && <motion.button className="vu-pill" {...gestures(false, quietLift, quietPress)} onClick={() => setDeleting(false)}>Keep issue</motion.button>}</div>}
-        <motion.button className="vu-btn vu-btn--quiet" {...gestures(false, quietLift, quietPress)} onClick={close}>Back to menu</motion.button>
-      </footer>
-    </motion.section>
-  </motion.div>, host)
+    </section>
 }

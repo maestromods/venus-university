@@ -1,6 +1,6 @@
 # The Venus Whisper
 
-An optional campus gossip newsletter, accessed from **Game menu → The Venus Whisper**.
+An optional campus gossip newsletter, accessed from **Bunnyboard → Whisper**.
 It gives the former Journals concept one shared column and discussion, separate from
 character profiles, Bunnyboard Updates, and Meanwhile's spectator conversations.
 
@@ -99,8 +99,17 @@ to what the reader subsequently does in a scene.
 | `src/main/ipc.ts`, `src/preload/api.d.ts`, `src/preload/index.ts`, `src/web/bridge.ts` | Cancellable `llm:completeWhisper` structured requests on desktop and browser. |
 | `src/renderer/stores/loop/promptState.ts`, `prompts/scenePrompt.ts` | Scene injection of public excerpts only. |
 | `src/renderer/stores/textingLoop.ts`, `prompts/textingPrompt.ts` | Same public recall for normal and regenerated texts. |
-| `src/renderer/views/GameView.tsx`, `GameMenuModal.tsx` | Dedicated menu entry and modal, independent of character profiles and Updates. |
+| `src/renderer/views/BunnyboardModal.tsx`, `VenusWhisperModal.tsx` | Optional rail tab and embedded newsletter page, independent of character profiles and Updates. |
 | `test/venusWhisper.test.ts` | Identity persistence, repeated term rollover, bounded imports, privacy boundaries, duplicate prevention, failed writes and stale requests. |
+
+## Bunnyboard navigation
+
+Whisper and Meanwhile each have their own rail tab and shared outline icon in the page header.
+Neither occupies the Game menu. The phone owns dismissal and theme; changing tabs unmounts
+the page, cancels unfinished requests and typing timers, and keeps already saved replies.
+Disabling the selected feature returns to Chats. The archive and article scroll separately;
+the composer stays visible below the article. The rail contracts to the native five destinations
+when both features are off. No newsletter save fields or SQLite integration change.
 
 ## Save format and integration
 
@@ -118,7 +127,7 @@ links are scoped to an issue; a normalizer drops duplicate IDs and invalid paren
 Current/previous-day gates compare both semester and day, so an old day-zero issue cannot
 become today's issue in a new semester.
 
-Turning the mod off retains the saved identity/archive and disables its menu, generation and
+Turning the mod off retains the saved identity/archive and disables its tab, generation and
 extra prompt context. Semester carryover retains it even while off. Saves/backup exports
 already carry optional save fields; no sidecar database or new installer is required.
 This does not import legacy EX journal archives or any person's playthrough data.
@@ -142,7 +151,6 @@ closing, loading, time changes and switching off while a response is outstanding
 and switching off without erasing data. The native save-field inventory includes the new field.
 
 UI checks use synthetic saves and a stubbed writer, avoiding API charges or real private saves.
-Exercise day and night at 1920×1080, 2560×1440, 1280×720 and 1440×1080, including the full
-Game menu. Check publication, article scrolling, tags, direct replies, pauses, the older-term
+Exercise day and night at 1920×1080, 2560×1440, 1280×720 and 1440×1080, including all seven Bunnyboard rail tiles and each mod enabled alone. Check publication, article scrolling, tags, direct replies, pauses, the older-term
 archive, and failure retry. Before release, playtest real-model editorial quality and subtlety
 over several days; schema validation cannot certify believable prose or perfect discretion.
