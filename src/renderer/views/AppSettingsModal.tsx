@@ -44,6 +44,9 @@ import { SFW_FIELDS, sfwValuesOf, type SfwKey } from './sfwFields'
 import { VOLUME_FIELDS } from './volumeFields'
 import { PROMPT_KIND_FIELDS, promptKindValuesOf, promptKindsFrom } from './promptKindFields'
 import '../vu_styles/Settings.css'
+import { SOUNDTRACK_MOD } from '@shared/soundtracks'
+import { useModOn } from '../stores/modsStore'
+import { SoundtracksModal } from './SoundtracksModal'
 
 export interface AppSettingsModalProps {
   /** Drawn by whatever opened this — a portal inherits neither palette nor state rules. */
@@ -177,6 +180,8 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
   const [closing, setClosing] = useState(false)
   // Whether the Advanced Settings panel stands over this one.
   const [advanced, setAdvanced] = useState(false)
+  const [soundtracks, setSoundtracks] = useState(false)
+  const customSoundtracks = useModOn(SOUNDTRACK_MOD)
   // Holds off a second click while Save's write is in flight.
   const saving = useRef(false)
   // The layer inside the panel a combobox hangs its list on, once it is in the document.
@@ -819,6 +824,13 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
                 ))}
               </div>
 
+              {customSoundtracks && <motion.button
+                id="settings-soundtracks" className="vu-pill" type="button"
+                disabled={backingUp || restoring}
+                {...gestures(backingUp || restoring, quietLift, quietPress)}
+                onClick={() => setSoundtracks(true)}
+              >Custom soundtracks</motion.button>}
+
               {/* One zip of everything this build keeps, and one read back over it. Both builds
                   write the same format, so a semester started in one goes on in the other. */}
               <span className="vu-settings-heading vu-settings-data-heading">Game data</span>
@@ -918,6 +930,7 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
       {/* Siblings of the veil, not children: a click inside one does not reach the veil's
           own handler through the React tree. */}
       <AnimatePresence propagate>
+        {soundtracks && <SoundtracksModal key="soundtracks" theme={theme} onClose={() => setSoundtracks(false)} />}
         {confirmRestore && (
           <ConfirmModal
             key="restore"

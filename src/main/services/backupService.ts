@@ -78,6 +78,8 @@ import {
   saveIdsOf
 } from './saveService'
 import { getRendererSettings, getSettings, replaceSettings } from './settingsService'
+import { prepareSoundtrackSnapshot, SOUNDTRACK_BACKUP_DIR } from '@shared/soundtracks'
+import { soundtrackLibrary, soundtrackHash, readSoundtrackFile } from './soundtrackService'
 
 /** The data folder as one backup zip, and one backup zip back over the data folder. */
 
@@ -254,8 +256,14 @@ export async function exportBackup(targetPath: string): Promise<void> {
     }
 
     const backgrounds = await backupBackgrounds(scratch)
+    const music = await soundtrackLibrary.snapshot()
+    for (const [file, bytes] of Object.entries(music.files)) {
+      await mkdir(join(scratch, SOUNDTRACK_BACKUP_DIR), { recursive: true })
+      await writeFile(join(scratch, SOUNDTRACK_BACKUP_DIR, file), bytes)
+    }
 
     const record: BackupFile = {
+      exMusic: music.map,
       schemaVersion: BACKUP_SCHEMA_VERSION,
       settings,
       grabbags,
@@ -471,6 +479,8 @@ export async function importBackup(archivePath: string): Promise<void> {
     await extractZip(archivePath, scratch, BACKUP_ZIP_LIMITS)
     await checkExtractedContent(scratch, classifyBackupEntry, 'backup')
     const record = await readBackupRecord(scratch)
+    const music = await prepareSoundtrackSnapshot(record.exMusic,
+      file => readSoundtrackFile(join(scratch, SOUNDTRACK_BACKUP_DIR, file)), soundtrackHash)
 
     // Everything the record says is checked before anything here is written. The stored keys,
     // the dev switches and the ComfyUI build stay, being this install's own.
@@ -482,6 +492,7 @@ export async function importBackup(archivePath: string): Promise<void> {
     await restoreSaves(scratch, record)
     await restoreCharacters(scratch, record)
     await restoreBackgrounds(scratch, backgrounds)
+    if (music) await soundtrackLibrary.restore(music)
   } finally {
     await discard(scratch)
   }

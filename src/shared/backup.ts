@@ -9,6 +9,7 @@ import {
   type CustomBackground
 } from './customBackgrounds'
 import { appError } from './errors'
+import { SOUNDTRACK_FILE, SOUNDTRACK_BACKUP_DIR } from './soundtracks'
 import type { ValidateRecordOptions } from './jsonValidate'
 import type { PhotoMeta } from './photos'
 import { SAFE_NUMERIC_ID } from './saveRules'
@@ -171,7 +172,8 @@ function isBackgroundPicture(name: string): boolean {
  * graduation picture, a profile picture, a photo or a background's picture, something the
  * archive carries that no unpack keeps, or something this build never wrote.
  */
-export function classifyBackupEntry(name: string): 'record' | 'image' | 'skip' | 'reject' {
+export function classifyBackupEntry(name: string): 'record' | 'image' | 'audio' | 'skip' | 'reject' {
+  if (name.startsWith(SOUNDTRACK_BACKUP_DIR + '/') && SOUNDTRACK_FILE.test(name.slice(SOUNDTRACK_BACKUP_DIR.length + 1))) return 'audio'
   if (name === BACKUP_NAME) return 'record'
   if (isArchiveCruft(name)) return 'skip'
   if (charFileOf(name)) return 'image'
