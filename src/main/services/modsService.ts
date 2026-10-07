@@ -1,8 +1,15 @@
 import { mkdir } from 'fs/promises'
-import { cleanSwitches, NO_SWITCHES, photoSwitchesOf, type ModSwitches } from '@shared/mods'
+import {
+  cleanSwitches,
+  NO_SWITCHES,
+  photoSwitchesOf,
+  withPhotoSettingsCarried,
+  type ModSwitches
+} from '@shared/mods'
 import { setPhotoSwitches } from '@shared/photoSwitches'
 import { getDataPath, getModsPath } from '../paths'
 import { readValidatedJson, writeAtomicJson } from './jsonFile'
+import { getSettings } from './settingsService'
 
 /** Schema version this build reads and writes. */
 const SCHEMA_VERSION = 1
@@ -29,7 +36,7 @@ export async function getModSwitches(): Promise<ModSwitches> {
     required: { schemaVersion: true },
     onMissing: () => ({ schemaVersion: SCHEMA_VERSION, ...NO_SWITCHES })
   })
-  const switches = cleanSwitches(file)
+  const switches = withPhotoSettingsCarried(cleanSwitches(file), await settingsToCarry())
   // Main's own copy of Photo Feature's switches, for the renders it draws (body details).
   setPhotoSwitches(photoSwitchesOf(switches))
   return switches
@@ -44,4 +51,14 @@ export async function setModSwitches(switches: ModSwitches): Promise<void> {
     { code: 'MODS_UNWRITABLE', message: 'Could not save mods.json.' }
   )
   setPhotoSwitches(photoSwitchesOf(switches))
+}
+
+/** Settings Photo Feature's options carry over from; none where they cannot be read. */
+async function settingsToCarry(): Promise<{ photos?: boolean; photoLoader?: string }> {
+  try {
+    const { photos, photoLoader } = await getSettings()
+    return { photos, photoLoader }
+  } catch {
+    return {}
+  }
 }

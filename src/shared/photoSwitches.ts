@@ -1,35 +1,37 @@
+import { PHOTO_LOADERS, type PhotoLoader } from './photoLoader'
+
 /**
- * Whether Photo Feature is acting at all, and its two options, as a build that can switch mods on
- * and off has them set.
+ * Whether Photo Feature is acting at all, and its options, as the Mods screen has them set.
  *
- * This build has no such switches: the mod is always on, explicit photos follow only the game's
- * own "No NSFW images", and nothing is hidden, so every answer below is the one it has always
- * been. A build that carries a mods screen sets them through {@link setPhotoSwitches}, at boot and
- * whenever one moves, and every place the mod acts or shows something asks here.
+ * The build sets them through {@link setPhotoSwitches}, at boot and whenever one moves, and every
+ * place the mod acts or shows something asks here.
  *
- * Off stops the mod acting: no new photo, no feed comments, no body details. It never deletes
- * anything: every photo, comment and body stays in the save and the character files, and comes
- * back the moment the mod is on again. Whether what already exists stays on screen while it is
- * off is the player's own option.
+ * Off stops the mod acting and hides what it made: no new photo, no feed comments, no body
+ * details, and no photo, gallery or comment on screen. It never deletes anything: every photo,
+ * comment and body stays in the save and the character files, and comes back the moment the mod
+ * is on again.
  *
- * A module of its own, with no imports, so main, preload-facing shared code and the renderer can
- * all read it; each process holds its own copy and the build sets each one.
+ * Main, shared code and the renderer can all read it; each process holds its own copy and the
+ * build sets each one.
  */
 
 export interface PhotoSwitches {
   /** The mod itself. */
   on: boolean
+  /** New photos are made. Off, the mod stays on and what it already made stays visible. */
+  photos: boolean
   /** Undressed photos may be sent; the game's own "No NSFW images" can still forbid them. */
   explicit: boolean
-  /** While the mod is off, photos, the gallery and comments that already exist stay visible. */
-  showWhenOff: boolean
+  /** What a DM photo still being drawn waits behind. */
+  loader: PhotoLoader
 }
 
-/** What this build answers: the mod on, nothing forbidden by the mod, nothing hidden. */
+/** Before the Mods screen's switches are read: the mod on, nothing forbidden, the bunny. */
 export const DEFAULT_PHOTO_SWITCHES: PhotoSwitches = {
   on: true,
+  photos: true,
   explicit: true,
-  showWhenOff: false
+  loader: 'bunny'
 }
 
 let current: PhotoSwitches = DEFAULT_PHOTO_SWITCHES
@@ -40,8 +42,9 @@ export function setPhotoSwitches(next: Partial<PhotoSwitches>): void {
   const merged = { ...current, ...next }
   if (
     merged.on === current.on &&
+    merged.photos === current.photos &&
     merged.explicit === current.explicit &&
-    merged.showWhenOff === current.showWhenOff
+    merged.loader === current.loader
   ) {
     return
   }
@@ -67,10 +70,15 @@ export function photoFeatureOn(): boolean {
 
 /**
  * Whether what the mod has already made is on screen: its photos, its gallery and its feed
- * comments. Always while it is on; while it is off, only if the player asked to keep them.
+ * comments. Whenever the mod is on, whether or not it makes new photos.
  */
 export function photosVisible(switches: PhotoSwitches = current): boolean {
-  return switches.on || switches.showWhenOff
+  return switches.on
+}
+
+/** Whether new photos are made: the mod on, and its "Photo generation" option. */
+export function photoGenerationOn(switches: PhotoSwitches = current): boolean {
+  return switches.on && switches.photos
 }
 
 /**
@@ -84,6 +92,11 @@ export function explicitPhotosAllowed(
   return switches.explicit && !noNsfwImages
 }
 
+/** The option that picks one loading animation. */
+export function loaderOptionId(loader: PhotoLoader): string {
+  return `loader-${loader}`
+}
+
 /**
  * The mod as a mods screen lists it: what a build with one needs to register it. The ids are
  * written to disk there, so they never change once shipped.
@@ -92,24 +105,32 @@ export const PHOTO_FEATURE_MOD = {
   id: 'photo-feature',
   name: 'Photo Feature',
   author: 'naudh1r',
-  scope: 'anytime',
+  scope: 'anytime' as const,
   defaultOn: true,
   blurb:
     'The girls send photos in their DMs and post them on their feeds, with comments from the rest of campus. Adds a gallery to each contact and optional body details for characters. Needs local image generation.',
   offNote:
-    'Off, nobody takes a new photo, posts get no new comments and body details are not used. Nothing is deleted: everything comes back when it is on again.',
+    'Off, nobody takes a new photo, posts get no new comments and body details are not used. Photos, galleries and comments already made are hidden. Nothing is deleted: everything comes back when it is on again.',
   options: [
+    {
+      id: 'photos',
+      label: 'Photo generation',
+      hint: "Off, no new photos are made, and characters don't know they can send one. Photos already sent stay visible.",
+      default: true
+    },
     {
       id: 'explicit',
       label: 'Explicit photos',
       hint: 'Off, nobody sends an undressed photo, and ones already sent stay covered. Settings → No NSFW images turns them off too.',
       default: true
     },
-    {
-      id: 'showWhenOff',
-      label: 'Show existing photos while the mod is off',
-      hint: 'On, photos, galleries and comments already made stay visible while the mod is off. Off, they are hidden until it is on again.',
-      default: false
-    }
+    // One of these is on at a time: the store turns the others off.
+    ...PHOTO_LOADERS.map((loader) => ({
+      id: loaderOptionId(loader.value),
+      label: loader.label,
+      hint: 'The animation shown while a photo is being made.',
+      default: loader.value === 'bunny',
+      group: 'loader'
+    }))
   ]
-} as const
+}

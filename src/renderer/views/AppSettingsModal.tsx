@@ -29,8 +29,6 @@ import { useModalShell } from '../components/useModalShell'
 import { TitleTab } from '../components/TitleTab'
 import { ComboField } from '../components/ComboField'
 import { SelectField } from '../components/SelectField'
-import { usePhotoSwitches } from '../stores/photoSwitchHooks'
-import { PhotoLoaderField } from './photoLoaderField'
 import { TextField } from '../components/TextField'
 import { CheckField } from '../components/CheckField'
 import { SfwCheckList } from '../components/SfwCheckList'
@@ -144,9 +142,6 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
   const [checkUpdates, setCheckUpdates] = useState(settings?.checkUpdates !== false)
   // Likewise absent means the window opens fullscreen.
   const [fullscreen, setFullscreen] = useState(settings?.fullscreen !== false)
-  const [photos, setPhotos] = useState(settings?.photos !== false)
-  // With Photo Feature off its own settings are not offered; they keep what they were set to.
-  const photoMod = usePhotoSwitches().on
   // Likewise absent means a scene warns before an ending is interrupted.
   const [warnEndingInterrupt, setWarnEndingInterrupt] = useState(
     settings?.warnEndingInterrupt !== false
@@ -431,11 +426,6 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
   }
 
   /** Whether the window opens fullscreen; main switches the window to it as the write lands. */
-  function handlePhotosChange(checked: boolean): void {
-    setPhotos(checked)
-    void write({ photos: checked }).then(reseed((stored) => setPhotos(stored.photos !== false)))
-  }
-
   function handleFullscreenChange(checked: boolean): void {
     setFullscreen(checked)
     void write({ fullscreen: checked }).then(
@@ -803,20 +793,6 @@ export function AppSettingsModal({ theme, onClose }: AppSettingsModalProps): JSX
                   />
 
                   <span className="vu-settings-heading">Content</span>
-
-                  {/* The switch that decides whether the cast photographs itself at all sits over the
-                      ones that decide what a picture may show. Named for the playthrough it makes,
-                      like they are: what is turned on here is the absence. */}
-                  {!webBuild && photoMod && (
-                    <CheckField
-                      id="settings-photos"
-                      label="No DM and feed photos"
-                      note="Photos on Bunnyboard feeds and DMs are turned off. Existing photos stay visible, and any still waiting are held until you turn this back on."
-                      checked={!photos}
-                      onChange={(checked) => handlePhotosChange(!checked)}
-                    />
-                  )}
-                  {!webBuild && photoMod && photos && <PhotoLoaderField />}
 
                   {/* Each toggle carries what turning it on costs; the note is the whole of what the
                       app promises about either setting. */}

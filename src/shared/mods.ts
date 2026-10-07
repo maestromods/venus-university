@@ -1,4 +1,5 @@
-import { PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSwitches'
+import { PHOTO_LOADERS, photoLoaderOf } from './photoLoader'
+import { loaderOptionId, PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSwitches'
 import type { PlaythroughRecord } from './types'
 
 /**
@@ -29,6 +30,11 @@ export interface ModOption {
   /** What the other position does, in a line. */
   hint: string
   default: boolean
+  /**
+   * Options of one mod that share a group are one choice: one of them is on at a time. Turning
+   * one on turns the others off, and the one that is on stays on until another is picked.
+   */
+  group?: string
 }
 
 export interface ModDef {
@@ -89,9 +95,7 @@ export const MODS: readonly ModDef[] = [
   {
     ...PHOTO_FEATURE_MOD,
     id: PHOTO_FEATURE,
-    version: '1.1.3',
-    // The mod's own options, as it describes them; arrays from it are read-only.
-    options: [...PHOTO_FEATURE_MOD.options]
+    version: '1.1.3'
   }
 ]
 
@@ -198,9 +202,22 @@ export function withOption(
   switches: ModSwitches,
   modId: string,
   optionId: string,
-  on: boolean
+  on: boolean,
+  mods: readonly ModDef[] = MODS
 ): ModSwitches {
-  return { ...switches, options: { ...switches.options, [optionKey(modId, optionId)]: on } }
+  const options = modById(modId, mods)?.options ?? []
+  const group = options.find((o) => o.id === optionId)?.group
+  if (!group) {
+    return { ...switches, options: { ...switches.options, [optionKey(modId, optionId)]: on } }
+  }
+  // One of a group is always picked: turning the picked one off picks nothing else.
+  if (!on) return switches
+  const picked = Object.fromEntries(
+    options
+      .filter((o) => o.group === group)
+      .map((o) => [optionKey(modId, o.id), o.id === optionId])
+  )
+  return { ...switches, options: { ...switches.options, ...picked } }
 }
 
 /**
@@ -273,9 +290,38 @@ declare module './types' {
  * when the switches are read or written and in the renderer whenever one moves.
  */
 export function photoSwitchesOf(switches: ModSwitches): PhotoSwitches {
+  const loader =
+    PHOTO_LOADERS.find((l) => optionOn(switches, PHOTO_FEATURE, loaderOptionId(l.value)))?.value ??
+    'bunny'
   return {
     on: modOn(switches, PHOTO_FEATURE),
+    photos: optionOn(switches, PHOTO_FEATURE, 'photos'),
     explicit: optionOn(switches, PHOTO_FEATURE, 'explicit'),
-    showWhenOff: optionOn(switches, PHOTO_FEATURE, 'showWhenOff')
+    loader
   }
+}
+
+/**
+ * Photo Feature's options for a player who set them in Settings, where they lived before this
+ * build: "No DM and feed photos" and "Loading animation". Read only where the Mods screen has
+ * never stored them, so what he picked there carries over until he moves them here.
+ */
+export function withPhotoSettingsCarried(
+  switches: ModSwitches,
+  settings: { photos?: boolean; photoLoader?: string }
+): ModSwitches {
+  let carried = switches
+  if (settings.photos === false && !(optionKey(PHOTO_FEATURE, 'photos') in switches.options)) {
+    carried = withOption(carried, PHOTO_FEATURE, 'photos', false)
+  }
+  const loaderKeys = PHOTO_LOADERS.map((l) => optionKey(PHOTO_FEATURE, loaderOptionId(l.value)))
+  if (settings.photoLoader && !loaderKeys.some((key) => key in switches.options)) {
+    carried = withOption(
+      carried,
+      PHOTO_FEATURE,
+      loaderOptionId(photoLoaderOf(settings.photoLoader)),
+      true
+    )
+  }
+  return carried
 }

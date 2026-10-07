@@ -1,4 +1,4 @@
-import { explicitPhotosAllowed, photoFeatureOn } from '@shared/photoSwitches'
+import { explicitPhotosAllowed, photoGenerationOn } from '@shared/photoSwitches'
 import type { ChatPhoto } from '@shared/photoTypes'
 import { isWebBuild } from '../platform'
 import { useGameStore } from './gameStore'
@@ -29,18 +29,11 @@ function canRenderImages(): boolean {
 }
 
 /**
- * Whether a character may send a photograph: the player's switch, and a renderer to draw it
- * with. Asked by the DM prompt and by the feed, so one switch covers both.
- *
- * Absent reads as on — a save written before the feature existed has no `photos` key, and the
- * renderer check below is the real gate anyway.
+ * Whether a character may send a photograph: the mod and its "Photo generation" option, and a
+ * renderer to draw it with. Asked by the DM prompt and by the feed, so one switch covers both.
  */
 export function canSendPhotos(): boolean {
-  return (
-    photoFeatureOn() &&
-    useSettingsStore.getState().settings?.photos !== false &&
-    canRenderImages()
-  )
+  return photoGenerationOn() && canRenderImages()
 }
 
 /**

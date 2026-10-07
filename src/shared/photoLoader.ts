@@ -1,4 +1,4 @@
-/** The ways a picture still being drawn can wait in a DM, as the Settings dropdown lists them. */
+/** The ways a picture still being drawn can wait in a DM, as the Mods screen lists them. */
 export const PHOTO_LOADERS = [
   { value: 'bunny', label: 'Bunny hop' },
   { value: 'shimmer', label: 'Dot shimmer' },

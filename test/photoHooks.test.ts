@@ -258,14 +258,14 @@ const HOOKS: readonly {
     why: 'the NSFW switch does not say it covers photos too'
   },
   {
-    file: 'src/renderer/views/AppSettingsModal.tsx',
-    needs: ['settings-photos'],
-    why: 'the player cannot turn photographs off'
+    file: 'src/renderer/stores/modsStore.ts',
+    needs: ['setPhotoSwitches(photoSwitchesOf(switches))'],
+    why: 'the Mods screen cannot turn photographs off or pick how a photo waits'
   },
   {
-    file: 'src/renderer/views/AppSettingsModal.tsx',
-    needs: ['{!webBuild && photoMod && photos && <PhotoLoaderField />}'],
-    why: 'the player cannot pick how a photo waits'
+    file: 'src/main/services/modsService.ts',
+    needs: ['withPhotoSettingsCarried(cleanSwitches(file), await settingsToCarry())'],
+    why: 'what the player set in Settings before the Mods screen is lost'
   },
   {
     file: 'src/renderer/stores/textingLoop.ts',

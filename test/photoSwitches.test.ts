@@ -5,6 +5,7 @@ import {
   explicitPhotosAllowed,
   PHOTO_FEATURE_MOD,
   photoFeatureOn,
+  photoGenerationOn,
   photoSwitches,
   photosVisible,
   setPhotoSwitches,
@@ -13,11 +14,7 @@ import {
 import { postCommentLines } from '../src/renderer/prompts/photoBrief'
 import type { SocialPost } from '../src/shared/types'
 
-/**
- * Photo Feature's own switches, as a build with a mods screen sets them. This build never sets
- * them, so the first test is the one that matters most: nothing changes for anybody who plays it
- * as it ships.
- */
+/** Photo Feature's own switches, as the Mods screen sets them. */
 
 afterEach(() => setPhotoSwitches(DEFAULT_PHOTO_SWITCHES))
 
@@ -31,20 +28,28 @@ const held: SocialPost = {
 } as SocialPost
 
 describe('photo switches', () => {
-  it('leave the mod exactly as it ships when nothing sets them', () => {
+  it('leave the mod fully on before anything sets them', () => {
     expect(photoFeatureOn()).toBe(true)
+    expect(photoGenerationOn()).toBe(true)
+    expect(photoSwitches().loader).toBe('bunny')
     expect(photosVisible()).toBe(true)
     expect(explicitPhotosAllowed(false)).toBe(true)
     expect(explicitPhotosAllowed(true)).toBe(false)
     expect(postIsOut(held)).toBe(false)
   })
 
-  it('hide what exists while off, unless the player keeps it', () => {
+  it('hide what exists while off', () => {
     setPhotoSwitches({ on: false })
     expect(photoFeatureOn()).toBe(false)
     expect(photosVisible()).toBe(false)
-    setPhotoSwitches({ showWhenOff: true })
+    expect(photoGenerationOn()).toBe(false)
+  })
+
+  it('keep what exists on screen with photo generation off, and make nothing new', () => {
+    setPhotoSwitches({ photos: false })
+    expect(photoFeatureOn()).toBe(true)
     expect(photosVisible()).toBe(true)
+    expect(photoGenerationOn()).toBe(false)
   })
 
   it('let either switch forbid an explicit photo, and neither allow what the other forbids', () => {
@@ -86,8 +91,11 @@ describe('photo switches', () => {
     expect(PHOTO_FEATURE_MOD.id).toBe('photo-feature')
     const defaults = Object.fromEntries(PHOTO_FEATURE_MOD.options.map((o) => [o.id, o.default]))
     expect(defaults).toEqual({
+      photos: DEFAULT_PHOTO_SWITCHES.photos,
       explicit: DEFAULT_PHOTO_SWITCHES.explicit,
-      showWhenOff: DEFAULT_PHOTO_SWITCHES.showWhenOff
+      'loader-bunny': true,
+      'loader-shimmer': false,
+      'loader-dots': false
     })
   })
 })

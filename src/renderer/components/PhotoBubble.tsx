@@ -1,12 +1,11 @@
 import { motion, useReducedMotion } from 'motion/react'
 import { useEffect, useState, type JSX } from 'react'
 import { photoUrl } from '@shared/photoFiles'
-import { photoLoaderOf } from '@shared/photoLoader'
+import { photoGenerationOn } from '@shared/photoSwitches'
 import type { ChatPhoto } from '@shared/photoTypes'
 import { useExplicitBlocked, usePhotoSwitches, usePhotosVisible } from '../stores/photoSwitchHooks'
 import { useBunnyboardStore } from '../stores/bunnyboardStore'
 import { useGameStore } from '../stores/gameStore'
-import { useSettingsStore } from '../stores/settingsStore'
 import { rerollPostPhoto } from '../stores/photoPost'
 import { tellAboutFeedPhotos } from '../stores/photoTipDelivery'
 import { rerollMessagePhoto } from '../stores/photoTurn'
@@ -23,14 +22,14 @@ import '../vu_styles/PhotoBubble.css'
  */
 
 /**
- * The frame while her picture is being drawn, in the wait the player picked in Settings: the
+ * The frame while her picture is being drawn, in the wait the player picked in Mods: the
  * same bunny the game waits behind between slots, hopping on the same beat; a field of dots a
  * shimmer runs across; or her typing dots, at the size a frame carries them. Reduced motion
  * keeps each one and stills it — the wait still has to be legible as a wait.
  */
 function PhotoWait(): JSX.Element {
   const still = useReducedMotion() ?? false
-  const loader = useSettingsStore((s) => photoLoaderOf(s.settings?.photoLoader))
+  const loader = usePhotoSwitches().loader
   return (
     <div
       className={`vu-bb-photo vu-bb-photo--pending vu-bb-photo--${loader}`}
@@ -177,10 +176,8 @@ function RerollablePhoto({
   photo: ChatPhoto
   onReroll: () => void
 }): JSX.Element {
-  // Drawing again is the mod acting: it waits for the mod and its photos switch both.
-  const photosSwitch = useSettingsStore((s) => s.settings?.photos !== false)
-  const modOn = usePhotoSwitches().on
-  const photosOn = photosSwitch && modOn
+  // Drawing again is the mod acting: it waits for the mod and its photo generation both.
+  const photosOn = photoGenerationOn(usePhotoSwitches())
   const [missing, setMissing] = useState(false)
   if ((photo.failed || (missing && !photo.pending)) && photo.file && photo.scene) {
     return (

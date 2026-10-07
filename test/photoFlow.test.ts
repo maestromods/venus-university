@@ -70,12 +70,14 @@ function heldPost(id = 'p1'): {
 
 /**
  * Photos switched on, with a renderer that says it is ready — what `canSendPhotos` asks. `on`
- * false is the player's switch turned off.
+ * false is the mod's "Photo generation" option turned off.
  */
 async function photosSwitched(on: boolean): Promise<void> {
   const { useSettingsStore } = await import('../src/renderer/stores/settingsStore')
   const { useSetupStore } = await import('../src/renderer/stores/setupStore')
-  useSettingsStore.setState({ settings: { photos: on, comfyDeferred: false } as never })
+  const { setPhotoSwitches } = await import('../src/shared/photoSwitches')
+  setPhotoSwitches({ photos: on })
+  useSettingsStore.setState({ settings: { comfyDeferred: false } as never })
   useSetupStore.setState({ status: { comfyReady: true } as never })
 }
 
