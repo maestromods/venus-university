@@ -32,6 +32,7 @@ export interface GameMenuModalProps {
   onSettings: () => void
   /** Opens the community mods' switches in the menu's place. Absent drops the entry. */
   onMods?: () => void
+  onMeanwhile?: () => void
   /** A reply is on its way: a rule is not changed under a turn already being written. */
   modsWaiting?: boolean
   /**
@@ -57,6 +58,7 @@ export function GameMenuModal({
   onFeedback,
   onSettings,
   onMods,
+  onMeanwhile,
   modsWaiting = false,
   onControls,
   onLeave,
@@ -140,6 +142,9 @@ export function GameMenuModal({
               </motion.button>
             </DeadNote>
           )}
+          {onMeanwhile && <motion.button id="game-menu-meanwhile" type="button"
+            className="vu-btn vu-btn--outline vu-paper" variants={dealtItem}
+            {...gestures(false,lift,press)} onClick={onMeanwhile}>Meanwhile…</motion.button>}
           {onControls && (
             <motion.button
               id="game-menu-controls"

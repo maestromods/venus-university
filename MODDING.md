@@ -85,6 +85,9 @@ a setter, and set it from `modsStore.ts` at boot and whenever a switch moves
 
 ## Not decided yet
 
+The independent [Meanwhile conversations port](docs/mods/meanwhile-conversations.md)
+documents its menu, replay storage, generation boundary, and future memory integration.
+
 - The build's name and version (`BUILD` in `mods.ts`).
 - Whether `data/mods.json` goes into the game's own backup; it does not today.
 - How a mod that patches the built code, rather than the source, reads its switch.

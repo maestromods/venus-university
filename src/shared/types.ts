@@ -1,3 +1,4 @@
+import type { MeanwhileStore } from './meanwhile'
 /** Shared on-disk schema and IPC result types. */
 
 // Type-only, so the import cycles erase: most of these modules import back from here.
@@ -1179,6 +1180,8 @@ export type BunnybotHandover = 'contact' | 'haunt'
 
 /** On-disk save file — `/data/saves/{playthroughId}/{saveId}.json`. */
 export interface GameSave {
+  /** Optional, noncanonical spectator conversations. */
+  exNpcWatch?: MeanwhileStore
   schemaVersion: 12
   /**
    * The playthrough this save belongs to. Derived from the containing folder

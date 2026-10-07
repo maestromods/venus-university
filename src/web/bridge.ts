@@ -1,3 +1,4 @@
+import type { MeanwhileResponse } from '@shared/meanwhile'
 import type { ClassifierPromptRequest, ClassifierVerdict } from '@shared/classifier'
 import { base64ToBytes } from '@shared/base64'
 import { appError, toAppError } from '@shared/errors'
@@ -231,6 +232,10 @@ export function buildApi(): VenusUniversityApi {
       completeEndingPosts: (request, group) =>
         result('write the status updates', () =>
           runAbortable(group, (signal) => completeStructured<EndingPostsResponse>(request, signal))
+        ),
+      completeMeanwhile: (request, group) =>
+        result('write the Meanwhile conversation', () =>
+          runAbortable(group, signal => completeStructured<MeanwhileResponse>(request, signal))
         ),
       // Several texting calls can stream at once, so every delta carries its `group`.
       completeTexting: (request, group) =>

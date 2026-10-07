@@ -1,3 +1,4 @@
+import { withMeanwhile, type MeanwhileScene } from '@shared/meanwhile'
 import { toAppError } from '@shared/errors'
 import { gameOverReasonOf, type GameOverReason } from '@shared/gameOver'
 import { isGameOver, spentOf } from '@shared/money'
@@ -361,4 +362,22 @@ export async function writeManualSave(slot: number): Promise<boolean> {
     manualWriting = false
   }
   return saved
+}
+
+/** Cache a spectator scene without ever inserting it into canonical history or memories. */
+export async function persistMeanwhileScene(scene: MeanwhileScene, isCurrent: () => boolean): Promise<void> {
+  let completed = false
+  await queueWrite(async () => {
+    if (!isCurrent() || manualSaveOffer() !== 'open') return
+    const game = useGameStore.getState()
+    const draft = manualSaveDraft() ?? (!sceneActiveOf(game) ? { ...game.toGameSave(), scene: null } : null)
+    if (!draft || !game.playthroughId) throw Error('No safe save point is available yet.')
+    const next = withMeanwhile(game.exNpcWatch,scene)
+    const result = await window.api.saves.autosave(game.playthroughId,{ ...draft, exNpcWatch: next })
+    if (!result.ok) throw Error(result.error.message)
+    if (!isCurrent()) return
+    useGameStore.setState({ exNpcWatch: next })
+    completed = true
+  })
+  if (!completed) throw Error('The game changed. Reopen Meanwhile to view saved conversations.')
 }
