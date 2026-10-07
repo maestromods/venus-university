@@ -1,9 +1,11 @@
-import { toAppError } from '@shared/errors'
+import { appError, toAppError } from '@shared/errors'
+import { PLOT_TWIST_MOD, validatePlotTwist } from '@shared/plotTwists'
 import { gameOverReasonOf, type GameOverReason } from '@shared/gameOver'
 import { isGameOver, spentOf } from '@shared/money'
 import {
   READER_SPEAKER,
   type AppError,
+  type Result,
   type SaveDraft,
   type SceneLine,
   type SceneState
@@ -14,6 +16,7 @@ import { PORTRAIT_SLOTS, useGameStore } from '../gameStore'
 import { lastReaderIndexOf } from '../stageStep'
 import { sceneActiveOf, textingUnsettled } from '../textingLoop'
 import { useUiStore } from '../uiStore'
+import { modIsOn } from '../modsStore'
 import { currentRun, loopState, runStale } from './state'
 import { sceneInProgress } from './stream'
 import { composeStageThumbnail } from './thumbnail'
@@ -284,6 +287,11 @@ export type ManualSaveOffer = 'open' | 'waiting' | 'none'
 
 /** What the Save Game button offers at this moment. */
 export function manualSaveOffer(): ManualSaveOffer {
+  return saveOffer(manualWriting)
+}
+
+/** Rechecked by an editor at its write turn, excluding only its own write lock. */
+function saveOffer(manualInProgress: boolean): ManualSaveOffer {
   const game = useGameStore.getState()
   if (!game.playthroughId || game.activeGameOver !== null) return 'none'
   // The goodbye menu past the floor: the next press meets the collectors, and the goodbyes
@@ -311,7 +319,7 @@ export function manualSaveOffer(): ManualSaveOffer {
     loopState.hangoutPrefetch !== null ||
     useBunnyboardStore.getState().armedHangout !== null ||
     textingUnsettled() ||
-    manualWriting
+    manualInProgress
   return unsettled ? 'waiting' : 'open'
 }
 
@@ -361,4 +369,69 @@ export async function writeManualSave(slot: number): Promise<boolean> {
     manualWriting = false
   }
   return saved
+}
+
+/**
+ * Save a twist and a native, resumable checkpoint in the same write lane as the loop.
+ * The live value changes only after a successful disk/IndexedDB write. In particular, a
+ * failed write must not leak an unsaved twist into a later scene request or autosave.
+ */
+export async function writePlotTwist(value: string): Promise<Result<null>> {
+  const validated = validatePlotTwist(value)
+  if (!validated.ok) return validated
+  const unavailable = (): Result<null> => ({
+    ok: false,
+    error: appError('PLOT_TWIST_WAIT', 'Wait for the scene to settle and enable Plot Twist before applying it.')
+  })
+  if (!modIsOn(PLOT_TWIST_MOD) || manualSaveOffer() !== 'open') return unavailable()
+  const game = useGameStore.getState()
+  const playthroughId = game.playthroughId
+  const run = currentRun()
+  const sameGame = (): boolean => {
+    const now = useGameStore.getState()
+    return !runStale(run) && now.playthroughId === playthroughId && now.loads === game.loads
+  }
+  let outcome: Result<null> = {
+    ok: false,
+    error: appError('PLOT_TWIST_STALE', 'The loaded game changed. Reopen Plot Twist before trying again.')
+  }
+  manualWriting = true
+  try {
+    await queueWrite(async () => {
+      if (!sameGame()) return
+      if (!modIsOn(PLOT_TWIST_MOD) || saveOffer(false) !== 'open') {
+        outcome = unavailable()
+        return
+      }
+      const now = useGameStore.getState()
+      // Use the ending/status checkpoint when there is one. Only a true landing may
+      // fall back to a scene-less save; never manufacture a mid-scene checkpoint.
+      const base = manualSaveDraft() ?? (!sceneActiveOf(now) ? { ...now.toGameSave(), scene: null } : null)
+      if (!playthroughId || !base) {
+        outcome = unavailable()
+        return
+      }
+      const result = await window.api.saves.autosave(playthroughId, {
+        ...base,
+        exPlotTwist: validated.data
+      })
+      if (!sameGame()) return
+      if (!result.ok) {
+        outcome = result
+        return
+      }
+      // Status playback can save from a frozen pre-status draft. Carry this edit there
+      // too, without advancing or replaying any of its stats, ledger, or pending lines.
+      if (loopState.statusBase) {
+        loopState.statusBase = { ...loopState.statusBase, exPlotTwist: validated.data }
+      }
+      useGameStore.setState({ exPlotTwist: validated.data })
+      outcome = { ok: true, data: null }
+    })
+  } catch (error) {
+    if (sameGame()) outcome = { ok: false, error: toAppError(error, 'SAVE_WRITE_FAILED') }
+  } finally {
+    manualWriting = false
+  }
+  return outcome
 }
