@@ -17,6 +17,11 @@ character profiles, Bunnyboard Updates, and Meanwhile's spectator conversations.
   name-derived handle; their saved IDs and reply links remain unchanged.
 - Comment on the article or select **Reply** on a particular comment. Type `@handle` or use
   **Mention** to tag a known character. NPCs can answer; sometimes other students chime in.
+- Direct replies retain their parent comment; comments on the main article are explicitly
+  identified as article comments in the reply request. Tags and unambiguous greetings such
+  as "Hi, Lili" prioritize that known person. Other commenters are told they are bystanders,
+  not the recipient of a greeting meant for somebody else. First names shared by multiple
+  known people require a full name or @handle to select one reliably.
 - Replies appear with short pauses and typing indicators. They are already saved when their
   reveal starts, so closing the viewer does not lose completed replies.
 - If a reply request fails, the player's comment stays saved. **Get replies** retries the

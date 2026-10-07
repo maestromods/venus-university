@@ -1,5 +1,5 @@
 import {
-  VENUS_WHISPER_MOD, WHISPER_COMMENTS, WHISPER_TEXT, ensureWhisperAuthor, whisperCommenters,
+  VENUS_WHISPER_MOD, WHISPER_COMMENTS, WHISPER_TEXT, ensureWhisperAuthor, whisperAddressees, whisperCommenters,
   whisperIssueId, whisperMentions, whisperPeople, whisperPlayerHandle, whisperSources, validateWhisperComments,
   validateWhisperDraft, withWhisperIssue, type VenusWhisper, type WhisperComment, type WhisperIssue
 } from '@shared/venusWhisper'
@@ -82,11 +82,11 @@ export async function replyOnWhisper(issueId: string, replyTo: string | undefine
     const target = issue.comments.find(c => c.id === replyTo)
     if (replyTo && (!target?.player || issue.answered.includes(replyTo))) return []
     if (!replyTo && issue.comments.some(c => !c.player)) return []
-    const parent = target?.replyTo ? issue.comments.find(c => c.id === target.replyTo) : undefined
-    const priority = [...(parent && !parent.player ? [parent.person.id] : []), ...(target?.mentions ?? [])]
+    const addressees = whisperAddressees(issue, replyTo, whisperPeople(game))
+    const priority = addressees.map(p => p.id)
     const people = whisperCommenters(game, Math.random, priority, Math.min(WHISPER_COMMENTS - issue.comments.length, replyTo ? (Math.random() < .35 ? 3 : 1) : 3))
     if (!people.length) return []
-    const response = await window.api.llm.completeWhisper(buildWhisperReplies(issue, people, replyTo, whisperPlayerHandle(game.playerFirstName, game.playerLastName)), group)
+    const response = await window.api.llm.completeWhisper(buildWhisperReplies(issue, people, replyTo, whisperPlayerHandle(game.playerFirstName, game.playerLastName), addressees), group)
     if (!current()) throw Error('The game changed. No replies were added.')
     if (!response.ok) throw Error(response.error.message)
     const batch = validateWhisperComments(response.data, people).map(c => {

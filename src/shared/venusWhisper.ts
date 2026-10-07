@@ -201,6 +201,26 @@ export function whisperMentions(value: string, people: readonly WhisperPerson[])
   return people.filter(p => new RegExp(`(^|[^\\w])@${p.handle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w])`, 'i').test(value)).map(p => p.id)
 }
 
+/** Explicit tags and unambiguous greetings name recipients; a third-person mention does not. */
+export function whisperAddressees(issue: WhisperIssue, replyTo: string | undefined, people: readonly WhisperPerson[]): WhisperPerson[] {
+  const target = issue.comments.find(c => c.id === replyTo)
+  if (!target) return []
+  const explicit = new Set(whisperMentions(target.text, people))
+  const escape = (name: string): string => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  for (const person of people) {
+    const full = person.name.trim(), first = full.split(/\s+/)[0]
+    const uniqueFirst = people.filter(p => p.name.trim().split(/\s+/)[0].toLowerCase() === first.toLowerCase()).length === 1
+    const names = [...new Set([full, ...(uniqueFirst ? [first] : [])])].filter(Boolean).map(escape).join('|')
+    if (!names) continue
+    const greeting = new RegExp(`^\\s*(?:(?:hi|hey|hello|good morning|good afternoon|good evening)\\b[,!]?\\s+)(?:${names})(?=$|[\\s,.!?;:])`, 'iu')
+    const address = new RegExp(`^\\s*(?:${names})\\s*[,!:]`, 'iu')
+    if (greeting.test(target.text) || address.test(target.text)) explicit.add(person.id)
+  }
+  if (explicit.size) return people.filter(p => explicit.has(p.id))
+  const parent = issue.comments.find(c => c.id === target.replyTo)
+  return parent && !parent.player ? people.filter(p => p.id === parent.person.id) : []
+}
+
 /** Add one issue or a changed thread without touching any other mod's state. */
 export function withWhisperIssue(state: VenusWhisper, issue: WhisperIssue): VenusWhisper {
   return normalizeWhisper({ ...state, issues: [...state.issues.filter(i => i.id !== issue.id), issue] })

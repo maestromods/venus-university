@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   VENUS_WHISPER_MOD, carryWhisper, ensureWhisperAuthor, normalizeWhisper, validateWhisperComments,
-  whisperCommenters, whisperIssueId, whisperMentions, whisperPeople, whisperRecall, whisperSources,
+  whisperAddressees, whisperCommenters, whisperIssueId, whisperMentions, whisperPeople, whisperRecall, whisperSources,
   type WhisperDraft, type WhisperIssue, type WhisperReply
 } from '@shared/venusWhisper'
 import { carriedOpening, carryTerm } from '@shared/termCarry'
@@ -102,6 +102,44 @@ describe('newsletter identity and semester continuity', () => {
 })
 
 describe('public evidence and stable writes', () => {
+  it('keeps article comments separate from direct replies and routes a named greeting before random bystanders', async () => {
+    const { complete } = api()
+    vi.spyOn(Math, 'random').mockReturnValue(.9)
+    const publicIssue = issue()
+    publicIssue.comments.push({ id: 'npc', person: { id: 'b', name: 'Mina Rose', handle: 'mina' }, player: false, text: 'An interesting read.', mentions: [] })
+    useGameStore.setState({ exVenusWhisper: { ...ensureWhisperAuthor(game(), () => 0), issues: [publicIssue] } })
+    const root = await commentOnWhisper(id(), 'Hi, Sarah.', undefined, active)
+    await replyOnWhisper(id(), root, 'test', active)
+    const request = JSON.parse(complete.mock.calls.at(-1)![0].user)
+    expect(request.profiles.map((p: { id: string }) => p.id)).toEqual(['a'])
+    expect(request.respondingTo.placement).toBe('article-comment')
+    expect(request.respondingTo.parent).toBeUndefined()
+    expect(request.respondingTo.addressedTo.map((p: { id: string }) => p.id)).toEqual(['a'])
+    expect(game().exVenusWhisper.issues[0].comments.find(c => c.id === root)?.replyTo).toBeUndefined()
+    expect(game().exVenusWhisper.issues[0].comments.at(-1)?.replyTo).toBe(root)
+    const direct = await commentOnWhisper(id(), 'What did you think?', 'npc', active)
+    await replyOnWhisper(id(), direct, 'test', active)
+    const reply = JSON.parse(complete.mock.calls.at(-1)![0].user)
+    expect(reply.profiles.map((p: { id: string }) => p.id)).toEqual(['b'])
+    expect(reply.respondingTo.placement).toBe('comment-reply')
+    expect(reply.respondingTo.parent.id).toBe('npc')
+    expect(reply.respondingTo.addressedTo.map((p: { id: string }) => p.id)).toEqual(['b'])
+  })
+
+  it('does not turn third-person, partial or ambiguous names into direct recipients', () => {
+    const people = whisperPeople(game())
+    const sharedName = [...people, { ...people[0], id: 'c', name: 'Sarah Stone', handle: 'sarah_stone' }]
+    const addressed = (text: string, profiles = people): string[] => whisperAddressees({ ...issue(), comments: [
+      { id: 'player', person: { id: 'reader', name: 'Sam Rowe', handle: 'sam_rowe' }, player: true, text, mentions: [] }
+    ] }, 'player', profiles).map(p => p.id)
+    expect(addressed('Sarah had a great idea.')).toEqual([])
+    expect(addressed('Hi, Sarahlynn.')).toEqual([])
+    expect(addressed('Hi, Sarah.', sharedName)).toEqual([])
+    expect(addressed('Hi, Sarah Rose.', sharedName)).toEqual(['a'])
+    expect(addressed('@sarah_stone what do you think?', sharedName)).toEqual(['c'])
+    expect(addressed('Mina, what do you think?')).toEqual(['b'])
+  })
+
   it('excludes private, future, unknown and held-photo sources; recall has no secret profile and stays bounded', () => {
     useGameStore.setState(s => ({ charInfo: { ...s.charInfo, b: { ...s.charInfo.b, feed: [
       { id: 'future', text: 'FUTURE POST', date: 8, time: 0, likes: 0 },
