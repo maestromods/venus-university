@@ -1,3 +1,4 @@
+import { locationAvailable } from '@shared/cityLife'
 import { studentsOf } from '@shared/classes'
 import { dormBuildingOf } from '@shared/dorms'
 import {
@@ -80,7 +81,7 @@ export function rollNpcOverlayNow(
 
   // A spot shut this half of the day is never drawn for an outing.
   const spots = OUTING_LOCATIONS.filter((id) =>
-    isLocationOpen(id, shiftSlotOf(shiftWeekdayOf(date), time))
+    locationAvailable(id) && isLocationOpen(id, shiftSlotOf(shiftWeekdayOf(date), time))
   )
   return rollNpcOverlay(date, time, window, chars, spots)
 }

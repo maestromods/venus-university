@@ -177,7 +177,7 @@ describe('a new playthrough', () => {
   it('names the playthrough mods that are on, and no others', () => {
     expect(playthroughMods(NO_SWITCHES, LIST)).toEqual(['places', 'work'])
     expect(playthroughMods(withMod(NO_SWITCHES, 'places', false), LIST)).toEqual([])
-    expect(playthroughMods(NO_SWITCHES)).toEqual([])
+    expect(playthroughMods(NO_SWITCHES, [])).toEqual([])
   })
 })
 

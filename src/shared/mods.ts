@@ -2,6 +2,7 @@ import { CONTINUING_SEMESTERS, CONTINUING_SEMESTERS_MOD } from './continuingSeme
 import { PHOTO_LOADERS, photoLoaderOf } from './photoLoader'
 import { loaderOptionId, PHOTO_FEATURE_MOD, type PhotoSwitches } from './photoSwitches'
 import { MEANWHILE_MOD } from './meanwhile'
+import { CITY_LIFE_LOCATIONS_MOD, CITY_LIFE_JOBS_MOD } from './cityLife'
 import type { PlaythroughRecord } from './types'
 import { PLAYTHROUGH_NAMES_MOD } from './playthroughNames'
 import { PLOT_TWIST_DEF } from './plotTwists'
@@ -103,7 +104,15 @@ export const MODS: readonly ModDef[] = [
     scope: 'anytime', defaultOn: true,
     blurb: 'Watch optional two-NPC conversations from a dedicated Meanwhile menu.',
     offNote: 'Saved replays stay in the playthrough. Watching changes no relationships, memories, or time.'
-  }
+  },
+  { id: CITY_LIFE_LOCATIONS_MOD, name: 'City Life locations', author: 'Maestro Leeds', version: '1.0.0',
+    scope: 'playthrough', defaultOn: true,
+    blurb: 'Lucky Strike Lanes, Starlight Roller Rink, and Purr & Pour Cat Café, with day/night backgrounds and NPC visits.',
+    offNote: 'Chosen when a playthrough starts. Existing playthroughs keep their locations.' },
+  { id: CITY_LIFE_JOBS_MOD, name: 'City Life jobs', author: 'Maestro Leeds', version: '1.0.0',
+    scope: 'playthrough', defaultOn: true, requires: [CITY_LIFE_LOCATIONS_MOD],
+    blurb: 'Part-time jobs for the player and NPCs at the three City Life venues.',
+    offNote: 'Requires City Life locations. Existing playthroughs keep their jobs and schedules.' }
 ]
 
 /**

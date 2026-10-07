@@ -462,6 +462,8 @@ export async function writePlotTwist(value: string): Promise<Result<null>> {
     manualWriting = false
   }
   return outcome
+}
+
 /** Cache a spectator scene without ever inserting it into canonical history or memories. */
 export async function persistMeanwhileScene(scene: MeanwhileScene, isCurrent: () => boolean): Promise<void> {
   let completed = false

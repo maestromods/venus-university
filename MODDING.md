@@ -15,6 +15,8 @@ switch controls the game-menu editor and future scene requests. Saved text is re
 off. See [the Plot Twist integration notes](docs/mods/plot-twist.md) for the save and prompt hooks.
 This source port adds [Text Regeneration](docs/mods/text-regeneration.md) to the framework
 on Venus University's 0.3.0 source. It runs independently of the other community mods.
+This source port adds [City Life](docs/mods/city-life.md) to the framework on Venus
+University's 0.3.0 source. Locations and jobs have separate per-playthrough switches.
 
 ## The three things a mod does
 

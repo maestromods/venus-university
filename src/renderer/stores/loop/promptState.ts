@@ -2,6 +2,7 @@ import { slotFullLabel } from '@shared/classes'
 import { graduatesNow, readerGraduatesNow } from '@shared/term'
 import { activePlotTwist, PLOT_TWIST_MOD } from '@shared/plotTwists'
 import { modIsOn } from '../modsStore'
+import { cityLifeBackgrounds } from '@shared/cityLife'
 import { globalSlotOf, slotFromId } from '@shared/jobs'
 import type { PlayerStats } from '@shared/playerStats'
 import { POSITIONS } from '@shared/positions'
@@ -343,9 +344,11 @@ export function promptState(): PromptState {
     exPlotTwist: activePlotTwist(game.exPlotTwist, modIsOn(PLOT_TWIST_MOD)),
     date: game.date,
     time: game.time,
-    backgrounds: loopState.trip
-      ? offCampus(useAssetStore.getState().backgrounds)
-      : useAssetStore.getState().backgrounds,
+    backgrounds: cityLifeBackgrounds(
+      loopState.trip
+        ? offCampus(useAssetStore.getState().backgrounds)
+        : useAssetStore.getState().backgrounds
+    ),
     charInfo: game.charInfo,
     npcRelationships: game.npcRelationships,
     // Everyone the scene is not carrying — `game.cast`, not the departed-filtered list, or a
