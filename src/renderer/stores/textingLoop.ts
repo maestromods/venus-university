@@ -5,6 +5,9 @@
  */
 
 import { formatDateBanner, prevSlot } from '../prompts/gameDate'
+import { TEXT_REGENERATION_MOD, latestTextReply, beforeTextReply, textReplyFingerprint, checkedTextReplacement, replaceTextReply } from '@shared/textRegeneration'
+import type { Result } from '@shared/types'
+import { modIsOn } from './modsStore'
 import type { CalendarEvent, CharInfo, EventCancellation, Occasion } from '@shared/types'
 import { affectionFor, dispositionOf, emptyFlags, isPositive } from '@shared/relationship'
 import { requestAcceptChance } from '@shared/feed'
@@ -505,12 +508,22 @@ async function runReply(
   skip: number,
   invited: Conversation['pendingHangout'] | null
 ): Promise<void> {
+  if (skip === 0 && modIsOn(TEXT_REGENERATION_MOD)) {
+    useGameStore.setState(s => ({ bunnyboard: { ...s.bunnyboard, conversations: {
+      ...s.bunnyboard.conversations,
+      [charId]: { ...s.bunnyboard.conversations[charId], exTextBase: {
+        replyTo: sent.id, summary: conversation?.summary ?? null, regenerable: !invited
+      } }
+    } } }))
+  }
   // Every text goes through the pacer, one at a time at typing speed.
   // `released` counts what actually landed, which a retry must not repeat.
   let released = skip
   const pacer = createTypingPacer(charId, (text) => {
     released += 1
-    deliver(charId, chatMessage('contact', text))
+    const message = chatMessage('contact', text)
+    if (modIsOn(TEXT_REGENERATION_MOD)) message.exReplyTo = sent.id
+    deliver(charId, message)
   })
   const entry = { abandoned: false, pacer }
   inFlight.set(charId, entry)
@@ -586,6 +599,74 @@ async function runReply(
 
   handleHangout(charId, await classifyHangout(character, conversation, sent, messages))
   if (invited) settleAnsweredInvitation(charId, invited.occasionId)
+}
+
+/** The same availability rule is used by the button and the command. */
+export function textRegenerationTarget(charId: string): ReturnType<typeof latestTextReply> {
+  const game = useGameStore.getState()
+  if (!modIsOn(TEXT_REGENERATION_MOD) || !game.playthroughId || !game.characters[charId] ||
+      sceneActiveOf(game) || epilogueOf(game) || game.charInfo[charId]?.flags.blocked ||
+      inFlight.has(charId) || failedTurns.has(charId) ||
+      useBunnyboardStore.getState().armedHangout !== null) return null
+  return latestTextReply(game.bunnyboard.conversations[charId], game.date, game.time)
+}
+
+/** Generate privately, check for changed plans, then persist and replace the entire response. */
+export async function regenerateTextReply(charId: string, commit: (
+  charId: string, conversation: Conversation, isCurrent: () => boolean
+) => Promise<Result<null>>): Promise<{ replaced: number; created: number }> {
+  const game = useGameStore.getState(), target = textRegenerationTarget(charId)
+  if (!target) throw Error('Regenerate a completed reply in this time slot, before a scene or hangout starts.')
+  const fingerprint = textReplyFingerprint(target.conversation)
+  const entry = { abandoned: false, pacer: {
+    push: (_text: string): void => {}, drain: async (): Promise<void> => {},
+    cancel: (): void => { entry.abandoned = true }
+  } }
+  inFlight.set(charId, entry)
+  useBunnyboardStore.getState().setTextBusy(charId, true)
+  const isCurrent = (): boolean => {
+    const live = useGameStore.getState()
+    return !entry.abandoned && inFlight.get(charId) === entry && modIsOn(TEXT_REGENERATION_MOD) &&
+      live.playthroughId === game.playthroughId && live.loads === game.loads && live.date === game.date &&
+      live.time === game.time && !sceneActiveOf(live) && !epilogueOf(live) &&
+      !live.charInfo[charId]?.flags.blocked && useBunnyboardStore.getState().armedHangout === null &&
+      textReplyFingerprint(live.bunnyboard.conversations[charId]) === fingerprint
+  }
+  const check = (): void => { if (!isCurrent()) throw Error('The game or conversation changed. Your original reply was kept.') }
+  try {
+    const prior = beforeTextReply(target), character = game.characters[charId]
+    const request = buildTextingPrompt(character, game.charInfo[charId], prior, target.sent.text, {
+      date: game.date, time: game.time, stats: game.stats,
+      roster: game.chars.filter(id => id !== charId).map(id => game.characters[id]).filter(Boolean),
+      charInfo: game.charInfo, npcRelationships: game.npcRelationships, classes: game.classes,
+      playerSchedule: game.playerSchedule, playerJob: game.job, occasions: game.occasions,
+      weather: game.weather, charLocation: charHiddenLocationNow(charId), charCompanions: companionsOf(charId),
+      charHaunt: charStandingHauntNow(charId), springBreakAway: game.springBreakAway,
+      memoryBudget: memoryBudgetsOf(useSettingsStore.getState().settings ?? {}).one,
+      historyLimit: prior.summary === null ? 160 : undefined
+    }, readerBlockOf(game))
+    const result = await window.api.llm.completeTexting(request, `texting:${charId}`)
+    check()
+    if (!result.ok) throw Error(result.error.message)
+    const replacement = checkedTextReplacement(result.data)
+    const verdict = await window.api.llm.classifyHangout(buildHangoutClassifierPrompt(
+      character.firstName, prior.messages, target.sent,
+      replacement.messages.map(text => chatMessage('contact', text)),
+      { date: game.date, time: game.time, weather: game.weather }
+    ))
+    check()
+    if (!verdict.ok) throw Error('The plan check failed. Your original reply was kept.')
+    if (verdict.data.playerAsked !== false || verdict.data.characterOffered !== false) throw Error('The replacement would make a new hangout, or its plan check was unclear. Your original reply was kept; send a new message to make plans.')
+    const next = replaceTextReply(target, replacement, () => crypto.randomUUID())
+    const saved = await commit(charId, next, isCurrent)
+    if (!saved.ok) throw Error(saved.error.message)
+    return { replaced: target.replies.length, created: replacement.messages.length }
+  } finally {
+    if (inFlight.get(charId) === entry) {
+      inFlight.delete(charId)
+      useBunnyboardStore.getState().setTextBusy(charId, false)
+    }
+  }
 }
 
 /**

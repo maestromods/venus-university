@@ -4,9 +4,8 @@ This branch is a proposal for how the community mods share one build: every mod'
 always in the game, and a switch decides whether it acts. Players turn mods on and off from
 **Mods** on the main menu; nothing is chosen at install time.
 
-It carries no mods yet. This is the frame alone, on the game as Venus Dev released it (0.3.0),
-so any mod can start from it. The `extracurriculars-base` branch adds Continuing Semesters on
-top as a worked example.
+This source port adds [Text Regeneration](docs/mods/text-regeneration.md) to the framework
+on Venus University's 0.3.0 source. It runs independently of the other community mods.
 
 ## The three things a mod does
 

@@ -64,6 +64,8 @@ const TEXTING_PERSONA = [
 
 /** The prompt-facing slice of state a texting turn needs. */
 export interface TextingPromptState {
+  /** A bounded longer window for rebuilding a legacy reply without a pre-reply summary. */
+  historyLimit?: number
   date: number
   time: TimeSlot
   /** The reader's accumulated stats, used for relationship requirement guidance. */
@@ -280,7 +282,7 @@ export function buildTextingPrompt(
   // The new text is the last line of the log, so it gets its own stamp when it lands in a new slot.
   const history = stampedStubs(
     [
-      ...(conversation?.messages ?? []).slice(-TEXTING_HISTORY_CAP),
+      ...(conversation?.messages ?? []).slice(-Math.max(TEXTING_HISTORY_CAP, Math.min(160, state.historyLimit ?? TEXTING_HISTORY_CAP))),
       {
         id: 'pending',
         sender: 'player',

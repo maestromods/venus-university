@@ -101,6 +101,7 @@ import {
 import { BackIcon, BunnyMark, CloseIcon, HeartIcon, MapIcon, PlusIcon } from './screenIcons'
 import { LettersFilter, lettersUrl } from '../components/LettersMark'
 import '../vu_styles/Bunnyboard.css'
+import { TextRegenerate } from '../components/TextRegenerate'
 
 export interface BunnyboardModalProps {
   onClose: () => void
@@ -1029,6 +1030,7 @@ function ConversationView({
         )}
       </div>
 
+      {!bot && <TextRegenerate charId={charId} />}
       <div className="vu-bb-foot">
         {boss ? (
           <BossActions

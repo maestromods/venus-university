@@ -1,4 +1,5 @@
 import type { PlaythroughRecord } from './types'
+import { TEXT_REGENERATION_MOD } from './textRegeneration'
 
 /**
  * The community mods built into this copy of the game, and the switches a player turns them on
@@ -49,10 +50,14 @@ export interface ModDef {
 }
 
 /**
- * Every mod in this build, in the order the Mods screen lists them. None yet: this is the
- * frame alone, on the game as Venus Dev released it. A mod adds itself here (see MODDING.md).
+ * Every mod in this build, in the order the Mods screen lists them.
  */
-export const MODS: readonly ModDef[] = []
+export const MODS: readonly ModDef[] = [{
+  id: TEXT_REGENERATION_MOD, name: 'Text Regeneration', author: 'Maestro Leeds', version: '1.0.0',
+  scope: 'anytime', defaultOn: true,
+  blurb: 'Regenerate the whole latest phone reply, including every message in it.',
+  offNote: 'Existing messages and reply checkpoints stay saved. Regeneration uses your configured AI.'
+}]
 
 /**
  * What the player has set, as `data/mods.json` holds it. A mod or an option that is not in

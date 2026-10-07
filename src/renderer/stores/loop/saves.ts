@@ -1,4 +1,5 @@
-import { toAppError } from '@shared/errors'
+import { appError, toAppError } from '@shared/errors'
+import type { Conversation, Result } from '@shared/types'
 import { gameOverReasonOf, type GameOverReason } from '@shared/gameOver'
 import { isGameOver, spentOf } from '@shared/money'
 import {
@@ -57,6 +58,32 @@ function queueWrite(write: () => Promise<void>): Promise<void> {
 /** True while a save write is still queued or in flight. */
 export function writesPending(): boolean {
   return pending > 0
+}
+
+/** Persist a replacement before exposing it to scene prompts, in the native save write lane. */
+export async function persistRegeneratedConversation(
+  charId: string, conversation: Conversation, isCurrent: () => boolean
+): Promise<Result<null>> {
+  let outcome: Result<null> = { ok: false, error: appError('TEXT_REGEN_STALE', 'The game changed. Your original reply was kept.') }
+  try {
+    await queueWrite(async () => {
+      if (!isCurrent()) return
+      const game = useGameStore.getState()
+      if (!game.playthroughId || sceneActiveOf(game)) return
+      const next = { ...conversation, unread: game.bunnyboard.conversations[charId].unread }
+      const draft = { ...game.toGameSave(), scene: null,
+        bunnyboard: { ...game.bunnyboard, conversations: { ...game.bunnyboard.conversations, [charId]: next } }
+      }
+      const result = await window.api.saves.autosave(game.playthroughId, draft)
+      if (!isCurrent()) return
+      if (!result.ok) { outcome = result; return }
+      useGameStore.setState(s => ({ bunnyboard: { ...s.bunnyboard, conversations: {
+        ...s.bunnyboard.conversations, [charId]: { ...next, unread: s.bunnyboard.conversations[charId].unread }
+      } } }))
+      outcome = { ok: true, data: null }
+    })
+  } catch (error) { outcome = { ok: false, error: toAppError(error, 'SAVE_WRITE_FAILED') } }
+  return outcome
 }
 
 /** Resolves once every write queued so far, and any queued behind them meanwhile, has settled. */
