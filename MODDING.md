@@ -66,6 +66,23 @@ switch is left as the player set it.
   build does not know are kept.
 - `playthrough.json`: `mods`, the `playthrough` mods that playthrough started with.
 
+
+## Options that are one choice
+
+Options that are one choice among several share a `group`, and the mod names the group in
+`optionGroups`. One option of a group is on at a time: turning one on turns the others off, and
+the one that is on stays on until another is picked. The Mods screen shows a group as one box,
+with the group's label and hint once and a row for each choice. They are still plain on/off
+values in `data/mods.json`.
+
+```ts
+options: [
+  { id: 'loader-bunny', label: 'Bunny hop', hint: '', default: true, group: 'loader' },
+  { id: 'loader-dots', label: 'Typing dots', hint: '', default: false, group: 'loader' }
+],
+optionGroups: [{ id: 'loader', label: 'Loading animation', hint: 'The animation shown while…' }]
+```
+
 ## Where the code is
 
 | File | What it is |
